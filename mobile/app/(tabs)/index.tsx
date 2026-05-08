@@ -7,8 +7,9 @@ import {
   RefreshControl,
 } from "react-native";
 import HomeHeader from "@/components/HomeHeader";
-import Post, { HomePost } from "@/components/home/Post";
+import Post, { HomePost, PostOptionsAnchor } from "@/components/home/Post";
 import PdfViewerModal from "@/components/home/PdfViewerModal";
+import PostOptionsSheet from "@/components/home/PostOptionsSheet";
 import { gql } from "@/lib/api";
 
 const PAGE_SIZE = 20;
@@ -47,6 +48,22 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPost, setSelectedPost] = useState<HomePost | null>(null);
+  const [optionsState, setOptionsState] = useState<{
+    post: HomePost;
+    anchor: PostOptionsAnchor;
+  } | null>(null);
+
+  const handlePostUpdated = useCallback((updated: HomePost) => {
+    setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setOptionsState((prev) =>
+      prev?.post.id === updated.id ? { ...prev, post: updated } : prev,
+    );
+  }, []);
+
+  const handlePostRemoved = useCallback((postId: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    setOptionsState(null);
+  }, []);
 
   // Use refs for values read inside async callbacks to avoid stale closures
   const offsetRef = useRef(0);
@@ -106,7 +123,11 @@ export default function HomeScreen() {
         data={posts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <Post post={item} onFileClick={setSelectedPost} />
+          <Post
+            post={item}
+            onFileClick={setSelectedPost}
+            onOptionsClick={(post, anchor) => setOptionsState({ post, anchor })}
+          />
         )}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.4}
@@ -122,6 +143,15 @@ export default function HomeScreen() {
             <ActivityIndicator style={styles.loader} color="#E1761F" />
           ) : null
         }
+      />
+      <PostOptionsSheet
+        post={optionsState?.post ?? null}
+        anchor={optionsState?.anchor ?? null}
+        isOpen={optionsState !== null}
+        onClose={() => setOptionsState(null)}
+        onPostUpdated={handlePostUpdated}
+        onPostDeleted={handlePostRemoved}
+        onPostHidden={handlePostRemoved}
       />
       <PdfViewerModal
         post={selectedPost}

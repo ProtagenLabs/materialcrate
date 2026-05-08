@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,13 @@ import {
   Eye,
 } from "iconsax-react-nativejs";
 import { apiUrl } from "@/lib/api";
+
+export type PostOptionsAnchor = {
+  pageX: number;
+  pageY: number;
+  width: number;
+  height: number;
+};
 
 export type HomePost = {
   id: string;
@@ -49,7 +56,7 @@ export type HomePost = {
 type PostProps = {
   post: HomePost;
   onCommentClick?: (post: HomePost) => void;
-  onOptionsClick?: (post: HomePost) => void;
+  onOptionsClick?: (post: HomePost, anchor: PostOptionsAnchor) => void;
   onFileClick?: (post: HomePost) => void;
   isArchived?: boolean;
   isArchiveBusy?: boolean;
@@ -92,6 +99,7 @@ export default function Post({
   isArchiveBusy = false,
 }: PostProps) {
   const router = useRouter();
+  const optionsRef = useRef<TouchableOpacity>(null);
 
   const [likeCount, setLikeCount] = useState(post.likeCount ?? 0);
   const [viewerHasLiked, setViewerHasLiked] = useState(
@@ -186,7 +194,12 @@ export default function Post({
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => onOptionsClick?.(post)}
+          ref={optionsRef}
+          onPress={() => {
+            optionsRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
+              onOptionsClick?.(post, { pageX, pageY, width, height });
+            });
+          }}
           activeOpacity={0.7}
           hitSlop={8}
           style={styles.optionsButton}
