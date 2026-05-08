@@ -11,6 +11,11 @@ import {
 import { emitPostActivity } from "../../realtime/postActivity.js";
 import { checkAchievements } from "../../achievements/service.js";
 import { hardDeletePost } from "../../services/postDeletion.js";
+import {
+  checkUploadForPlagiarism,
+  indexPostContent,
+  removePostIndex,
+} from "../../services/plagiarism/plagiarism-service.js";
 
 type CreatePostArgs = {
   fileBase64: string;
@@ -1316,6 +1321,39 @@ export const PostResolver = {
       }
 
       checkAchievements(ctx.user.sub, "post_created").catch(() => null);
+
+      // Plagiarism: check and index the new post asynchronously so the upload
+      // response is never delayed. Results are logged; flag suspicious posts
+      // through whatever moderation flow you prefer (e.g. admin dashboard).
+      void (async () => {
+        try {
+          const plagiarismResult = await checkUploadForPlagiarism(
+            fileBase64,
+            "application/pdf",
+            createdPost.id,
+          );
+          if (plagiarismResult) {
+            const { overallVerdict, overallScore, matchesByPost } = plagiarismResult;
+            if (overallVerdict !== "CLEAN") {
+              console.warn(
+                `[plagiarism] post=${createdPost.id} verdict=${overallVerdict} ` +
+                `score=${(overallScore * 100).toFixed(1)}% ` +
+                `top_match=${matchesByPost[0]?.postId ?? "none"}`,
+              );
+              // TODO: write to a plagiarism_results table, notify admins,
+              // or auto-flag the post depending on your policy.
+            }
+          }
+          // Index after check so our own content doesn't match itself.
+          if (plagiarismResult !== null) {
+            const { extractText } = await import("../../services/plagiarism/text-extractor.js");
+            const text = await extractText(fileBase64, "application/pdf");
+            if (text) await indexPostContent(createdPost.id, text);
+          }
+        } catch (err) {
+          console.error("[plagiarism] background check failed:", err);
+        }
+      })();
 
       // Parse @mentions in post description and send notifications
       const postDescription = description?.trim();

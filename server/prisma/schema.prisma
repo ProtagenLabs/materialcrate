@@ -207,12 +207,58 @@ model Post {
   feedInteractions FeedInteraction[]
   tokenTransactions TokenTransaction[]
   chatAttachments   ChatMessageAttachment[] @relation("PostChatAttachments")
+  documentFingerprint DocumentFingerprint?
+  contentChunks       ContentChunk[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([authorId])
   @@index([categories])
   @@index([deleted, deletedAt])
+}
+
+model DocumentFingerprint {
+  id         String   @id @default(cuid())
+  postId     String   @unique
+  sha256Hash String
+  createdAt  DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([sha256Hash])
+  @@map("document_fingerprints")
+}
+
+model ContentChunk {
+  id               String         @id @default(cuid())
+  postId           String
+  chunkIndex       Int
+  chunkType        String
+  sha256Hash       String
+  minHashSignature Int[]
+  wordCount        Int
+  charCount        Int
+  createdAt        DateTime       @default(now())
+
+  post     Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  lshBands ChunkLshBand[]
+
+  @@unique([postId, chunkIndex, chunkType])
+  @@index([sha256Hash])
+  @@index([postId])
+  @@map("content_chunks")
+}
+
+model ChunkLshBand {
+  chunkId   String
+  bandIndex Int
+  bandHash  BigInt
+
+  chunk ContentChunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  @@id([chunkId, bandIndex])
+  @@index([bandIndex, bandHash])
+  @@map("chunk_lsh_bands")
 }
 
 model PostVersion {
