@@ -1,4 +1,5 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import McWordmark from "@/assets/images/mc-wordmark.svg";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SearchNormal1, Coin1 } from "iconsax-react-nativejs";
@@ -18,11 +19,7 @@ export default function HomeHeader({
   return (
     <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <View style={styles.logo}>
-        <Image
-          source={require("@/assets/images/mc-wordmark.svg")}
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
+        <McWordmark width={160} height={40} />
       </View>
 
       <View style={styles.actions}>
@@ -76,10 +73,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  logoImage: {
-    width: 160,
-    height: 40,
   },
   actions: {
     flexDirection: "row",

@@ -51,30 +51,35 @@ export default function HomeScreen() {
   const hasMoreRef = useRef(true);
   const isFetchingRef = useRef(false);
 
-  const fetchPosts = useCallback(async (nextOffset: number, isRefresh = false) => {
-    if (isFetchingRef.current && !isRefresh) return;
-    if (!hasMoreRef.current && !isRefresh) return;
+  const fetchPosts = useCallback(
+    async (nextOffset: number, isRefresh = false) => {
+      if (isFetchingRef.current && !isRefresh) return;
+      if (!hasMoreRef.current && !isRefresh) return;
 
-    isFetchingRef.current = true;
-    setLoading(true);
-    try {
-      const data = await gql<{ posts: HomePost[] }>(POSTS_QUERY, {
-        limit: PAGE_SIZE,
-        offset: nextOffset,
-      });
-      const newPosts = data.posts ?? [];
+      isFetchingRef.current = true;
+      setLoading(true);
+      try {
+        const data = await gql<{ posts: HomePost[] }>(POSTS_QUERY, {
+          limit: PAGE_SIZE,
+          offset: nextOffset,
+        });
+        const newPosts = data.posts ?? [];
 
-      setPosts((prev) => (nextOffset === 0 ? newPosts : [...prev, ...newPosts]));
-      offsetRef.current = nextOffset + newPosts.length;
-      hasMoreRef.current = newPosts.length === PAGE_SIZE;
-    } catch (e) {
-      console.error("Failed to fetch posts", e);
-    } finally {
-      isFetchingRef.current = false;
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+        setPosts((prev) =>
+          nextOffset === 0 ? newPosts : [...prev, ...newPosts],
+        );
+        offsetRef.current = nextOffset + newPosts.length;
+        hasMoreRef.current = newPosts.length === PAGE_SIZE;
+      } catch (e) {
+        console.error("Failed to fetch posts", e);
+      } finally {
+        isFetchingRef.current = false;
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     void fetchPosts(0);
@@ -102,14 +107,15 @@ export default function HomeScreen() {
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.4}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#E1761F" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#E1761F"
+          />
         }
         ListFooterComponent={
           loading && !refreshing ? (
-            <ActivityIndicator
-              style={styles.loader}
-              color="#E1761F"
-            />
+            <ActivityIndicator style={styles.loader} color="#E1761F" />
           ) : null
         }
       />
