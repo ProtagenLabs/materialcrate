@@ -802,14 +802,12 @@ export default function DesktopChatPanel({ isOpen, onClose }: { isOpen: boolean;
               <div ref={messagesEndRef} />
             </div>
 
-            {/* GIF picker overlay */}
             {showGifPicker && (
               <GifPicker
                 onSelect={url => { draftRef.current = url; setDraft(url); }}
                 onClose={() => setShowGifPicker(false)}
               />
             )}
-            {/* Post picker overlay */}
             {showPostPicker && user?.username && (
               <PostPicker
                 username={user.username}
@@ -819,7 +817,6 @@ export default function DesktopChatPanel({ isOpen, onClose }: { isOpen: boolean;
             )}
           </div>
 
-          {/* Unsend confirm */}
           {pendingUnsendId && (
             <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/30 rounded-2xl">
               <div className="mx-4 rounded-2xl bg-surface p-4 shadow-xl">

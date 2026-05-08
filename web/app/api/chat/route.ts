@@ -98,8 +98,29 @@ export async function GET(request: Request) {
     );
   }
 
+  const items = (body?.data?.conversations?.items ?? []).map((item: {
+    id: string;
+    participant: { id: string; name: string; username: string; avatar: string | null; isOnline: boolean };
+    lastMessage: string | null;
+    lastMessageTime: string | null;
+    lastMessageSentByMe: boolean;
+    lastMessageIsRead: boolean;
+    unreadCount: number;
+  }) => ({
+    id: item.id,
+    name: item.participant?.name ?? "",
+    username: item.participant?.username ?? "",
+    avatar: item.participant?.avatar ?? null,
+    isOnline: item.participant?.isOnline ?? false,
+    lastMessage: item.lastMessage,
+    lastMessageTime: item.lastMessageTime,
+    isSentByMe: item.lastMessageSentByMe,
+    isRead: item.lastMessageIsRead,
+    unreadCount: item.unreadCount,
+  }));
+
   return NextResponse.json({
-    conversations: body?.data?.conversations?.items ?? [],
+    conversations: items,
     nextCursor: body?.data?.conversations?.nextCursor ?? null,
   });
 }
@@ -138,7 +159,19 @@ export async function POST(request: Request) {
     );
   }
 
+  const conv = gqlBody?.data?.startConversation ?? null;
   return NextResponse.json({
-    conversation: gqlBody?.data?.startConversation ?? null,
+    conversation: conv ? {
+      id: conv.id,
+      name: conv.participant?.name ?? "",
+      username: conv.participant?.username ?? "",
+      avatar: conv.participant?.avatar ?? null,
+      isOnline: conv.participant?.isOnline ?? false,
+      lastMessage: conv.lastMessage,
+      lastMessageTime: conv.lastMessageTime,
+      isSentByMe: conv.lastMessageSentByMe,
+      isRead: conv.lastMessageIsRead,
+      unreadCount: conv.unreadCount,
+    } : null,
   });
 }
