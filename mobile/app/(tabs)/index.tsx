@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import HomeHeader from "@/components/HomeHeader";
 import Post, { HomePost } from "@/components/home/Post";
+import PdfViewerModal from "@/components/home/PdfViewerModal";
 import { gql } from "@/lib/api";
 
 const PAGE_SIZE = 20;
@@ -45,6 +46,7 @@ export default function HomeScreen() {
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<HomePost | null>(null);
 
   // Use refs for values read inside async callbacks to avoid stale closures
   const offsetRef = useRef(0);
@@ -103,7 +105,9 @@ export default function HomeScreen() {
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <Post post={item} />}
+        renderItem={({ item }) => (
+          <Post post={item} onFileClick={setSelectedPost} />
+        )}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.4}
         refreshControl={
@@ -118,6 +122,11 @@ export default function HomeScreen() {
             <ActivityIndicator style={styles.loader} color="#E1761F" />
           ) : null
         }
+      />
+      <PdfViewerModal
+        post={selectedPost}
+        isOpen={selectedPost !== null}
+        onClose={() => setSelectedPost(null)}
       />
     </View>
   );
