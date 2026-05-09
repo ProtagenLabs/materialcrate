@@ -4,6 +4,7 @@ import { join } from "path";
 export const typeDefs = [
   readFileSync(join("src/graphql/schema/user.graphql"), "utf8"),
   readFileSync(join("src/graphql/schema/post.graphql"), "utf8"),
+  readFileSync(join("src/graphql/schema/purchase.graphql"), "utf8"),
   readFileSync(join("src/graphql/schema/archive.graphql"), "utf8"),
   readFileSync(join("src/graphql/schema/hub-chat.graphql"), "utf8"),
   readFileSync(join("src/graphql/schema/workspace.graphql"), "utf8"),

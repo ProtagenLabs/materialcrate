@@ -16,6 +16,7 @@ import {
   indexPostContent,
   removePostIndex,
 } from "../../services/plagiarism/plagiarism-service.js";
+import { normalizePricingInput } from "./purchase.resolver.js";
 
 type CreatePostArgs = {
   fileBase64: string;
@@ -26,6 +27,8 @@ type CreatePostArgs = {
   categories: string[];
   description?: string;
   year?: number;
+  isFree?: boolean;
+  price?: number;
 };
 
 type UpdatePostArgs = {
@@ -34,6 +37,8 @@ type UpdatePostArgs = {
   categories: string[];
   description?: string;
   year?: number;
+  isFree?: boolean;
+  price?: number;
 };
 
 type PinPostArgs = {
@@ -312,6 +317,10 @@ const buildPostInclude = (viewerId?: string) => {
       where: { userId: viewerId },
       select: { userId: true },
     };
+    include.purchases = {
+      where: { userId: viewerId },
+      select: { id: true },
+    };
   }
 
   return include;
@@ -322,7 +331,14 @@ const mapPostForGraphQL = (post: any, viewerId?: string) => ({
   likeCount: post?._count?.likes ?? 0,
   commentCount: post?._count?.comments ?? 0,
   viewerHasLiked: viewerId ? (post?.likes?.length ?? 0) > 0 : false,
+  viewerHasPurchased: viewerId
+    ? post?.isFree
+      ? false
+      : (post?.purchases?.length ?? 0) > 0 || post?.authorId === viewerId
+    : false,
   viewCount: post?.viewCount ?? 0,
+  isFree: post?.isFree ?? true,
+  price: post?.price ?? 0,
 });
 
 type FeedViewerSignals = {
@@ -1213,7 +1229,11 @@ export const PostResolver = {
         categories,
         description,
         year,
+        isFree: isFreeInput,
+        price: priceInput,
       } = args;
+
+      const { isFree, price } = normalizePricingInput(isFreeInput, priceInput);
 
       const normalizedCategories = normalizeCategories(categories);
 
@@ -1302,6 +1322,8 @@ export const PostResolver = {
             categories: normalizedCategories,
             description: description?.trim() || null,
             year: Number.isFinite(year) ? year : null,
+            isFree,
+            price,
             authorId: ctx.user.sub,
           },
         });
@@ -1322,9 +1344,6 @@ export const PostResolver = {
 
       checkAchievements(ctx.user.sub, "post_created").catch(() => null);
 
-      // Plagiarism: check and index the new post asynchronously so the upload
-      // response is never delayed. Results are logged; flag suspicious posts
-      // through whatever moderation flow you prefer (e.g. admin dashboard).
       void (async () => {
         try {
           const plagiarismResult = await checkUploadForPlagiarism(
@@ -1418,6 +1437,7 @@ export const PostResolver = {
       const normalizedCategories = normalizeCategories(args.categories);
       const normalizedDescription = args.description?.trim() || null;
       const normalizedYear = Number.isFinite(args.year) ? args.year : null;
+      const { isFree, price } = normalizePricingInput(args.isFree, args.price);
 
       if (!normalizedPostId) {
         throw new Error("Post id is required");
@@ -1482,6 +1502,8 @@ export const PostResolver = {
             categories: normalizedCategories,
             description: normalizedDescription,
             year: normalizedYear,
+            isFree,
+            price,
           },
         });
 
@@ -1673,7 +1695,6 @@ export const PostResolver = {
         throw new Error("Not authenticated");
       }
 
-      // Check for existing LONG_VIEW today BEFORE creating the new record
       let isFirstLongViewToday = false;
       if (input.interactionType === "LONG_VIEW" && input.postId?.trim()) {
         const postId = input.postId.trim();

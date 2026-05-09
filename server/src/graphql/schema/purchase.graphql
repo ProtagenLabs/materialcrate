@@ -1,0 +1,23 @@
+type Purchase {
+  id: ID!
+  userId: ID!
+  postId: ID!
+  amount: Float!
+  createdAt: String!
+}
+
+type DocumentAccessResult {
+  locked: Boolean!
+  price: Float
+  message: String
+  fileUrl: String
+}
+
+extend type Query {
+  documentAccess(postId: ID!): DocumentAccessResult!
+  myPurchases(limit: Int = 20, offset: Int = 0): [Purchase!]!
+}
+
+extend type Mutation {
+  purchasePost(postId: ID!): Purchase!
+}

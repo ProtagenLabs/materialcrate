@@ -83,6 +83,7 @@ model User {
   reports       Report[]
   tokenTransactions TokenTransaction[]
   cashoutRequests   TokenCashoutRequest[]
+  purchases         Purchase[]
   conversationsAsA  Conversation[] @relation("ConversationParticipantA")
   conversationsAsB  Conversation[] @relation("ConversationParticipantB")
   sentChatMessages  ChatMessage[]  @relation("ChatMessageSender")
@@ -196,11 +197,14 @@ model Post {
   description String?
   year       Int?
   viewCount  Int      @default(0)
+  isFree     Boolean  @default(true)
+  price      Float    @default(0)
   authorId   String?
   author     User?    @relation("UserPosts", fields: [authorId], references: [id], onDelete: SetNull)
   versions   PostVersion[]
   likes      Like[]
   comments   Comment[]
+  purchases  Purchase[]
   savedInWorkspaces WorkspaceSavedPost[]
   savedInArchives ArchiveSavedPost[]
   hubChats   HubChat[]
@@ -215,6 +219,22 @@ model Post {
   @@index([authorId])
   @@index([categories])
   @@index([deleted, deletedAt])
+  @@index([isFree])
+}
+
+model Purchase {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  amount    Float
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId, createdAt])
+  @@index([postId])
 }
 
 model DocumentFingerprint {

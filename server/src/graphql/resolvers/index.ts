@@ -3,6 +3,7 @@ import { AdminResolver } from "./admin.resolver.js";
 import { ArchiveResolver } from "./archive.resolver.js";
 import { HubChatResolver } from "./hub-chat.resolver.js";
 import { PostResolver } from "./post.resolver.js";
+import { PurchaseResolver } from "./purchase.resolver.js";
 import { WorkspaceResolver } from "./workspace.resolver.js";
 import { NotificationResolver } from "./notification.resolver.js";
 import { ReportResolver } from "./report.resolver.js";
@@ -18,6 +19,7 @@ export const resolvers = {
     ...HubChatResolver.Query,
     ...AiUsageResolver.Query,
     ...PostResolver.Query,
+    ...PurchaseResolver.Query,
     ...WorkspaceResolver.Query,
     ...NotificationResolver.Query,
     ...ReportResolver.Query,
@@ -30,6 +32,7 @@ export const resolvers = {
     ...ArchiveResolver.Mutation,
     ...HubChatResolver.Mutation,
     ...PostResolver.Mutation,
+    ...PurchaseResolver.Mutation,
     ...WorkspaceResolver.Mutation,
     ...NotificationResolver.Mutation,
     ...ReportResolver.Mutation,
