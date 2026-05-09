@@ -1,0 +1,85 @@
+type CasePost {
+  id: ID!
+  title: String!
+  thumbnailUrl: String
+  authorId: ID
+  authorUsername: String
+  viewCount: Int!
+  isFree: Boolean!
+  price: Float!
+  createdAt: String!
+}
+
+type CaseRevenueRedirect {
+  active: Boolean!
+  redirectPercentage: Float!
+  beneficiaryUserId: ID!
+}
+
+type CaseEvent {
+  id: ID!
+  caseId: ID!
+  type: String!
+  description: String!
+  actorId: ID
+  metadata: String
+  createdAt: String!
+}
+
+type CaseAppeal {
+  id: ID!
+  caseId: ID!
+  userId: ID!
+  reason: String!
+  status: String!
+  response: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+type CaseChunkInfo {
+  index: Int!
+  text: String!
+  chunkType: String!
+  wordCount: Int!
+  isMatched: Boolean!
+  matchedIndex: Int
+  similarity: Float
+  matchType: String
+}
+
+type CaseComparison {
+  originalChunks: [CaseChunkInfo!]!
+  suspectedChunks: [CaseChunkInfo!]!
+}
+
+type PlagiarismCase {
+  id: ID!
+  originalPost: CasePost!
+  suspectedPost: CasePost!
+  similarityScore: Float!
+  verdict: String!
+  status: String!
+  matchedChunkCount: Int!
+  totalChunkCount: Int!
+  revenueRedirectEnabled: Boolean!
+  matchSummaryJson: String!
+  moderatorNote: String
+  resolvedAt: String
+  createdAt: String!
+  updatedAt: String!
+  viewerRole: String!
+  revenueRedirect: CaseRevenueRedirect
+  events: [CaseEvent!]!
+  appeals: [CaseAppeal!]!
+}
+
+extend type Query {
+  plagiarismCase(id: ID!): PlagiarismCase
+  plagiarismCaseComparison(id: ID!): CaseComparison
+}
+
+extend type Mutation {
+  submitCaseAppeal(caseId: ID!, reason: String!): CaseAppeal!
+  moderateCase(caseId: ID!, action: String!, note: String): PlagiarismCase!
+}

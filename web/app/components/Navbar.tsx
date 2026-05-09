@@ -18,6 +18,7 @@ import {
 } from "iconsax-reactjs";
 import type { Icon as IconsaxIcon } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
+import { subscribeToNotificationActivity } from "@/app/lib/post-activity-realtime";
 
 type NavItem = {
   label: string;
@@ -70,26 +71,42 @@ export default function Navbar() {
     void fetchUnread();
   }, [user?.id, pathname]);
 
+  // Initial fetch — gets the unread count once on mount.
+  // After that, the Socket.IO subscription below keeps it current.
   useEffect(() => {
     if (!user?.id) return;
-
-    const fetchNotifications = async () => {
-      try {
-        const res = await fetch("/api/notifications?limit=100&unreadOnly=true", {
-          cache: "no-store",
-        });
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          notifications?: unknown[];
-        };
+    void fetch("/api/notifications?limit=100&unreadOnly=true", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: { notifications?: unknown[] } | null) => {
         if (Array.isArray(data?.notifications)) {
           setRawNotificationCount(data.notifications.length);
         }
-      } catch {}
-    };
+      })
+      .catch(() => {});
+  }, [user?.id]);
 
-    void fetchNotifications();
-  }, [user?.id, pathname]);
+  // Real-time updates via Socket.IO — the server pushes the exact unread count
+  // in every notification event so no re-fetch is needed.
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let unsubscribe: (() => void) | undefined;
+    let disposed = false;
+
+    void subscribeToNotificationActivity(user.id, (event) => {
+      if (typeof event.unreadCount === "number") {
+        setRawNotificationCount(event.unreadCount);
+      }
+    }).then((cleanup) => {
+      if (disposed) { cleanup(); return; }
+      unsubscribe = cleanup;
+    });
+
+    return () => {
+      disposed = true;
+      unsubscribe?.();
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     const onNewChatMessage = () => setRawUnreadCount((n) => n + 1);

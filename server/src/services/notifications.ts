@@ -40,6 +40,7 @@ type CreateNotificationInput = {
   actorId?: string | null;
   postId?: string | null;
   commentId?: string | null;
+  caseId?: string | null;
   achievementId?: string | null;
   type?: string;
   title: string;
@@ -54,6 +55,7 @@ export const createNotification = async ({
   actorId,
   postId,
   commentId,
+  caseId,
   achievementId,
   type = NOTIFICATION_TYPE.SYSTEM,
   title,
@@ -81,6 +83,7 @@ export const createNotification = async ({
       achievementId: achievementId?.trim() || null,
       postId: postId?.trim() || null,
       commentId: commentId?.trim() || null,
+      caseId: caseId?.trim() || null,
       unread,
     },
   });

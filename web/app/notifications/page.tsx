@@ -31,6 +31,7 @@ type NotificationItem = {
   actorUsername?: string | null;
   postId?: string | null;
   commentId?: string | null;
+  caseId?: string | null;
   followRequestId?: string | null;
   achievementId?: string | null;
   title: string;
@@ -53,6 +54,7 @@ type ApiNotificationItem = {
   actorUsername?: string | null;
   postId?: string | null;
   commentId?: string | null;
+  caseId?: string | null;
   followRequestId?: string | null;
   achievementId?: string | null;
   title: string;
@@ -261,6 +263,7 @@ export default function Page() {
         actorUsername: notification.actorUsername ?? null,
         postId: notification.postId ?? null,
         commentId: notification.commentId ?? null,
+        caseId: notification.caseId ?? null,
         followRequestId: notification.followRequestId ?? null,
         achievementId: notification.achievementId ?? null,
         title: notification.title,
@@ -271,7 +274,14 @@ export default function Page() {
         imageLabel: getImageLabel(notification.title),
         imageTone: style.imageTone,
         accent: style.accent,
-        href: getNotificationHref(notification),
+        href: getNotificationHref({
+          type: notification.type,
+          actorUsername: notification.actorUsername,
+          postId: notification.postId,
+          commentId: notification.commentId,
+          caseId: notification.caseId,
+          achievementId: notification.achievementId,
+        }),
         Icon: style.Icon,
       });
 

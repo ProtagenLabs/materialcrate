@@ -13,6 +13,7 @@ const NOTIFICATIONS_QUERY = `
       actorUsername
       postId
       commentId
+      caseId
       followRequestId
       achievementId
       title

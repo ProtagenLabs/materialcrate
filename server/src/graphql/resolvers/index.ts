@@ -11,6 +11,7 @@ import { SupportResolver } from "./support.resolver.js";
 import { AiUsageResolver } from "./ai-usage.resolver.js";
 import { AchievementResolver } from "./achievement.resolver.js";
 import { ChatResolver } from "./chat.resolver.js";
+import { PlagiarismResolver } from "./plagiarism.resolver.js";
 
 export const resolvers = {
   Query: {
@@ -26,6 +27,7 @@ export const resolvers = {
     ...AdminResolver.Query,
     ...AchievementResolver.Query,
     ...ChatResolver.Query,
+    ...PlagiarismResolver.Query,
   },
   Mutation: {
     ...UserResolver.Mutation,
@@ -40,6 +42,7 @@ export const resolvers = {
     ...AdminResolver.Mutation,
     ...AiUsageResolver.Mutation,
     ...ChatResolver.Mutation,
+    ...PlagiarismResolver.Mutation,
   },
   Post: {
     ...PostResolver.Post,

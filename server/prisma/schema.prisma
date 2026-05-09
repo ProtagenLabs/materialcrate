@@ -145,6 +145,7 @@ model Notification {
   achievementId String?
   postId        String?
   commentId     String?
+  caseId        String?
   unread        Boolean  @default(true)
   time          DateTime @default(now())
 
@@ -154,6 +155,7 @@ model Notification {
   @@index([userId, unread])
   @@index([userId, type, actorId])
   @@index([postId])
+  @@index([caseId])
 }
 
 model UserAchievement {
@@ -263,6 +265,7 @@ model ContentChunk {
   chunkType        String
   sha256Hash       String
   minHashSignature Int[]
+  text             String         @default("")
   wordCount        Int
   charCount        Int
   createdAt        DateTime       @default(now())
@@ -623,6 +626,7 @@ model PlagiarismCase {
   suspectedPost   Post              @relation("PlagiarismSuspectedPost", fields: [suspectedPostId], references: [id], onDelete: Cascade)
   revenueRedirect RevenueRedirect?
   appeals         PlagiarismAppeal[]
+  events          CaseEvent[]
 
   @@unique([originalPostId, suspectedPostId])
   @@index([originalPostId])
@@ -662,4 +666,18 @@ model PlagiarismAppeal {
 
   @@index([caseId])
   @@index([userId])
+}
+
+model CaseEvent {
+  id          String   @id @default(cuid())
+  caseId      String
+  type        String
+  description String
+  actorId     String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  case PlagiarismCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, createdAt])
 }

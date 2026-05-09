@@ -3,6 +3,7 @@ export type NotificationNavigationPayload = {
   actorUsername?: string | null;
   postId?: string | null;
   commentId?: string | null;
+  caseId?: string | null;
   achievementId?: string | null;
 };
 
@@ -27,15 +28,24 @@ export const getNotificationHref = ({
   actorUsername,
   postId,
   commentId,
+  caseId,
   achievementId,
 }: NotificationNavigationPayload) => {
   const normalizedPostId = postId?.trim();
   const normalizedCommentId = commentId?.trim();
+  const normalizedCaseId = caseId?.trim();
   const normalizedActorUsername = actorUsername?.trim();
   const normalizedAchievementId = achievementId?.trim();
 
   if (type === "ACHIEVEMENT_UNLOCKED" && normalizedAchievementId) {
     return `/achievements/${encodeURIComponent(normalizedAchievementId)}`;
+  }
+
+  if (
+    (type === "PLAGIARISM_ORIGINAL_AUTHOR" || type === "PLAGIARISM_FLAGGED_UPLOAD") &&
+    normalizedCaseId
+  ) {
+    return `/cases/${encodeURIComponent(normalizedCaseId)}`;
   }
 
   if (normalizedPostId) {

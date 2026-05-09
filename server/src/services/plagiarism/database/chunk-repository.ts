@@ -68,7 +68,7 @@ export class ChunkRepository {
       for (const fp of fingerprints) {
         const rows = await tx.$queryRaw<Array<{ id: string }>>`
           INSERT INTO content_chunks
-            (id, post_id, chunk_index, chunk_type, sha256_hash, minhash_signature, word_count, char_count)
+            (id, post_id, chunk_index, chunk_type, sha256_hash, minhash_signature, word_count, char_count, text)
           VALUES (
             gen_random_uuid(),
             ${postId},
@@ -77,14 +77,16 @@ export class ChunkRepository {
             ${fp.sha256Hash},
             ${fp.minHashSignature}::integer[],
             ${fp.chunk.wordCount},
-            ${fp.chunk.charCount}
+            ${fp.chunk.charCount},
+            ${fp.chunk.text}
           )
           ON CONFLICT (post_id, chunk_index, chunk_type)
           DO UPDATE SET
             sha256_hash       = EXCLUDED.sha256_hash,
             minhash_signature = EXCLUDED.minhash_signature,
             word_count        = EXCLUDED.word_count,
-            char_count        = EXCLUDED.char_count
+            char_count        = EXCLUDED.char_count,
+            text              = EXCLUDED.text
           RETURNING id
         `;
 
@@ -163,6 +165,49 @@ export class ChunkRepository {
         AND  cc.word_count >= 30
       LIMIT  1000
     `;
+  }
+
+  // ── Chunk text retrieval (for comparison UI) ──────────────────────────────
+
+  async getChunksWithText(postId: string): Promise<Array<{
+    chunkIndex: number;
+    text: string;
+    chunkType: string;
+    wordCount: number;
+  }>> {
+    const rows = await this.prisma.$queryRaw<Array<{
+      chunk_index: number;
+      text: string;
+      chunk_type: string;
+      word_count: number;
+    }>>`
+      SELECT chunk_index, text, chunk_type, word_count
+      FROM   content_chunks
+      WHERE  post_id = ${postId}
+      ORDER  BY chunk_index ASC
+    `;
+    return rows.map((r) => ({
+      chunkIndex: r.chunk_index,
+      text: r.text,
+      chunkType: r.chunk_type,
+      wordCount: r.word_count,
+    }));
+  }
+
+  async getChunkIndicesByIds(chunkIds: string[]): Promise<Array<{
+    id: string;
+    chunkIndex: number;
+  }>> {
+    if (chunkIds.length === 0) return [];
+    const rows = await this.prisma.$queryRaw<Array<{
+      id: string;
+      chunk_index: number;
+    }>>`
+      SELECT id, chunk_index
+      FROM   content_chunks
+      WHERE  id = ANY(${chunkIds}::text[])
+    `;
+    return rows.map((r) => ({ id: r.id, chunkIndex: r.chunk_index }));
   }
 
   // ── Cleanup ───────────────────────────────────────────────────────────────

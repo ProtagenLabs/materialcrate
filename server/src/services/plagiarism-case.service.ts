@@ -6,6 +6,23 @@ import {
 } from "./notifications.js";
 import type { PlagiarismDetectionResult } from "./plagiarism/types.js";
 
+export const createCaseEvent = async (
+  caseId: string,
+  type: string,
+  description: string,
+  options?: { actorId?: string; metadata?: Record<string, unknown> },
+): Promise<void> => {
+  await prisma.caseEvent.create({
+    data: {
+      caseId,
+      type,
+      description,
+      actorId: options?.actorId ?? null,
+      metadata: options?.metadata ? (options.metadata as any) : undefined,
+    },
+  });
+};
+
 export const createPlagiarismCase = async (
   result: PlagiarismDetectionResult,
   suspectedPostId: string,
@@ -49,6 +66,14 @@ export const createPlagiarismCase = async (
       totalChunkCount: result.totalChunks,
       revenueRedirectEnabled: isDuplicate && Boolean(originalPost.authorId),
       matchSummaryJson: {
+        chunkMatches: topMatch.matchedChunks.map((m) => ({
+          newChunkIndex: m.newChunkIndex,
+          matchedChunkId: m.matchedChunkId,
+          matchedPostId: m.matchedPostId,
+          matchType: m.matchType,
+          similarity: m.similarity,
+        })),
+        consecutiveRuns: topMatch.consecutiveRuns,
         matches: result.matchesByPost.slice(0, 5).map((m) => ({
           postId: m.postId,
           weightedScore: m.weightedScore,
@@ -56,15 +81,27 @@ export const createPlagiarismCase = async (
           matchedChunkCount: m.matchedChunks.length,
           verdict: m.verdict,
           confidence: m.confidence,
+          explanation: m.explanation,
         })),
       },
+    },
+  });
+
+  const caseId = plagiarismCase.id;
+
+  await createCaseEvent(caseId, "CASE_CREATED", "Plagiarism case opened automatically after upload analysis.", {
+    metadata: {
+      verdict: result.overallVerdict,
+      similarityScore: result.overallScore,
+      matchedChunkCount: topMatch.matchedChunks.length,
+      totalChunkCount: result.totalChunks,
     },
   });
 
   if (isDuplicate && originalPost.authorId) {
     await prisma.revenueRedirect.create({
       data: {
-        caseId: plagiarismCase.id,
+        caseId,
         sourcePostId: suspectedPostId,
         beneficiaryPostId: originalPostId,
         beneficiaryUserId: originalPost.authorId,
@@ -73,6 +110,12 @@ export const createPlagiarismCase = async (
         active: true,
       },
     });
+
+    await createCaseEvent(caseId, "REVENUE_REDIRECTED",
+      "All future revenue from the suspected copy will be automatically redirected to the original author.", {
+        metadata: { beneficiaryUserId: originalPost.authorId, redirectPercentage: 100 },
+      },
+    );
   }
 
   const scorePercent = `${(result.overallScore * 100).toFixed(0)}%`;
@@ -87,6 +130,7 @@ export const createPlagiarismCase = async (
           : `A document similar to your "${originalPost.title}" was uploaded (${scorePercent} match). Our team will review it.`,
         icon: NOTIFICATION_ICON.PLAGIARISM,
         postId: originalPostId,
+        caseId,
       }).catch(() => null)
     : Promise.resolve(null);
 
@@ -98,8 +142,12 @@ export const createPlagiarismCase = async (
         description: `Your document "${suspectedPost.title}" has been flagged for ${scorePercent} similarity to an existing document. Our moderation team will review it shortly.`,
         icon: NOTIFICATION_ICON.PLAGIARISM,
         postId: suspectedPostId,
+        caseId,
       }).catch(() => null)
     : Promise.resolve(null);
 
   await Promise.all([notifyOriginalAuthor, notifySuspectedCopier]);
+
+  await createCaseEvent(caseId, "NOTIFICATIONS_SENT",
+    "Both the original author and uploader have been notified about this case.");
 };

@@ -189,6 +189,7 @@ const toNotificationGraphQL = async (
     actorUsername,
     postId: targets.postId,
     commentId: targets.commentId,
+    caseId: notification.caseId?.trim?.() || null,
     followRequestId:
       notification.type === NOTIFICATION_TYPE.FOLLOW_REQUEST &&
       normalizedActorId
