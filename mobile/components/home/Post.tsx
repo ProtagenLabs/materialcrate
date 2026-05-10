@@ -20,6 +20,7 @@ import {
   Eye,
 } from "iconsax-react-nativejs";
 import { apiUrl } from "@/lib/api";
+import { useAuth } from "@/lib/auth-store";
 
 export type PostOptionsAnchor = {
   pageX: number;
@@ -99,6 +100,7 @@ export default function Post({
   isArchiveBusy = false,
 }: PostProps) {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const optionsRef = useRef<TouchableOpacity>(null);
 
   const [likeCount, setLikeCount] = useState(post.likeCount ?? 0);
@@ -116,6 +118,10 @@ export default function Post({
   const commentCount = post.commentCount ?? 0;
 
   const handleLike = useCallback(async () => {
+    if (!isAuthenticated) {
+      router.push("/(auth)/login");
+      return;
+    }
     if (isLiking) return;
     setIsLiking(true);
     const wasLiked = viewerHasLiked;
@@ -128,6 +134,7 @@ export default function Post({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ postId: post.id }),
       });
+
       const body = await res.json().catch(() => ({}));
       if (res.ok && body?.post) {
         setLikeCount(body.post.likeCount ?? likeCount);
@@ -140,7 +147,7 @@ export default function Post({
     } finally {
       setIsLiking(false);
     }
-  }, [isLiking, viewerHasLiked, likeCount, post.id]);
+  }, [isAuthenticated, isLiking, viewerHasLiked, likeCount, post.id, router]);
 
   const handleShare = useCallback(async () => {
     await Share.share({
