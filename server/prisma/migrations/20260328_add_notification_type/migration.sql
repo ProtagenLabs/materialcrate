@@ -16,3 +16,4 @@ ALTER COLUMN "type" SET NOT NULL,
 ALTER COLUMN "type" SET DEFAULT 'SYSTEM';
 
 CREATE INDEX IF NOT EXISTS "Notification_userId_type_idx" ON "Notification"("userId", "type");
+CREATE INDEX IF NOT EXISTS "Notification_userId_type_actorId_idx" ON "Notification"("userId", "type", "actorId");

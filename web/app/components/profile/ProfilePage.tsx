@@ -14,7 +14,7 @@ import Post, {
 } from "@/app/components/home/Post";
 import CommentDrawer from "@/app/components/home/CommentDrawer";
 import OptionsDrawer from "@/app/components/home/PostOptions";
-import PdfViewerModal from "@/app/components/home/PdfViewerModal";
+import DocumentViewer from "@/app/components/home/DocumentViewer";
 import FollowersnFollowingList from "./FollowersnFollowingList";
 import Alert from "../Alert";
 
@@ -750,7 +750,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
           router.push(`/create?postId=${selectedPost.id}`);
         }}
       />
-      <PdfViewerModal
+      <DocumentViewer
         isOpen={Boolean(activePdfPost)}
         post={activePdfPost}
         onClose={() => setActivePdfPost(null)}

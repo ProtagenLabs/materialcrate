@@ -25,6 +25,7 @@ const UPDATE_POST_MUTATION = `
       id
       fileUrl
       thumbnailUrl
+      fileType
       title
       categories
       description

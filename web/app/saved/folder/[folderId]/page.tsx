@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import SavedFileCard from "@/app/components/saved/SavedFileCard";
 import { ArrowLeft, DocumentText, Trash } from "iconsax-reactjs";
-import PdfViewerModal from "@/app/components/home/PdfViewerModal";
+import DocumentViewer from "@/app/components/home/DocumentViewer";
 import type { HomePost } from "@/app/components/home/Post";
 import type {
   SavedFolder,
@@ -274,7 +274,7 @@ export default function SavedFolderPage() {
 
   return (
     <div className="min-h-screen bg-surface pb-32 pt-22">
-      <PdfViewerModal
+      <DocumentViewer
         isOpen={Boolean(activePdfPost)}
         post={activePdfPost}
         onClose={() => setActivePdfPost(null)}

@@ -27,6 +27,7 @@ export type HomePost = {
   id: string;
   fileUrl: string;
   thumbnailUrl?: string | null;
+  fileType?: string | null;
   title: string;
   categories: string[];
   description?: string | null;
@@ -449,9 +450,9 @@ export default function Post({
         const safeTitle = (post.title?.trim() || "materialcrate-document")
           .replace(/[<>:"/\\|?*]+/g, "_")
           .replace(/\s+/g, " ");
-        const fileName = safeTitle.toLowerCase().endsWith(".pdf")
-          ? safeTitle
-          : `${safeTitle}.pdf`;
+        const extMap: Record<string, string> = { pdf: "pdf", docx: "docx", doc: "doc" };
+        const ext = extMap[post.fileType ?? "pdf"] ?? "pdf";
+        const fileName = `${safeTitle}.${ext}`;
 
         anchor.href = downloadUrl;
         anchor.download = fileName;
@@ -468,7 +469,7 @@ export default function Post({
         setIsDownloading(false);
       }
     },
-    [ensureAuthenticated, isDownloading, post.id, post.title, showAlert],
+    [ensureAuthenticated, isDownloading, post.id, post.fileType, post.title, showAlert],
   );
 
   useEffect(() => {
@@ -616,6 +617,7 @@ export default function Post({
               fileUrl={post.fileUrl}
               thumbnailUrl={post.thumbnailUrl}
               title={post.title}
+              fileType={post.fileType}
             />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-2">

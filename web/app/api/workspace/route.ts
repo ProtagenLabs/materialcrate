@@ -29,6 +29,7 @@ const WORKSPACE_QUERY = `
           id
           fileUrl
           thumbnailUrl
+          fileType
           title
           categories
           description

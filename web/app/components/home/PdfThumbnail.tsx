@@ -9,6 +9,7 @@ type PdfThumbnailProps = {
   fileUrl?: string;
   thumbnailUrl?: string | null;
   title: string;
+  fileType?: string | null;
 };
 
 type ThumbnailState = "idle" | "loading" | "ready" | "error";
@@ -18,9 +19,11 @@ export default function PdfThumbnail({
   fileUrl,
   thumbnailUrl,
   title,
+  fileType,
 }: PdfThumbnailProps) {
   const { user, isLoading: authLoading } = useAuth();
   const isAuthenticated = !authLoading && Boolean(user);
+  const isWordDoc = fileType === "docx" || fileType === "doc";
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [thumbnailState, setThumbnailState] = useState<ThumbnailState>("idle");
@@ -40,6 +43,11 @@ export default function PdfThumbnail({
   useEffect(() => {
     if (canUseStoredThumbnail) {
       setThumbnailState("ready");
+      return;
+    }
+
+    if (isWordDoc) {
+      setThumbnailState("error");
       return;
     }
 
@@ -66,9 +74,6 @@ export default function PdfThumbnail({
           import.meta.url,
         ).toString();
 
-        // Pass URL directly so pdfjs streams and parses concurrently —
-        // no arrayBuffer() wait. Range requests are disabled since the
-        // proxy returns Accept-Ranges: none.
         const pdf = await pdfjs.getDocument({
           url: proxiedFileUrl,
           httpHeaders: {
@@ -114,7 +119,7 @@ export default function PdfThumbnail({
       const context = canvas.getContext("2d");
       context?.clearRect(0, 0, canvas.width, canvas.height);
     };
-  }, [canUseStoredThumbnail, isAuthenticated, proxiedFileUrl]);
+  }, [canUseStoredThumbnail, isAuthenticated, isWordDoc, proxiedFileUrl]);
 
   return (
     <div className="relative h-40 w-28 shrink-0 overflow-hidden rounded-sm bg-[#E8E8E8]">
@@ -126,6 +131,7 @@ export default function PdfThumbnail({
           width={112}
           height={160}
           unoptimized
+          loading="eager"
           onError={() => {
             setImageFailed(true);
             setThumbnailState("idle");
@@ -143,7 +149,11 @@ export default function PdfThumbnail({
       />
       {!canUseStoredThumbnail && thumbnailState !== "ready" && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#E8E8E8] px-2 text-center text-[10px] font-medium text-ink-2">
-          {thumbnailState === "error" ? "PDF" : "Loading preview..."}
+          {thumbnailState === "error"
+            ? isWordDoc
+              ? fileType?.toUpperCase() ?? "WORD"
+              : "PDF"
+            : "Loading preview..."}
         </div>
       )}
     </div>

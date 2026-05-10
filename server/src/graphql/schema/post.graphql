@@ -2,6 +2,8 @@ type Post {
   id: ID!
   fileUrl: String!
   thumbnailUrl: String
+  fileType: String!
+  renderedHtmlUrl: String
   title: String!
   categories: [String!]!
   description: String
@@ -68,6 +70,7 @@ extend type Query {
   posts(authorUsername: String, limit: Int = 50, offset: Int = 0): [Post!]!
   searchPosts(query: String!, limit: Int = 12, offset: Int = 0): [Post!]!
   recentlyDeletedPosts(limit: Int = 50, offset: Int = 0): [Post!]!
+  postRenderedHtml(id: ID!): String
   comments(
     postId: ID!
     parentCommentId: ID

@@ -12,7 +12,7 @@ import Post, {
 import FeedAd from "./components/home/FeedAd";
 import CommentDrawer from "./components/home/CommentDrawer";
 import OptionsDrawer from "./components/home/PostOptions";
-import PdfViewerModal from "./components/home/PdfViewerModal";
+import DocumentViewer from "./components/home/DocumentViewer";
 import Header from "./components/home/Header";
 import ArchiveDrawer from "./components/home/ArchiveDrawer";
 import Spinner from "./components/Spinner";
@@ -621,7 +621,7 @@ export default function Home() {
           router.push(`/create?postId=${selectedPost.id}`);
         }}
       />
-      <PdfViewerModal
+      <DocumentViewer
         isOpen={Boolean(activePdfPost)}
         post={activePdfPost}
         onClose={() => setActivePdfPost(null)}

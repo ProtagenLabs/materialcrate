@@ -10,6 +10,7 @@ const POST_QUERY = `
       id
       fileUrl
       thumbnailUrl
+      fileType
       title
       categories
       description
@@ -48,6 +49,7 @@ const AUTHENTICATED_POST_QUERY = `
       id
       fileUrl
       thumbnailUrl
+      fileType
       title
       categories
       description

@@ -10,6 +10,7 @@ const POST_HISTORY_QUERY = `
       id
       fileUrl
       thumbnailUrl
+      fileType
       title
       categories
       description

@@ -19,6 +19,7 @@ const FILE_URL_QUERY = `
     post(id: $id) {
       id
       fileUrl
+      fileType
     }
   }
 `;
@@ -93,10 +94,24 @@ export async function GET(req: Request) {
 
   const graphqlBody = await graphqlResponse.json().catch(() => ({}));
   const fileUrl = graphqlBody?.data?.post?.fileUrl?.trim?.() ?? "";
+  const fileType: string = graphqlBody?.data?.post?.fileType ?? "pdf";
 
   if (!fileUrl || !isAllowedFileUrl(fileUrl)) {
     return NextResponse.json({ error: "Invalid file URL" }, { status: 400 });
   }
+
+  const MIME_BY_TYPE: Record<string, string> = {
+    pdf: "application/pdf",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    doc: "application/msword",
+  };
+  const EXT_BY_TYPE: Record<string, string> = {
+    pdf: "pdf",
+    docx: "docx",
+    doc: "doc",
+  };
+  const acceptMime = MIME_BY_TYPE[fileType] ?? "application/pdf";
+  const fileExt = EXT_BY_TYPE[fileType] ?? "pdf";
 
   let upstreamResponse: Response;
   try {
@@ -104,7 +119,7 @@ export async function GET(req: Request) {
       method: "GET",
       cache: "no-store",
       headers: {
-        Accept: "application/pdf,*/*",
+        Accept: `${acceptMime},*/*`,
       },
       signal: AbortSignal.timeout(15000),
     });
@@ -152,10 +167,10 @@ export async function GET(req: Request) {
     status: 200,
     headers: {
       "Content-Type":
-        upstreamResponse.headers.get("content-type") ?? "application/pdf",
+        upstreamResponse.headers.get("content-type") ?? acceptMime,
       "Content-Disposition": isDownloadRequest
-        ? 'attachment; filename="materialcrate-document.pdf"'
-        : 'inline; filename="protected-document.pdf"',
+        ? `attachment; filename="materialcrate-document.${fileExt}"`
+        : `inline; filename="protected-document.${fileExt}"`,
       "Cache-Control": "private, no-store, no-cache, must-revalidate",
       Pragma: "no-cache",
       Expires: "0",

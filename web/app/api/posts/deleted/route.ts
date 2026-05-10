@@ -14,6 +14,7 @@ const RECENTLY_DELETED_QUERY = `
       categories
       fileUrl
       thumbnailUrl
+      fileType
       deletedAt
     }
   }

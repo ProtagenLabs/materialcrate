@@ -32,6 +32,7 @@ const CREATE_POST_MUTATION = `
       id
       fileUrl
       thumbnailUrl
+      fileType
       title
       categories
       description
@@ -95,6 +96,20 @@ export async function POST(req: Request) {
     );
   }
 
+  // Determine MIME type: prefer what the browser reports, fall back to
+  // detecting from the file extension so Word files aren't misidentified.
+  const MIME_BY_EXT: Record<string, string> = {
+    ".pdf": "application/pdf",
+    ".docx":
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".doc": "application/msword",
+  };
+  const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] ?? "";
+  const resolvedMime =
+    file.type && file.type !== "application/octet-stream"
+      ? file.type
+      : (MIME_BY_EXT[ext] ?? file.type ?? "application/pdf");
+
   const arrayBuffer = await file.arrayBuffer();
   const fileBase64 = Buffer.from(arrayBuffer).toString("base64");
   let parsedYear: number | null = null;
@@ -125,7 +140,7 @@ export async function POST(req: Request) {
             ? thumbnailBase64.trim()
             : null,
         fileName: file.name,
-        mimeType: file.type || "application/pdf",
+        mimeType: resolvedMime,
         title: title.trim(),
         categories: normalizedCategories,
         description:

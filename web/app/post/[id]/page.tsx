@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "iconsax-reactjs";
 import CommentDrawer from "@/app/components/home/CommentDrawer";
 import Post, { type HomePost } from "@/app/components/home/Post";
-import PdfViewerModal from "@/app/components/home/PdfViewerModal";
+import DocumentViewer from "@/app/components/home/DocumentViewer";
 
 export default function PostDetailPage() {
   const params = useParams<{ id: string }>();
@@ -86,7 +86,7 @@ export default function PostDetailPage() {
         postId={post?.id ?? null}
         post={post}
       />
-      <PdfViewerModal
+      <DocumentViewer
         isOpen={Boolean(activePdfPost)}
         post={activePdfPost}
         onClose={() => setActivePdfPost(null)}

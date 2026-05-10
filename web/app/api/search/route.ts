@@ -22,6 +22,7 @@ const SEARCH_QUERY = `
       id
       fileUrl
       thumbnailUrl
+      fileType
       title
       categories
       description
@@ -71,6 +72,7 @@ const AUTHENTICATED_SEARCH_QUERY = `
       id
       fileUrl
       thumbnailUrl
+      fileType
       title
       categories
       description

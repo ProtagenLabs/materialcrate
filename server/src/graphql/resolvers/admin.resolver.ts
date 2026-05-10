@@ -269,11 +269,28 @@ export const AdminResolver = {
 
       const normalizedMime = mimeType.toLowerCase();
       const normalizedName = fileName.toLowerCase();
+
+      const DOCX_MIME =
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      const DOC_MIME = "application/msword";
+
       const isPdf =
         normalizedMime === "application/pdf" || normalizedName.endsWith(".pdf");
-      if (!isPdf) {
-        throw new Error("Only PDF files are allowed");
+      const isDocx =
+        normalizedMime === DOCX_MIME || normalizedName.endsWith(".docx");
+      const isDoc =
+        normalizedMime === DOC_MIME || normalizedName.endsWith(".doc");
+
+      if (!isPdf && !isDocx && !isDoc) {
+        throw new Error("Only PDF, DOCX, and DOC files are allowed");
       }
+
+      const fileType = isPdf ? "pdf" : isDocx ? "docx" : "doc";
+      const s3ContentType = isPdf
+        ? "application/pdf"
+        : isDocx
+          ? DOCX_MIME
+          : DOC_MIME;
 
       const fileBuffer = Buffer.from(fileBase64, "base64");
       if (!fileBuffer.length) {
@@ -287,7 +304,7 @@ export const AdminResolver = {
           Bucket: privateBucket,
           Key: key,
           Body: fileBuffer,
-          ContentType: "application/pdf",
+          ContentType: s3ContentType,
         }),
       );
 
@@ -302,7 +319,7 @@ export const AdminResolver = {
             thumbnailBuffer.length <= MAX_POST_THUMBNAIL_BYTES
           ) {
             const thumbnailBaseName =
-              fileName.replace(/\.pdf$/i, "") || "document";
+              fileName.replace(/\.(pdf|docx?|doc)$/i, "") || "document";
             const thumbnailKey = `thumbnails/${Date.now()}-${randomUUID()}-${sanitizeFileName(thumbnailBaseName)}.webp`;
 
             await s3.send(
@@ -321,6 +338,44 @@ export const AdminResolver = {
         }
       }
 
+      let renderedHtmlUrl: string | null = null;
+      if (!isPdf) {
+        try {
+          const { convertWordToHtml, generateWordThumbnail } = await import(
+            "../../services/document-converter.js"
+          );
+          const { html, text } = await convertWordToHtml(fileBuffer);
+          const htmlKey = `documents/html/${Date.now()}-${randomUUID()}-${sanitizeFileName(fileName)}.html`;
+          await s3.send(
+            new PutObjectCommand({
+              Bucket: privateBucket,
+              Key: htmlKey,
+              Body: Buffer.from(html, "utf8"),
+              ContentType: "text/html; charset=utf-8",
+            }),
+          );
+          renderedHtmlUrl = buildPrivateS3Url(htmlKey);
+
+          if (!thumbnailUrl && text.trim()) {
+            const thumbBuffer = await generateWordThumbnail(text);
+            if (thumbBuffer) {
+              const thumbKey = `thumbnails/${Date.now()}-${randomUUID()}.webp`;
+              await s3.send(
+                new PutObjectCommand({
+                  Bucket: publicBucket,
+                  Key: thumbKey,
+                  Body: thumbBuffer,
+                  ContentType: "image/webp",
+                }),
+              );
+              thumbnailUrl = buildCloudFrontUrl(thumbKey);
+            }
+          }
+        } catch (err) {
+          console.error("[admin] word-to-html conversion failed:", err);
+        }
+      }
+
       const normalizedCategories = categories
         .map((c) => (typeof c === "string" ? c.trim() : ""))
         .filter(Boolean)
@@ -335,6 +390,8 @@ export const AdminResolver = {
           data: {
             fileUrl,
             thumbnailUrl,
+            fileType,
+            renderedHtmlUrl,
             title: title.trim(),
             categories: normalizedCategories,
             description: description?.trim() || null,
@@ -353,6 +410,7 @@ export const AdminResolver = {
             year: nextPost.year,
             fileUrl: nextPost.fileUrl,
             thumbnailUrl: nextPost.thumbnailUrl,
+            fileType: nextPost.fileType,
             editorId: bot.id,
           },
         });

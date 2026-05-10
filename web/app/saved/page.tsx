@@ -6,7 +6,7 @@ import Image from "next/image";
 import SavedFileCard from "@/app/components/saved/SavedFileCard";
 import { FolderOpen, Folder2, DocumentText } from "iconsax-reactjs";
 import emptyWorkspace from "@/assets/icons/empty-workspace.svg";
-import PdfViewerModal from "@/app/components/home/PdfViewerModal";
+import DocumentViewer from "@/app/components/home/DocumentViewer";
 import type { HomePost } from "@/app/components/home/Post";
 import type {
   SavedFolder,
@@ -153,7 +153,7 @@ export default function SavedPage() {
 
   return (
     <div className="min-h-dvh bg-surface pb-32 pt-20">
-      <PdfViewerModal
+      <DocumentViewer
         isOpen={Boolean(activePdfPost)}
         post={activePdfPost}
         onClose={() => setActivePdfPost(null)}

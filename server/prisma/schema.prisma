@@ -195,6 +195,8 @@ model Post {
   id         String   @id @default(cuid())
   fileUrl    String
   thumbnailUrl String?
+  fileType   String   @default("pdf")
+  renderedHtmlUrl String?
   pinned     Boolean  @default(false)
   commentsDisabled Boolean @default(false)
   deleted    Boolean  @default(false)
@@ -301,6 +303,7 @@ model PostVersion {
   year          Int?
   fileUrl       String
   thumbnailUrl  String?
+  fileType      String   @default("pdf")
   editorId      String?
   createdAt     DateTime @default(now())
 

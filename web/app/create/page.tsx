@@ -10,6 +10,21 @@ import {
   DocumentText,
 } from "iconsax-reactjs";
 import { createPdfThumbnailBase64 } from "@/app/lib/pdf-thumbnail";
+
+const ACCEPTED_FILE_TYPES =
+  ".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,application/msword";
+
+function isWordFile(file: File): boolean {
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+  return (
+    name.endsWith(".docx") ||
+    name.endsWith(".doc") ||
+    type ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    type === "application/msword"
+  );
+}
 import {
   POST_CATEGORIES,
   normalizeAllowedCategory,
@@ -132,6 +147,9 @@ export default function CreatePage() {
       setIsGeneratingThumbnail(false);
       return;
     }
+
+    // Word documents don't support client-side thumbnail generation.
+    if (isWordFile(file)) return;
 
     const requestId = thumbnailRequestIdRef.current + 1;
     thumbnailRequestIdRef.current = requestId;
@@ -261,7 +279,7 @@ export default function CreatePage() {
                   ref={fileInputRef}
                   id="material-upload"
                   type="file"
-                  accept=".pdf,application/pdf"
+                  accept={ACCEPTED_FILE_TYPES}
                   className="hidden"
                   onChange={handleFileChange}
                   required
@@ -281,7 +299,7 @@ export default function CreatePage() {
                           </span>
                         </p>
                         <p className="text-[10px] text-ink-2 font-medium text-center">
-                          Max file size: 20MB (PDF)
+                          Max file size: 20MB (PDF, DOCX, DOC)
                         </p>
                       </div>
                     </>

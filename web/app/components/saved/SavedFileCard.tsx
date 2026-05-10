@@ -66,6 +66,7 @@ export default function SavedFileCard({
               fileUrl={savedPost.post.fileUrl}
               thumbnailUrl={savedPost.post.thumbnailUrl}
               title={savedPost.post.title}
+              fileType={savedPost.post.fileType}
             />
           )}
         </button>

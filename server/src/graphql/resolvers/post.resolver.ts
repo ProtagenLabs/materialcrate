@@ -806,6 +806,7 @@ const buildPostVersionSnapshot = (
     year?: number | null;
     fileUrl: string;
     thumbnailUrl?: string | null;
+    fileType?: string | null;
   },
   versionNumber: number,
   editorId?: string | null,
@@ -818,6 +819,7 @@ const buildPostVersionSnapshot = (
   year: post.year ?? null,
   fileUrl: post.fileUrl,
   thumbnailUrl: post.thumbnailUrl ?? null,
+  fileType: post.fileType ?? "pdf",
   editorId: editorId ?? null,
 });
 
@@ -910,6 +912,45 @@ export const PostResolver = {
       });
 
       return post ? mapPostForGraphQL(post, viewerId) : null;
+    },
+    postRenderedHtml: async (
+      _: unknown,
+      { id }: { id: string },
+      ctx: GraphQLContext,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedId = id?.trim();
+      if (!normalizedId) return null;
+
+      const post = await prisma.post.findFirst({
+        where: {
+          id: normalizedId,
+          ...buildVisiblePostWhere(),
+        },
+        select: { id: true, fileType: true, renderedHtmlUrl: true },
+      });
+
+      if (!post || post.fileType === "pdf" || !post.renderedHtmlUrl) {
+        return null;
+      }
+
+      const privateBucket = process.env.AWS_S3_PRIVATE_BUCKET;
+      if (!privateBucket) return null;
+
+      try {
+        const parsedUrl = new URL(post.renderedHtmlUrl);
+        const key = parsedUrl.pathname.slice(1);
+        const result = await s3.send(
+          new GetObjectCommand({ Bucket: privateBucket, Key: key }),
+        );
+        return (await result.Body?.transformToString("utf-8")) ?? null;
+      } catch (err) {
+        console.error(`[postRenderedHtml] S3 fetch failed for post ${normalizedId}:`, err);
+        return null;
+      }
     },
     postVersions: async (
       _: unknown,
@@ -1248,15 +1289,43 @@ export const PostResolver = {
 
       const normalizedMime = mimeType.toLowerCase();
       const normalizedName = fileName.toLowerCase();
+
+      const DOCX_MIME =
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      const DOC_MIME = "application/msword";
+
       const isPdf =
         normalizedMime === "application/pdf" || normalizedName.endsWith(".pdf");
-      if (!isPdf) {
-        throw new Error("Only PDF files are allowed");
+      const isDocx =
+        normalizedMime === DOCX_MIME || normalizedName.endsWith(".docx");
+      const isDoc =
+        normalizedMime === DOC_MIME || normalizedName.endsWith(".doc");
+
+      if (!isPdf && !isDocx && !isDoc) {
+        throw new Error("Only PDF, DOCX, and DOC files are allowed");
       }
+
+      const fileType = isPdf ? "pdf" : isDocx ? "docx" : "doc";
+      const s3ContentType = isPdf
+        ? "application/pdf"
+        : isDocx
+          ? DOCX_MIME
+          : DOC_MIME;
 
       const fileBuffer = Buffer.from(fileBase64, "base64");
       if (!fileBuffer.length) {
         throw new Error("Uploaded file is empty");
+      }
+
+      if (!isPdf) {
+        const { isValidWordBuffer } = await import(
+          "../../services/document-converter.js"
+        );
+        if (!isValidWordBuffer(fileBuffer, fileType as "docx" | "doc")) {
+          throw new Error(
+            `The uploaded file does not appear to be a valid ${fileType.toUpperCase()} document`,
+          );
+        }
       }
 
       const key = `documents/${Date.now()}-${randomUUID()}-${sanitizeFileName(fileName)}`;
@@ -1266,7 +1335,7 @@ export const PostResolver = {
           Bucket: privateBucket,
           Key: key,
           Body: fileBuffer,
-          ContentType: "application/pdf",
+          ContentType: s3ContentType,
         }),
       );
 
@@ -1293,7 +1362,7 @@ export const PostResolver = {
             const thumbnailExt = isWebp ? ".webp" : ".jpg";
             const thumbnailContentType = isWebp ? "image/webp" : "image/jpeg";
             const thumbnailBaseName =
-              fileName.replace(/\.pdf$/i, "") || "document";
+              fileName.replace(/\.(pdf|docx?|doc)$/i, "") || "document";
             const thumbnailKey = `thumbnails/${Date.now()}-${randomUUID()}-${sanitizeFileName(
               thumbnailBaseName,
             )}${thumbnailExt}`;
@@ -1314,11 +1383,53 @@ export const PostResolver = {
         }
       }
 
+      // Convert Word documents to HTML for in-browser rendering.
+      // Stored as a private S3 object; URL saved alongside the original file.
+      let renderedHtmlUrl: string | null = null;
+      if (!isPdf) {
+        try {
+          const { convertWordToHtml, generateWordThumbnail } = await import(
+            "../../services/document-converter.js"
+          );
+          const { html, text } = await convertWordToHtml(fileBuffer);
+          const htmlKey = `documents/html/${Date.now()}-${randomUUID()}-${sanitizeFileName(fileName)}.html`;
+          await s3.send(
+            new PutObjectCommand({
+              Bucket: privateBucket,
+              Key: htmlKey,
+              Body: Buffer.from(html, "utf8"),
+              ContentType: "text/html; charset=utf-8",
+            }),
+          );
+          renderedHtmlUrl = buildPrivateS3Url(htmlKey);
+
+          if (!thumbnailUrl && text.trim()) {
+            const thumbBuffer = await generateWordThumbnail(text);
+            if (thumbBuffer) {
+              const thumbKey = `thumbnails/${Date.now()}-${randomUUID()}.webp`;
+              await s3.send(
+                new PutObjectCommand({
+                  Bucket: publicBucket,
+                  Key: thumbKey,
+                  Body: thumbBuffer,
+                  ContentType: "image/webp",
+                }),
+              );
+              thumbnailUrl = buildCloudFrontUrl(thumbKey);
+            }
+          }
+        } catch (err) {
+          console.error("[post] word-to-html conversion failed:", err);
+        }
+      }
+
       const createdPost = await prisma.$transaction(async (tx) => {
         const nextPost = await tx.post.create({
           data: {
             fileUrl,
             thumbnailUrl,
+            fileType,
+            renderedHtmlUrl,
             title: title.trim(),
             categories: normalizedCategories,
             description: description?.trim() || null,
@@ -1349,7 +1460,7 @@ export const PostResolver = {
         try {
           const plagiarismResult = await checkUploadForPlagiarism(
             fileBase64,
-            "application/pdf",
+            s3ContentType,
             createdPost.id,
           );
           if (plagiarismResult) {
@@ -1366,7 +1477,7 @@ export const PostResolver = {
           // Index after check so our own content doesn't match itself.
           if (plagiarismResult !== null) {
             const { extractText } = await import("../../services/plagiarism/text-extractor.js");
-            const text = await extractText(fileBase64, "application/pdf");
+            const text = await extractText(fileBase64, s3ContentType);
             if (text) await indexPostContent(createdPost.id, text);
           }
         } catch (err) {

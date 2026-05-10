@@ -12,6 +12,7 @@ const PIN_POST_MUTATION = `
       id
       fileUrl
       thumbnailUrl
+      fileType
       title
       categories
       description

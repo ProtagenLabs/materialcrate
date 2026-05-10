@@ -29,6 +29,7 @@ const ARCHIVE_QUERY = `
           id
           fileUrl
           thumbnailUrl
+          fileType
           title
           categories
           description
