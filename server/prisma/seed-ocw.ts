@@ -7,14 +7,20 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'node:module';
 import { PrismaClient } from '@prisma/client';
 import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { createCanvas } from '@napi-rs/canvas';
+import { createCanvas, DOMMatrix, Path2D, ImageData } from '@napi-rs/canvas';
 import sharp from 'sharp';
 import bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
 
-// pdfjs-dist ships as CJS; load via createRequire in this ESM file
+// pdfjs-dist@3 (legacy build) tries to require the old 'canvas' package to
+// polyfill DOMMatrix / Path2D. That package doesn't build on Node v24.
+// Set the globals from @napi-rs/canvas BEFORE requiring pdfjs so it skips
+// its broken fallback entirely.
+(globalThis as any).DOMMatrix ??= DOMMatrix;
+(globalThis as any).Path2D ??= Path2D;
+(globalThis as any).ImageData ??= ImageData;
+
 const _require = createRequire(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const pdfjsLib = _require('pdfjs-dist/legacy/build/pdf.js') as any;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -208,6 +214,16 @@ const COURSES: OcwCourse[] = [
 ];
 
 // ─── Fake Users ───────────────────────────────────────────────────────────────
+
+const DICEBEAR_STYLES = [
+  'adventurer', 'adventurer-neutral', 'avataaars', 'avataaars-neutral',
+  'big-ears', 'big-ears-neutral', 'big-smile', 'bottts', 'bottts-neutral',
+  'croodles', 'croodles-neutral', 'dylan', 'fun-emoji', 'glass',
+  'icons', 'identicon', 'initials', 'lorelei', 'lorelei-neutral',
+  'micah', 'miniavs', 'notionists', 'notionists-neutral', 'open-peeps',
+  'personas', 'pixel-art', 'pixel-art-neutral', 'rings', 'shapes',
+  'thumbs',
+];
 
 const SEED_USERS = [
   // prolific archivist — 20 posts, premium badge
@@ -634,12 +650,14 @@ async function seed() {
   // ── Create or reuse users ──
   console.log('Creating users (skipping any that already exist)...');
   const createdUsers = await Promise.all(
-    SEED_USERS.map(async (u) => {
+    SEED_USERS.map(async (u, idx) => {
       const existing = await prisma.user.findFirst({ where: { email: u.email } });
       if (existing) {
         console.log(`  Reusing existing user: ${u.email}`);
         return existing;
       }
+      const style = DICEBEAR_STYLES[idx % DICEBEAR_STYLES.length];
+      const profilePicture = `https://api.dicebear.com/9.x/${style}/png?seed=${encodeURIComponent(u.username)}&size=200`;
       return prisma.user.create({
         data: {
           username: u.username,
@@ -650,6 +668,7 @@ async function seed() {
           institution: u.institution,
           program: u.program,
           subscriptionPlan: u.plan,
+          profilePicture,
         },
       });
     })
