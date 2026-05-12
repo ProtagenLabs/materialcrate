@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -11,14 +11,14 @@ import {
   Platform,
   ScrollView,
   Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import { GRAPHQL_URL, gql } from '@/lib/api';
-import { setAuth } from '@/lib/auth-store';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
+import { GRAPHQL_URL, gql } from "@/lib/api";
+import { setAuth } from "@/lib/auth-store";
 
-const BRAND = '#E1761F';
+const BRAND = "#E1761F";
 
 const LOGIN_MUTATION = `
   mutation Login($email: String!, $password: String!) {
@@ -37,21 +37,21 @@ const RESTORE_MUTATION = `
 `;
 
 function formatRestoreDeadline(value?: string | null) {
-  if (!value) return 'within 30 days';
+  if (!value) return "within 30 days";
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return 'within 30 days';
-  return parsed.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
+  if (Number.isNaN(parsed.getTime())) return "within 30 days";
+  return parsed.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
 export default function LoginScreen() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -59,27 +59,30 @@ export default function LoginScreen() {
 
   const handleGoogleAuth = async () => {
     await WebBrowser.openBrowserAsync(
-      `${GRAPHQL_URL.replace('/graphql', '')}/api/auth/social/google?mode=login`,
+      `${GRAPHQL_URL.replace("/graphql", "")}/api/auth/social/google?mode=login`,
     );
   };
 
-  const handleRestore = (restoreToken: string, restoreDeadline?: string | null) => {
+  const handleRestore = (
+    restoreToken: string,
+    restoreDeadline?: string | null,
+  ) => {
     Alert.alert(
-      'Restore account?',
+      "Restore account?",
       `This account is currently deleted. If you continue, it will be restored and available again. You can restore it until ${formatRestoreDeadline(restoreDeadline)}.`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Restore account',
+          text: "Restore account",
           onPress: async () => {
             setLoading(true);
             setError(null);
             try {
               await gql(RESTORE_MUTATION, {}, restoreToken);
               setAuth(restoreToken);
-              router.replace('/(tabs)');
+              router.replace("/(tabs)");
             } catch {
-              setError('Failed to restore account');
+              setError("Failed to restore account");
             } finally {
               setLoading(false);
             }
@@ -94,8 +97,8 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const res = await fetch(GRAPHQL_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: LOGIN_MUTATION,
           variables: { email, password },
@@ -107,20 +110,23 @@ export default function LoginScreen() {
         const firstError = json.errors[0];
 
         // Email not verified — send to verification step
-        if (firstError?.extensions?.code === 'EMAIL_NOT_VERIFIED') {
+        if (firstError?.extensions?.code === "EMAIL_NOT_VERIFIED") {
           router.push({
-            pathname: '/(auth)/register',
+            pathname: "/(auth)/register",
             params: {
               email,
-              verify: '1',
-              verificationDeadline: firstError.extensions.verificationDeadline ?? '',
+              verify: "1",
+              verificationDeadline:
+                firstError.extensions.verificationDeadline ?? "",
             },
           } as never);
           return;
         }
 
-        const msg = firstError?.message ?? 'Login failed';
-        setError(msg === 'Invalid credentials' ? 'Incorrect email or password' : msg);
+        const msg = firstError?.message ?? "Login failed";
+        setError(
+          msg === "Invalid credentials" ? "Incorrect email or password" : msg,
+        );
         return;
       }
 
@@ -132,9 +138,9 @@ export default function LoginScreen() {
       }
 
       setAuth(token);
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     } catch {
-      setError('Login failed');
+      setError("Login failed");
     } finally {
       setLoading(false);
     }
@@ -143,7 +149,7 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -151,7 +157,10 @@ export default function LoginScreen() {
       >
         <View style={styles.topBar}>
           {step !== 1 && (
-            <TouchableOpacity onPress={() => setStep(step - 1)} style={styles.backBtn}>
+            <TouchableOpacity
+              onPress={() => setStep(step - 1)}
+              style={styles.backBtn}
+            >
               <Ionicons name="arrow-back" size={24} color="#111" />
             </TouchableOpacity>
           )}
@@ -159,9 +168,12 @@ export default function LoginScreen() {
 
         <View style={styles.card}>
           <View style={styles.header}>
-            <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+            <Image
+              source={require("@/assets/images/logo.png")}
+              style={styles.logo}
+            />
             <Text style={styles.title}>
-              {step === 1 ? 'Welcome Back' : 'Enter your password'}
+              {step === 1 ? "Welcome Back" : "Enter your password"}
             </Text>
           </View>
 
@@ -171,10 +183,12 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
-          {/* Step 1 — Email */}
           {step === 1 && (
             <View style={styles.content}>
-              <TouchableOpacity style={styles.socialBtn} onPress={handleGoogleAuth}>
+              <TouchableOpacity
+                style={styles.socialBtn}
+                onPress={handleGoogleAuth}
+              >
                 <Text style={styles.socialBtnText}>Continue with Google</Text>
                 <Ionicons name="logo-google" size={20} color="#111" />
               </TouchableOpacity>
@@ -200,19 +214,25 @@ export default function LoginScreen() {
                 {"Don't have an account? "}
                 <Text
                   style={styles.switchLink}
-                  onPress={() => router.replace('/(auth)/register')}
+                  onPress={() => router.replace("/(auth)/register")}
                 >
                   Sign up
                 </Text>
               </Text>
 
               <TouchableOpacity
-                style={[styles.actionBtn, !isValidEmail && styles.actionBtnDisabled]}
+                style={[
+                  styles.actionBtn,
+                  !isValidEmail && styles.actionBtnDisabled,
+                ]}
                 onPress={() => setStep(2)}
                 disabled={!isValidEmail}
               >
                 <Text
-                  style={[styles.actionBtnText, !isValidEmail && styles.actionBtnTextDisabled]}
+                  style={[
+                    styles.actionBtnText,
+                    !isValidEmail && styles.actionBtnTextDisabled,
+                  ]}
                 >
                   NEXT
                 </Text>
@@ -220,7 +240,6 @@ export default function LoginScreen() {
             </View>
           )}
 
-          {/* Step 2 — Password */}
           {step === 2 && (
             <View style={styles.content}>
               <Text style={styles.label}>PASSWORD</Text>
@@ -245,7 +264,10 @@ export default function LoginScreen() {
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
                   <Text
-                    style={[styles.actionBtnText, !password && styles.actionBtnTextDisabled]}
+                    style={[
+                      styles.actionBtnText,
+                      !password && styles.actionBtnTextDisabled,
+                    ]}
                   >
                     SIGN IN
                   </Text>
@@ -260,75 +282,95 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F1EE' },
+  container: { flex: 1, backgroundColor: "#F2F1EE" },
   scroll: { flexGrow: 1, paddingHorizontal: 16, paddingVertical: 16 },
-  topBar: { height: 40, justifyContent: 'center', marginBottom: 4 },
+  topBar: { height: 40, justifyContent: "center", marginBottom: 4 },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   card: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 28,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.04,
     shadowRadius: 36,
     shadowOffset: { width: 0, height: 12 },
     elevation: 2,
   },
-  header: { alignItems: 'center', gap: 16, marginTop: 8, marginBottom: 28 },
+  header: { alignItems: "center", gap: 16, marginTop: 8, marginBottom: 28 },
   logo: { width: 50, height: 50, borderRadius: 12 },
-  title: { fontSize: 28, fontWeight: '600', textAlign: 'center', color: '#111' },
+  title: {
+    fontSize: 28,
+    fontWeight: "600",
+    textAlign: "center",
+    color: "#111",
+  },
   errorBox: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: "#FEE2E2",
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
   },
-  errorText: { color: '#B91C1C', fontSize: 14 },
+  errorText: { color: "#B91C1C", fontSize: 14 },
   content: { flex: 1 },
   socialBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: "#E0E0E0",
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
-  socialBtnText: { fontSize: 15, fontWeight: '500', color: '#111' },
-  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 16, gap: 8 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#D5D5D5' },
-  dividerText: { fontSize: 10, fontWeight: '500', color: '#999', letterSpacing: 1.5 },
+  socialBtnText: { fontSize: 15, fontWeight: "500", color: "#111" },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 16,
+    gap: 8,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#D5D5D5" },
+  dividerText: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: "#999",
+    letterSpacing: 1.5,
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: "#E0E0E0",
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: '#F8F8F6',
-    color: '#111',
+    backgroundColor: "#F8F8F6",
+    color: "#111",
   },
-  label: { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 8 },
-  switchText: { fontSize: 14, color: '#555', marginTop: 10 },
-  switchLink: { fontWeight: '700', color: '#111' },
+  label: { fontSize: 13, fontWeight: "600", color: "#333", marginBottom: 8 },
+  switchText: { fontSize: 14, color: "#555", marginTop: 10 },
+  switchLink: { fontWeight: "700", color: "#111" },
   actionBtn: {
     backgroundColor: BRAND,
     borderRadius: 100,
     paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 24,
   },
-  actionBtnDisabled: { backgroundColor: '#EBEBEB' },
-  actionBtnText: { color: '#fff', fontWeight: '600', fontSize: 15, letterSpacing: 1 },
-  actionBtnTextDisabled: { color: '#aaa' },
+  actionBtnDisabled: { backgroundColor: "#EBEBEB" },
+  actionBtnText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
+    letterSpacing: 1,
+  },
+  actionBtnTextDisabled: { color: "#aaa" },
 });

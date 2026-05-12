@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import HomeHeader from "@/components/HomeHeader";
 import Post, { HomePost, PostOptionsAnchor } from "@/components/home/Post";
+import CommentDrawer from "@/components/home/CommentDrawer";
 import PdfViewerModal from "@/components/home/PdfViewerModal";
 import PostOptionsSheet from "@/components/home/PostOptionsSheet";
 import { gql } from "@/lib/api";
@@ -48,6 +49,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPost, setSelectedPost] = useState<HomePost | null>(null);
+  const [commentPost, setCommentPost] = useState<HomePost | null>(null);
   const [optionsState, setOptionsState] = useState<{
     post: HomePost;
     anchor: PostOptionsAnchor;
@@ -126,6 +128,7 @@ export default function HomeScreen() {
           <Post
             post={item}
             onFileClick={setSelectedPost}
+            onCommentClick={setCommentPost}
             onOptionsClick={(post, anchor) => setOptionsState({ post, anchor })}
           />
         )}
@@ -143,6 +146,12 @@ export default function HomeScreen() {
             <ActivityIndicator style={styles.loader} color="#E1761F" />
           ) : null
         }
+      />
+      <CommentDrawer
+        postId={commentPost?.id ?? null}
+        post={commentPost}
+        isOpen={commentPost !== null}
+        onClose={() => setCommentPost(null)}
       />
       <PostOptionsSheet
         post={optionsState?.post ?? null}
