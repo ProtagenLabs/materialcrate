@@ -5,12 +5,14 @@ interface FullNameProps {
   displayName: string;
   setDisplayName: React.Dispatch<React.SetStateAction<string>>;
   fixedAction?: boolean;
+  submitLabel?: string;
 }
 
 export default function FullName({
   displayName,
   setDisplayName,
   fixedAction = false,
+  submitLabel = "NEXT",
 }: FullNameProps) {
   const isNextDisabled = displayName.trim().length < 2;
 
@@ -39,7 +41,7 @@ export default function FullName({
         className="mt-8 w-full"
         disabled={isNextDisabled}
       >
-        NEXT
+        {submitLabel}
       </ActionButton>
     </div>
   );

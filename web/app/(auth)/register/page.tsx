@@ -9,8 +9,6 @@ import Password from "@/app/components/register/Password";
 import Verification from "@/app/components/register/Verification";
 import Username from "@/app/components/register/Username";
 import FullName from "@/app/components/register/FullName";
-import Institution from "@/app/components/register/Institution";
-import Program from "@/app/components/register/Program";
 import Alert from "@/app/components/Alert";
 
 export default function Page() {
@@ -25,8 +23,6 @@ export default function Page() {
   const [password, setPassword] = useState<string>("");
   const [username, setUsername] = useState<string>("");
   const [displayName, setDisplayName] = useState<string>("");
-  const [institution, setInstitution] = useState<string>("");
-  const [program, setProgram] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [isPrefillingSocial, setIsPrefillingSocial] = useState<boolean>(false);
@@ -88,17 +84,6 @@ export default function Page() {
     e.preventDefault();
     setError(null);
 
-    if (isSocialSignup) {
-      if (step === 3 && username) {
-        setStep(4);
-      } else if (step === 4 && displayName.trim()) {
-        setStep(5);
-      } else if (step === 5 && institution) {
-        setStep(6);
-      }
-      return;
-    }
-
     if (step === 1 && email) {
       const trimmedEmail = email.trim();
       try {
@@ -124,12 +109,6 @@ export default function Page() {
       setStep(2);
     } else if (step === 2 && password) {
       setStep(3);
-    } else if (step === 3 && username) {
-      setStep(4);
-    } else if (step === 4 && displayName.trim()) {
-      setStep(5);
-    } else if (step === 5 && institution) {
-      setStep(6);
     }
   };
 
@@ -146,8 +125,6 @@ export default function Page() {
           body: JSON.stringify({
             username,
             displayName,
-            institution,
-            program,
           }),
         });
 
@@ -168,8 +145,6 @@ export default function Page() {
           password,
           username,
           displayName,
-          institution,
-          program,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -198,10 +173,6 @@ export default function Page() {
 
   const handleUsernameValidated = (validatedUsername: string) => {
     setUsername(validatedUsername);
-    if (isSocialSignup) {
-      setStep(4);
-      return;
-    }
     setStep(4);
   };
 
@@ -211,17 +182,8 @@ export default function Page() {
       return;
     }
 
-    if (step === 5) {
-      setStep(4);
-      return;
-    }
     if (step === 4) {
       setStep(3);
-      return;
-    }
-    if (step === 6) {
-      setStep(5);
-      return;
     }
   };
 
@@ -229,17 +191,7 @@ export default function Page() {
     <form
       className="min-h-dvh bg-surface-high px-4 py-4 sm:px-6 sm:py-6"
       onSubmit={
-        isSocialSignup
-          ? step < 6
-            ? handleNext
-            : step === 6
-              ? handleSubmit
-              : handleNoopSubmit
-          : step < 6
-            ? handleNext
-            : step === 6
-              ? handleSubmit
-              : handleNoopSubmit
+        step < 4 ? handleNext : step === 4 ? handleSubmit : handleNoopSubmit
       }
     >
       {isVerifyOnly && verificationDeadlineParam && (
@@ -281,9 +233,7 @@ export default function Page() {
                   ? "Create your username"
                   : step === 4
                     ? "Enter your display name"
-                    : step === 5
-                      ? "Enter your institution's name"
-                      : step === 6 && "Enter your program/main option"}
+                    : null}
           </h1>
         </div>
 
@@ -304,18 +254,6 @@ export default function Page() {
               <FullName
                 displayName={displayName}
                 setDisplayName={setDisplayName}
-                fixedAction
-              />
-            ) : step === 5 ? (
-              <Institution
-                institution={institution}
-                setInstitution={setInstitution}
-                fixedAction
-              />
-            ) : step === 6 ? (
-              <Program
-                program={program}
-                setProgram={setProgram}
                 submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
                 fixedAction
               />
@@ -339,18 +277,6 @@ export default function Page() {
             <FullName
               displayName={displayName}
               setDisplayName={setDisplayName}
-              fixedAction
-            />
-          ) : step === 5 ? (
-            <Institution
-              institution={institution}
-              setInstitution={setInstitution}
-              fixedAction
-            />
-          ) : step === 6 ? (
-            <Program
-              program={program}
-              setProgram={setProgram}
               submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
               fixedAction
             />

@@ -25,10 +25,10 @@ const Q_USERNAME_AVAILABLE = `query UsernameAvailable($username: String!) { user
 const M_SIGNUP = `
   mutation Signup(
     $email: String! $password: String! $username: String!
-    $displayName: String! $institution: String $program: String
+    $displayName: String!
   ) {
     signup(email: $email, password: $password, username: $username,
-           displayName: $displayName, institution: $institution, program: $program) {
+           displayName: $displayName) {
       token
     }
   }
@@ -60,8 +60,6 @@ const TITLES: Record<number, string> = {
   2: 'Create Password',
   3: 'Create your username',
   4: 'Enter your display name',
-  5: "Enter your institution's name",
-  6: 'Enter your program/main option',
 };
 
 export default function RegisterScreen() {
@@ -79,8 +77,6 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [institution, setInstitution] = useState('');
-  const [program, setProgram] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -204,7 +200,7 @@ export default function RegisterScreen() {
     setError(null);
     setLoading(true);
     try {
-      await gql(M_SIGNUP, { email, password, username, displayName, institution, program });
+      await gql(M_SIGNUP, { email, password, username, displayName });
       setStep(7);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Oops, something went wrong :-(');
@@ -468,68 +464,20 @@ export default function RegisterScreen() {
               <TouchableOpacity
                 style={[
                   styles.actionBtn,
-                  displayName.trim().length < 2 && styles.actionBtnDisabled,
+                  (displayName.trim().length < 2 || loading) && styles.actionBtnDisabled,
                 ]}
-                onPress={() => setStep(5)}
-                disabled={displayName.trim().length < 2}
-              >
-                <Text
-                  style={[
-                    styles.actionBtnText,
-                    displayName.trim().length < 2 && styles.actionBtnTextDisabled,
-                  ]}
-                >
-                  NEXT
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Step 5 — Institution */}
-          {step === 5 && (
-            <View style={styles.content}>
-              <Text style={styles.label}>INSTITUTION NAME</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Copperbelt University"
-                value={institution}
-                onChangeText={setInstitution}
-                placeholderTextColor="#aaa"
-              />
-              <TouchableOpacity
-                style={[styles.actionBtn, !institution && styles.actionBtnDisabled]}
-                onPress={() => setStep(6)}
-                disabled={!institution}
-              >
-                <Text
-                  style={[styles.actionBtnText, !institution && styles.actionBtnTextDisabled]}
-                >
-                  NEXT
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Step 6 — Program */}
-          {step === 6 && (
-            <View style={styles.content}>
-              <Text style={styles.label}>PROGRAM/MAIN OPTION</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Computer science / ADDMA"
-                value={program}
-                onChangeText={setProgram}
-                placeholderTextColor="#aaa"
-              />
-              <TouchableOpacity
-                style={[styles.actionBtn, (!program || loading) && styles.actionBtnDisabled]}
                 onPress={handleSubmit}
-                disabled={!program || loading}
+                disabled={displayName.trim().length < 2 || loading}
               >
                 {loading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={[styles.actionBtnText, !program && styles.actionBtnTextDisabled]}>
+                  <Text
+                    style={[
+                      styles.actionBtnText,
+                      displayName.trim().length < 2 && styles.actionBtnTextDisabled,
+                    ]}
+                  >
                     SUBMIT
                   </Text>
                 )}

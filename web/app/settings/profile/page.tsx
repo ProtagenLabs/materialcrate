@@ -716,18 +716,18 @@ export default function Page() {
               </span>
             </div>
             {isPaidUser &&
-            (!isDefaultProfileBackground(profile.profileBackground) ||
-              Boolean(profileBackgroundFile)) ? (
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={handleResetProfileBackground}
-                  className="text-sm font-medium text-[#A95A13]"
-                >
-                  Use default background
-                </button>
-              </div>
-            ) : null}
+              (!isDefaultProfileBackground(profile.profileBackground) ||
+                Boolean(profileBackgroundFile)) && (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={handleResetProfileBackground}
+                    className="text-sm font-medium text-[#A95A13]"
+                  >
+                    Use default background
+                  </button>
+                </div>
+              )}
           </div>
           <div className="w-full rounded-[20px] border border-edge bg-surface px-4 py-4">
             <h2 className="text-base font-semibold text-ink">
@@ -776,9 +776,7 @@ export default function Page() {
             </div>
             {textInputs.map((input) => {
               const visibilityKey = input.visibilityKey;
-              const visibilityValue = visibilityKey
-                ? profile[visibilityKey]
-                : null;
+              const visibilityValue = visibilityKey && profile[visibilityKey];
 
               return (
                 <div className="space-y-1 mt-4" key={input.key}>
@@ -792,11 +790,15 @@ export default function Page() {
                       onChange={input.onchange}
                       disabled={isLoading || isSaving}
                       required={!input.optional}
-                      minLength={input.optional && input.value.trim().length === 0 ? undefined : input.minLength}
+                      minLength={
+                        input.optional && input.value.trim().length === 0
+                          ? undefined
+                          : input.minLength
+                      }
                       maxLength={input.maxLength}
                       className={`w-full rounded-2xl border border-edge bg-surface-high px-3 py-3 text-sm placeholder:text-ink-3 focus:outline-none ${visibilityKey ? "pr-12" : ""}`}
                     />
-                    {visibilityKey ? (
+                    {visibilityKey && (
                       <button
                         type="button"
                         aria-label={`${input.label} visibility: ${visibilityValue === "everyone" ? "Everyone" : "Only you"}`}
@@ -822,7 +824,7 @@ export default function Page() {
                           <EyeSlash size={18} color="#A95A13" variant="Bulk" />
                         )}
                       </button>
-                    ) : null}
+                    )}
                   </div>
                 </div>
               );

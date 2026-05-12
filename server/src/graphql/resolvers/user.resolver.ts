@@ -2032,8 +2032,8 @@ export const UserResolver = {
         typeof profileBackgroundFileBase64 === "string" &&
         profileBackgroundFileBase64.trim().length > 0;
 
-      if (!username || !displayName || !institution) {
-        throw new Error("Username, display name, and institution are required");
+      if (!username || !displayName) {
+        throw new Error("Username and display name are required");
       }
 
       if (RESERVED_USERNAMES.has(username.toLowerCase())) {
