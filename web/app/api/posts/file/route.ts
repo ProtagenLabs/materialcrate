@@ -170,7 +170,7 @@ export async function GET(req: Request) {
     }),
   }).catch(() => null);
 
-  return new NextResponse(fileBuffer, {
+  return new NextResponse(new Uint8Array(fileBuffer), {
     status: 200,
     headers: {
       "Content-Type": acceptMime,
