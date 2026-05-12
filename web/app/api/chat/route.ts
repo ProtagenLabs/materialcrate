@@ -108,14 +108,17 @@ export async function GET(request: Request) {
     unreadCount: number;
   }) => ({
     id: item.id,
-    name: item.participant?.name ?? "",
-    username: item.participant?.username ?? "",
-    avatar: item.participant?.avatar ?? null,
-    isOnline: item.participant?.isOnline ?? false,
+    participant: {
+      id: item.participant?.id ?? "",
+      name: item.participant?.name ?? "",
+      username: item.participant?.username ?? "",
+      avatar: item.participant?.avatar ?? null,
+      isOnline: item.participant?.isOnline ?? false,
+    },
     lastMessage: item.lastMessage,
     lastMessageTime: item.lastMessageTime,
-    isSentByMe: item.lastMessageSentByMe,
-    isRead: item.lastMessageIsRead,
+    lastMessageSentByMe: item.lastMessageSentByMe,
+    lastMessageIsRead: item.lastMessageIsRead,
     unreadCount: item.unreadCount,
   }));
 
@@ -163,14 +166,17 @@ export async function POST(request: Request) {
   return NextResponse.json({
     conversation: conv ? {
       id: conv.id,
-      name: conv.participant?.name ?? "",
-      username: conv.participant?.username ?? "",
-      avatar: conv.participant?.avatar ?? null,
-      isOnline: conv.participant?.isOnline ?? false,
+      participant: {
+        id: conv.participant?.id ?? "",
+        name: conv.participant?.name ?? "",
+        username: conv.participant?.username ?? "",
+        avatar: conv.participant?.avatar ?? null,
+        isOnline: conv.participant?.isOnline ?? false,
+      },
       lastMessage: conv.lastMessage,
       lastMessageTime: conv.lastMessageTime,
-      isSentByMe: conv.lastMessageSentByMe,
-      isRead: conv.lastMessageIsRead,
+      lastMessageSentByMe: conv.lastMessageSentByMe,
+      lastMessageIsRead: conv.lastMessageIsRead,
       unreadCount: conv.unreadCount,
     } : null,
   });
