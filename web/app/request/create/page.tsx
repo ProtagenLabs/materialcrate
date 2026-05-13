@@ -1,0 +1,278 @@
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowDown2,
+  CloseCircle,
+  Coin1,
+  DocumentText,
+  MessageQuestion,
+} from "iconsax-reactjs";
+import {
+  POST_CATEGORIES,
+  normalizeAllowedCategory,
+} from "@/app/lib/post-categories";
+import { useAuth } from "@/app/lib/auth-client";
+import ActionButton from "@/app/components/ActionButton";
+import Alert from "@/app/components/Alert";
+import Header from "@/app/components/Header";
+
+export default function CreateRequestPage() {
+  const router = useRouter();
+  const { user, isLoading: isLoadingAuth } = useAuth();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [categoryQuery, setCategoryQuery] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [bounty, setBounty] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("error");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const categoryInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isLoadingAuth) return;
+    if (!user) router.push("/login");
+  }, [isLoadingAuth, router, user]);
+
+  const filteredCategories = POST_CATEGORIES.filter(
+    (cat) =>
+      !selectedCategories.includes(cat) &&
+      cat.toLowerCase().includes(categoryQuery.toLowerCase()),
+  ).slice(0, 8);
+
+  const handleAddCategory = (cat: string) => {
+    const normalized = normalizeAllowedCategory(cat);
+    if (!normalized || selectedCategories.includes(normalized)) return;
+    if (selectedCategories.length >= 5) {
+      setAlertType("info");
+      setAlertMessage("You can add up to 5 categories");
+      return;
+    }
+    setSelectedCategories((prev) => [...prev, normalized]);
+    setCategoryQuery("");
+    setIsCategoryDropdownOpen(false);
+  };
+
+  const handleRemoveCategory = (cat: string) => {
+    setSelectedCategories((prev) => prev.filter((c) => c !== cat));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setAlertType("error");
+      setAlertMessage("Please enter a title for your request");
+      return;
+    }
+    if (!description.trim()) {
+      setAlertType("error");
+      setAlertMessage("Please describe what you're looking for");
+      return;
+    }
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setAlertType("info");
+      setAlertMessage("Request posting is coming soon!");
+    }, 800);
+  };
+
+  const canSubmit = title.trim().length > 0 && description.trim().length > 0;
+
+  return (
+    <div className="min-h-screen bg-page">
+      <Header title="New Request" />
+      <Alert message={alertMessage || null} type={alertType} />
+
+      <form
+        onSubmit={handleSubmit}
+        className="mx-auto max-w-[600px] px-4 pt-[5.5rem] pb-32"
+      >
+        {/* Illustration */}
+        <div className="flex flex-col items-center py-6">
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#EFF6FF] mb-3">
+            <MessageQuestion size={40} color="#1D4ED8" variant="Bold" />
+          </div>
+          <p className="text-center text-sm text-ink-2 max-w-[260px] leading-5">
+            Describe the document you need. The community will help you find it.
+          </p>
+        </div>
+
+        <div className="space-y-5">
+          {/* Title */}
+          <div>
+            <label
+              htmlFor="request-title"
+              className="mb-2 block text-sm font-semibold text-ink"
+            >
+              What are you looking for?
+              <span className="ml-1 text-red-400">*</span>
+            </label>
+            <input
+              id="request-title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Grade 12 Physics Notes – ZSCE"
+              maxLength={120}
+              className="w-full rounded-2xl border border-edge-mid bg-input px-4 py-3 text-sm text-ink placeholder:text-ink-3 focus:border-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 transition-all duration-200"
+            />
+            <p className="mt-1.5 text-right text-xs text-ink-3">
+              {title.length}/120
+            </p>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label
+              htmlFor="request-description"
+              className="mb-2 block text-sm font-semibold text-ink"
+            >
+              Describe what you need
+              <span className="ml-1 text-red-400">*</span>
+            </label>
+            <textarea
+              id="request-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Provide details about the document — edition, year, specific chapters, format preferences, etc."
+              rows={5}
+              maxLength={1000}
+              className="w-full resize-none rounded-2xl border border-edge-mid bg-input px-4 py-3 text-sm text-ink placeholder:text-ink-3 focus:border-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 transition-all duration-200"
+            />
+            <p className="mt-1.5 text-right text-xs text-ink-3">
+              {description.length}/1000
+            </p>
+          </div>
+
+          {/* Categories */}
+          <div className="relative">
+            <label
+              htmlFor="request-categories"
+              className="mb-2 block text-sm font-semibold text-ink"
+            >
+              Categories
+              <span className="ml-1.5 text-xs font-normal text-ink-3">
+                (optional, up to 5)
+              </span>
+            </label>
+
+            {selectedCategories.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {selectedCategories.map((cat) => (
+                  <span
+                    key={cat}
+                    className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] py-1 pl-3 pr-2 text-xs font-semibold text-[#1D4ED8]"
+                  >
+                    {cat}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCategory(cat)}
+                      className="cursor-pointer rounded-full p-0.5 transition-colors hover:bg-[#DBEAFE]"
+                    >
+                      <CloseCircle size={14} color="#1D4ED8" variant="Bold" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="relative">
+              <input
+                ref={categoryInputRef}
+                id="request-categories"
+                type="text"
+                value={categoryQuery}
+                onChange={(e) => {
+                  setCategoryQuery(e.target.value);
+                  setIsCategoryDropdownOpen(true);
+                }}
+                onFocus={() => setIsCategoryDropdownOpen(true)}
+                onBlur={() =>
+                  setTimeout(() => setIsCategoryDropdownOpen(false), 150)
+                }
+                placeholder="Search categories…"
+                className="w-full rounded-2xl border border-edge-mid bg-input px-4 py-3 pr-10 text-sm text-ink placeholder:text-ink-3 focus:border-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 transition-all duration-200"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ArrowDown2 size={16} color="var(--ink-3)" />
+              </span>
+            </div>
+
+            {isCategoryDropdownOpen && filteredCategories.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full rounded-2xl border border-edge-mid bg-surface shadow-lg overflow-hidden">
+                {filteredCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onMouseDown={() => handleAddCategory(cat)}
+                    className="cursor-pointer w-full px-4 py-3 text-left text-sm text-ink transition-colors hover:bg-surface-high"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bounty */}
+          <div>
+            <label
+              htmlFor="request-bounty"
+              className="mb-2 block text-sm font-semibold text-ink"
+            >
+              Offer a reward
+              <span className="ml-1.5 text-xs font-normal text-ink-3">
+                (optional)
+              </span>
+            </label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+                <Coin1 size={18} color="#E1761F" variant="Bold" />
+                <span className="text-sm font-semibold text-[#E1761F]">
+                  Tokens
+                </span>
+              </div>
+              <input
+                id="request-bounty"
+                type="number"
+                value={bounty}
+                onChange={(e) => setBounty(e.target.value)}
+                min={0}
+                max={100000}
+                placeholder="0"
+                className="w-full rounded-2xl border border-edge-mid bg-input px-4 py-3 pl-28 text-sm text-ink placeholder:text-ink-3 focus:border-[#E1761F] focus:outline-none focus:ring-2 focus:ring-[#E1761F]/20 transition-all duration-200"
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-ink-3">
+              Tokens will be held until the request is fulfilled and released to
+              the contributor you choose.
+            </p>
+          </div>
+
+          {/* Hint card */}
+          <div className="flex items-start gap-3 rounded-2xl bg-surface-high border border-edge p-4">
+            <DocumentText size={20} color="var(--ink-3)" variant="Bold" />
+            <p className="text-xs leading-5 text-ink-2">
+              Good requests are specific — mention edition, year, subject level,
+              and exam board where relevant. This helps contributors find the
+              exact document you need.
+            </p>
+          </div>
+        </div>
+
+        <ActionButton
+          type="submit"
+          disabled={!canSubmit || isSubmitting}
+          fixedBottom
+          className="w-full mt-6"
+        >
+          {isSubmitting ? "Posting…" : "Post Request"}
+        </ActionButton>
+      </form>
+    </div>
+  );
+}

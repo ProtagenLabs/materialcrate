@@ -7,14 +7,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-client";
 
+export type HomeTab = "feed" | "requests";
+
 interface HeaderProps {
   forceVisible?: boolean;
   showLoadingBar?: boolean;
+  activeTab?: HomeTab;
+  onTabChange?: (tab: HomeTab) => void;
 }
 
 export default function Header({
   forceVisible,
   showLoadingBar,
+  activeTab = "feed",
+  onTabChange,
 }: HeaderProps = {}) {
   const isScrollVisible = useScrollVisibility();
   const isVisible = forceVisible || isScrollVisible;
@@ -24,7 +30,7 @@ export default function Header({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-10 flex flex-col bg-surface shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-out lg:hidden ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
+      className={`fixed top-0 left-0 right-0 z-10 flex flex-col bg-surface shadow-[0_1px_0_0_var(--edge)] transition-transform duration-300 ease-out lg:hidden ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
     >
       <div className="flex items-center justify-between px-6 pb-3 pt-6">
         <button
@@ -71,6 +77,31 @@ export default function Header({
           </button>
         </div>
       </div>
+
+      <div className="flex">
+        {(["feed", "requests"] as HomeTab[]).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => {
+              onTabChange?.(tab);
+            }}
+            className={`relative flex-1 pb-3.5 pt-1 text-sm font-semibold transition-colors duration-150 ${
+              activeTab === tab
+                ? "text-ink"
+                : "text-ink-3 hover:text-ink-2 active:text-ink-2"
+            }`}
+          >
+            {tab === "feed" ? "Feed" : "Requests"}
+            <span
+              className={`absolute bottom-0 left-1/2 h-[2.5px] -translate-x-1/2 rounded-full transition-all duration-200 ${
+                activeTab === tab ? "w-10 bg-ink" : "w-0 bg-transparent"
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+
       {showLoadingBar && (
         <div className="h-0.75 w-full overflow-hidden bg-[#FFF3E7]">
           <div className="h-full w-1/3 animate-[loading-bar_1.4s_ease-in-out_infinite] bg-[#E1761F] rounded-full" />

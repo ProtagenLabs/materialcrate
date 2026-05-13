@@ -18,9 +18,91 @@ import FeedAd from "./components/home/FeedAd";
 import CommentDrawer from "./components/home/CommentDrawer";
 import OptionsDrawer from "./components/home/PostOptions";
 import DocumentViewer from "./components/home/DocumentViewer";
-import Header from "./components/home/Header";
+import Header, { type HomeTab } from "./components/home/Header";
 import ArchiveDrawer from "./components/home/ArchiveDrawer";
 import Spinner from "./components/Spinner";
+import RequestCard, {
+  type DocumentRequest,
+} from "./components/request/RequestCard";
+
+const MOCK_REQUESTS: DocumentRequest[] = [
+  {
+    id: "req_1",
+    title: "Grade 12 Physics Notes – ZSCE",
+    description:
+      "Looking for comprehensive physics notes covering electricity, magnetism, and wave optics for the Grade 12 ZSCE exams.",
+    categories: ["Physics", "Grade 12"],
+    bounty: 500,
+    solved: false,
+    responseCount: 3,
+    commentCount: 7,
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    author: {
+      id: "u1",
+      displayName: "Mwamba Chilufya",
+      username: "mwamba_c",
+      profilePicture: null,
+      subscriptionPlan: null,
+    },
+  },
+  {
+    id: "req_2",
+    title: "Introduction to Algorithms – CLRS 4th Edition PDF",
+    description:
+      "Need the 4th edition of CLRS. Looking specifically for dynamic programming and graph algorithm chapters.",
+    categories: ["Computer Science", "Algorithms"],
+    bounty: null,
+    solved: true,
+    responseCount: 12,
+    commentCount: 15,
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    author: {
+      id: "u2",
+      displayName: "Thandiwe Daka",
+      username: "thandiwe.d",
+      profilePicture: null,
+      subscriptionPlan: "pro",
+    },
+  },
+  {
+    id: "req_3",
+    title: "Zambian Tax Law Past Papers 2020–2024",
+    description:
+      "Preparing for ZICA exams and need past papers for Zambian Tax Law from 2020 to 2024.",
+    categories: ["Law", "Tax", "ZICA"],
+    bounty: 200,
+    solved: false,
+    responseCount: 1,
+    commentCount: 2,
+    createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    author: {
+      id: "u3",
+      displayName: "Joseph Banda",
+      username: "jo_banda",
+      profilePicture: null,
+      subscriptionPlan: null,
+    },
+  },
+  {
+    id: "req_4",
+    title: "Introduction to Linear Algebra – Gilbert Strang 5th Edition",
+    description:
+      "Need the 5th edition by Gilbert Strang for my linear algebra course. A searchable PDF would be ideal.",
+    categories: ["Mathematics", "Linear Algebra"],
+    bounty: 1000,
+    solved: false,
+    responseCount: 6,
+    commentCount: 9,
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    author: {
+      id: "u4",
+      displayName: "Precious Mwale",
+      username: "precious_m",
+      profilePicture: null,
+      subscriptionPlan: null,
+    },
+  },
+];
 
 type ArchiveSavedPost = {
   id: string;
@@ -85,6 +167,7 @@ function FeedSkeleton() {
 export default function Home() {
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
+  const [activeTab, setActiveTab] = useState<HomeTab>("feed");
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [isCommentDrawerOpen, setIsCommentDrawerOpen] = useState(false);
   const [isPostOptionsDrawerOpen, setIsPostOptionsDrawerOpen] = useState(false);
@@ -581,7 +664,7 @@ export default function Home() {
   };
 
   return (
-    <div className="py-18 lg:py-0">
+    <div className="pt-30 pb-18 lg:py-0">
       <ArchiveDrawer
         isOpen={isArchiveDrawerOpen}
         post={activeArchivePost}
@@ -771,9 +854,47 @@ export default function Home() {
           />
         </button>
       </div>
-      <Header />
+      <Header
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
       <main className="mx-auto w-full max-w-140 2xl:max-w-120 lg:pt-4 lg:pb-8">
-        {isLoadingPosts ? (
+        {/* Desktop tabs */}
+        <div className="hidden lg:flex border-b border-edge mb-4">
+          {(["feed", "requests"] as HomeTab[]).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => {
+                setActiveTab(tab);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className={`relative px-6 pb-3.5 pt-1 text-sm font-semibold transition-colors duration-150 ${
+                activeTab === tab
+                  ? "text-ink"
+                  : "text-ink-3 hover:text-ink-2"
+              }`}
+            >
+              {tab === "feed" ? "Feed" : "Requests"}
+              <span
+                className={`absolute bottom-0 left-1/2 h-[2.5px] -translate-x-1/2 rounded-full transition-all duration-200 ${
+                  activeTab === tab ? "w-10 bg-ink" : "w-0 bg-transparent"
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+
+        {activeTab === "requests" ? (
+          <div className="space-y-0">
+            {MOCK_REQUESTS.map((request) => (
+              <RequestCard key={request.id} request={request} />
+            ))}
+          </div>
+        ) : isLoadingPosts ? (
           <FeedSkeleton />
         ) : posts.length === 0 ? (
           <p className="px-6 py-8 text-sm text-ink-2">No posts yet.</p>
