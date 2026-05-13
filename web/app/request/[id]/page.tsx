@@ -14,11 +14,9 @@ import {
   TickCircle,
   Send2,
   Heart,
-  CloseCircle,
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import Header from "@/app/components/Header";
-import ActionButton from "@/app/components/ActionButton";
 import type { DocumentRequest } from "@/app/components/request/RequestCard";
 
 type Fulfillment = {
@@ -244,10 +242,8 @@ export default function RequestDetailPage({
         }
       />
 
-      <div className="mx-auto max-w-[600px] pt-[5.5rem] pb-28">
-        {/* Request detail card */}
+      <div className="mx-auto max-w-150 pt-22 pb-28">
         <div className="bg-surface lg:rounded-xl lg:border lg:border-edge lg:shadow-sm">
-          {/* Author row */}
           <div className="flex items-start justify-between px-4 pt-4">
             <button
               type="button"
@@ -290,21 +286,20 @@ export default function RequestDetailPage({
             </button>
 
             {request.solved ? (
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#E8F5E9] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#2E7D32]">
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#E8F5E9] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#2E7D32]">
                 <TickCircle size={11} color="#2E7D32" variant="Bold" />
                 Fulfilled
               </span>
             ) : (
-              <span className="mt-1 inline-flex items-center rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#1D4ED8]">
+              <span className="mt-1 inline-flex items-center rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#1D4ED8]">
                 Open
               </span>
             )}
           </div>
 
-          {/* Badges + content */}
           <div className="px-4 pt-4">
             <div className="flex flex-wrap items-center gap-1.5 mb-3">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#1D4ED8]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#1D4ED8]">
                 <MessageQuestion size={11} color="#1D4ED8" variant="Bold" />
                 Request
               </span>
@@ -324,13 +319,12 @@ export default function RequestDetailPage({
             </p>
           </div>
 
-          {/* Categories */}
           {request.categories.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-4 pt-3">
               {request.categories.map((cat) => (
                 <span
                   key={cat}
-                  className="rounded-full bg-surface-high px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-3"
+                  className="rounded-full bg-surface-high px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-ink-3"
                 >
                   {cat}
                 </span>
@@ -338,7 +332,6 @@ export default function RequestDetailPage({
             </div>
           )}
 
-          {/* Stats row */}
           <div className="flex items-center gap-4 border-t border-edge px-4 py-3 mt-4">
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-3">
               <DocumentText1 size={15} color="var(--ink-3)" />
@@ -352,7 +345,6 @@ export default function RequestDetailPage({
           </div>
         </div>
 
-        {/* CTA — Post This Document */}
         {!request.solved && (
           <div className="mx-4 mt-4 lg:mx-0">
             <button
@@ -373,7 +365,6 @@ export default function RequestDetailPage({
           </div>
         )}
 
-        {/* Fulfillments */}
         {request.fulfillments.length > 0 && (
           <div className="mt-6 mx-4 lg:mx-0">
             <h2 className="mb-3 text-sm font-bold text-ink">
@@ -470,7 +461,6 @@ export default function RequestDetailPage({
           </div>
         )}
 
-        {/* Discussion */}
         <div className="mt-6 mx-4 lg:mx-0">
           <h2 className="mb-3 text-sm font-bold text-ink">
             Discussion
@@ -533,7 +523,6 @@ export default function RequestDetailPage({
             </div>
           )}
 
-          {/* Comment input */}
           <div className="mt-3 flex items-center gap-2">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge">
               <User size={13} color="var(--ink-3)" variant="Bold" />
@@ -560,7 +549,6 @@ export default function RequestDetailPage({
         </div>
       </div>
 
-      {/* Sticky bottom CTA on mobile */}
       {!request.solved && (
         <div className="fixed bottom-0 left-0 right-0 z-20 bg-surface border-t border-edge px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
           <button

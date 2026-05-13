@@ -12,6 +12,7 @@ import { AiUsageResolver } from "./ai-usage.resolver.js";
 import { AchievementResolver } from "./achievement.resolver.js";
 import { ChatResolver } from "./chat.resolver.js";
 import { PlagiarismResolver } from "./plagiarism.resolver.js";
+import { DocumentRequestResolver } from "./documentRequest.resolver.js";
 
 export const resolvers = {
   Query: {
@@ -28,6 +29,7 @@ export const resolvers = {
     ...AchievementResolver.Query,
     ...ChatResolver.Query,
     ...PlagiarismResolver.Query,
+    ...DocumentRequestResolver.Query,
   },
   Mutation: {
     ...UserResolver.Mutation,
@@ -43,6 +45,7 @@ export const resolvers = {
     ...AiUsageResolver.Mutation,
     ...ChatResolver.Mutation,
     ...PlagiarismResolver.Mutation,
+    ...DocumentRequestResolver.Mutation,
   },
   Post: {
     ...PostResolver.Post,
@@ -78,5 +81,11 @@ export const resolvers = {
   },
   WorkspaceSavedPost: {
     ...WorkspaceResolver.WorkspaceSavedPost,
+  },
+  DocumentRequest: {
+    ...DocumentRequestResolver.DocumentRequest,
+  },
+  DocumentRequestFulfillment: {
+    ...DocumentRequestResolver.DocumentRequestFulfillment,
   },
 };

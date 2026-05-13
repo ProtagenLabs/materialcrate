@@ -1,0 +1,78 @@
+type DocumentRequest {
+  id: ID!
+  title: String!
+  description: String!
+  categories: [String!]!
+  bounty: Int
+  bountyEscrowedAt: String
+  bountyReleasedAt: String
+  acceptedFulfillmentId: ID
+  solved: Boolean!
+  closed: Boolean!
+  responseCount: Int!
+  author: User!
+  fulfillments: [DocumentRequestFulfillment!]!
+  acceptedFulfillment: DocumentRequestFulfillment
+  viewerHasFulfilled: Boolean!
+  viewerIsAuthor: Boolean!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type DocumentRequestFulfillment {
+  id: ID!
+  requestId: ID!
+  postId: ID!
+  authorId: ID!
+  likeCount: Int!
+  viewerHasLiked: Boolean!
+  isAccepted: Boolean!
+  author: User!
+  post: Post!
+  createdAt: String!
+}
+
+type DocumentRequestFeed {
+  requests: [DocumentRequest!]!
+  hasMore: Boolean!
+  total: Int!
+}
+
+extend type Query {
+  documentRequest(id: ID!): DocumentRequest
+  documentRequests(
+    filter: String
+    limit: Int
+    offset: Int
+  ): DocumentRequestFeed!
+}
+
+extend type Mutation {
+  createDocumentRequest(
+    title: String!
+    description: String!
+    categories: [String!]!
+    bounty: Int
+  ): DocumentRequest!
+
+  fulfillDocumentRequest(
+    requestId: ID!
+    postId: ID!
+  ): DocumentRequestFulfillment!
+
+  acceptFulfillment(
+    fulfillmentId: ID!
+  ): DocumentRequest!
+
+  toggleFulfillmentLike(
+    fulfillmentId: ID!
+  ): DocumentRequestFulfillment!
+
+  closeDocumentRequest(
+    id: ID!
+  ): DocumentRequest!
+
+  deleteDocumentRequest(
+    id: ID!
+  ): Boolean!
+}

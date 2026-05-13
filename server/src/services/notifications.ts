@@ -11,6 +11,7 @@ export const NOTIFICATION_ICON = {
   SYSTEM: "Notification",
   ACHIEVEMENT: "Award",
   PLAGIARISM: "Shield",
+  DOCUMENT_REQUEST: "DocumentText1",
 } as const;
 
 export const NOTIFICATION_TYPE = {
@@ -24,6 +25,8 @@ export const NOTIFICATION_TYPE = {
   ACHIEVEMENT_UNLOCKED: "ACHIEVEMENT_UNLOCKED",
   PLAGIARISM_ORIGINAL_AUTHOR: "PLAGIARISM_ORIGINAL_AUTHOR",
   PLAGIARISM_FLAGGED_UPLOAD: "PLAGIARISM_FLAGGED_UPLOAD",
+  DOCUMENT_REQUEST_FULFILLED: "DOCUMENT_REQUEST_FULFILLED",
+  DOCUMENT_REQUEST_ACCEPTED: "DOCUMENT_REQUEST_ACCEPTED",
 } as const;
 
 const PUSH_NOTIFICATION_TYPE_TO_PREF: Record<string, string> = {
@@ -41,6 +44,7 @@ type CreateNotificationInput = {
   postId?: string | null;
   commentId?: string | null;
   caseId?: string | null;
+  requestId?: string | null;
   achievementId?: string | null;
   type?: string;
   title: string;
@@ -56,6 +60,7 @@ export const createNotification = async ({
   postId,
   commentId,
   caseId,
+  requestId,
   achievementId,
   type = NOTIFICATION_TYPE.SYSTEM,
   title,
@@ -84,6 +89,7 @@ export const createNotification = async ({
       postId: postId?.trim() || null,
       commentId: commentId?.trim() || null,
       caseId: caseId?.trim() || null,
+      requestId: requestId?.trim() || null,
       unread,
     },
   });

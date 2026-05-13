@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Add,
-  SearchNormal1,
-  MessageQuestion,
-} from "iconsax-reactjs";
+import { Add, SearchNormal1, MessageQuestion } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import RequestCard, {
   type DocumentRequest,
@@ -229,8 +225,7 @@ export default function RequestFeedPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[600px] pt-[5.5rem] pb-32 lg:pt-6 lg:pb-12">
-        {/* Desktop section title */}
+      <div className="mx-auto max-w-150 pt-22 pb-32 lg:pt-6 lg:pb-12">
         <div className="hidden lg:flex lg:items-center lg:justify-between lg:px-0 lg:pb-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EFF6FF]">
@@ -248,7 +243,6 @@ export default function RequestFeedPage() {
           </button>
         </div>
 
-        {/* Filter tabs */}
         <div className="flex items-center gap-1 border-b border-edge px-3 lg:px-0 lg:mb-2">
           {(["all", "open", "fulfilled"] as FilterTab[]).map((tab) => (
             <button
@@ -271,14 +265,17 @@ export default function RequestFeedPage() {
           ))}
         </div>
 
-        {/* Feed */}
         <div className="space-y-0">
           {isLoading ? (
             <FeedSkeleton />
           ) : filteredRequests.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-high mb-4">
-                <MessageQuestion size={28} color="var(--ink-3)" variant="Bold" />
+                <MessageQuestion
+                  size={28}
+                  color="var(--ink-3)"
+                  variant="Bold"
+                />
               </div>
               <p className="text-base font-semibold text-ink">
                 {activeTab === "fulfilled"
@@ -308,7 +305,6 @@ export default function RequestFeedPage() {
         </div>
       </div>
 
-      {/* Mobile FAB */}
       <button
         type="button"
         onClick={handleNewRequest}

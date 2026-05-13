@@ -4,6 +4,7 @@ import { createHttpServer } from "./server.js";
 import { startDeletedPostPurgeLoop } from "./services/postDeletion.js";
 import { startUnverifiedUserPurgeLoop } from "./services/unverifiedUserPurge.js";
 import { startUploadReminderLoop } from "./services/uploadReminderLoop.js";
+import { startDocumentRequestBountyLoop } from "./services/documentRequestBounty.js";
 
 const PORT = Number(process.env.PORT || 4000);
 const HOST = process.env.HOST || "0.0.0.0";
@@ -12,6 +13,7 @@ await connectDB();
 startDeletedPostPurgeLoop();
 startUnverifiedUserPurgeLoop();
 startUploadReminderLoop();
+startDocumentRequestBountyLoop();
 
 const httpServer = await createHttpServer();
 
