@@ -846,7 +846,13 @@ export default function Home() {
           ) : (
             <div className="space-y-0">
               {requests.map((request) => (
-                <RequestCard key={request.id} request={request} />
+                <RequestCard
+                  key={request.id}
+                  request={request}
+                  onDeleted={(id) =>
+                    setRequests((prev) => prev.filter((r) => r.id !== id))
+                  }
+                />
               ))}
             </div>
           )
