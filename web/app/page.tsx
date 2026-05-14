@@ -25,84 +25,6 @@ import RequestCard, {
   type DocumentRequest,
 } from "./components/request/RequestCard";
 
-const MOCK_REQUESTS: DocumentRequest[] = [
-  {
-    id: "req_1",
-    title: "Grade 12 Physics Notes – ZSCE",
-    description:
-      "Looking for comprehensive physics notes covering electricity, magnetism, and wave optics for the Grade 12 ZSCE exams.",
-    categories: ["Physics", "Grade 12"],
-    bounty: 500,
-    solved: false,
-    responseCount: 3,
-    commentCount: 7,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    author: {
-      id: "u1",
-      displayName: "Mwamba Chilufya",
-      username: "mwamba_c",
-      profilePicture: null,
-      subscriptionPlan: null,
-    },
-  },
-  {
-    id: "req_2",
-    title: "Introduction to Algorithms – CLRS 4th Edition PDF",
-    description:
-      "Need the 4th edition of CLRS. Looking specifically for dynamic programming and graph algorithm chapters.",
-    categories: ["Computer Science", "Algorithms"],
-    bounty: null,
-    solved: true,
-    responseCount: 12,
-    commentCount: 15,
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    author: {
-      id: "u2",
-      displayName: "Thandiwe Daka",
-      username: "thandiwe.d",
-      profilePicture: null,
-      subscriptionPlan: "pro",
-    },
-  },
-  {
-    id: "req_3",
-    title: "Zambian Tax Law Past Papers 2020–2024",
-    description:
-      "Preparing for ZICA exams and need past papers for Zambian Tax Law from 2020 to 2024.",
-    categories: ["Law", "Tax", "ZICA"],
-    bounty: 200,
-    solved: false,
-    responseCount: 1,
-    commentCount: 2,
-    createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    author: {
-      id: "u3",
-      displayName: "Joseph Banda",
-      username: "jo_banda",
-      profilePicture: null,
-      subscriptionPlan: null,
-    },
-  },
-  {
-    id: "req_4",
-    title: "Introduction to Linear Algebra – Gilbert Strang 5th Edition",
-    description:
-      "Need the 5th edition by Gilbert Strang for my linear algebra course. A searchable PDF would be ideal.",
-    categories: ["Mathematics", "Linear Algebra"],
-    bounty: 1000,
-    solved: false,
-    responseCount: 6,
-    commentCount: 9,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    author: {
-      id: "u4",
-      displayName: "Precious Mwale",
-      username: "precious_m",
-      profilePicture: null,
-      subscriptionPlan: null,
-    },
-  },
-];
 
 type ArchiveSavedPost = {
   id: string;
@@ -198,9 +120,12 @@ export default function Home() {
   const [archiveBusyPostIds, setArchiveBusyPostIds] = useState<
     Record<string, boolean>
   >({});
+  const [requests, setRequests] = useState<DocumentRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [hasUnopenedNotifications, setHasUnopenedNotifications] =
     useState(false);
+  const requestsFetchedRef = useRef(false);
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
   const notificationRefreshTimeoutRef = useRef<number | null>(null);
   const lastNotificationRefreshAtRef = useRef(0);
@@ -383,6 +308,21 @@ export default function Home() {
     void loadArchiveState();
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== "requests") return;
+    if (requestsFetchedRef.current) return;
+    requestsFetchedRef.current = true;
+
+    setIsLoadingRequests(true);
+    fetch("/api/requests?limit=50", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data: { requests?: DocumentRequest[] }) => {
+        setRequests(Array.isArray(data?.requests) ? data.requests : []);
+      })
+      .catch(() => setRequests([]))
+      .finally(() => setIsLoadingRequests(false));
+  }, [activeTab]);
 
   useEffect(() => {
     void refreshNotificationIndicators();
@@ -741,119 +681,119 @@ export default function Home() {
           setActivePdfPost(null);
         }}
       />
-      <div className="lg:hidden fixed right-6 bottom-28 z-50 flex flex-col items-end gap-3">
+      {activeTab === "requests" ? (
         <button
-          aria-label="Upload button"
+          aria-label="New Request"
           type="button"
           onClick={() => {
-            if (!requireAuthenticatedAccess()) {
-              return;
-            }
-            router.push("/create");
+            if (!requireAuthenticatedAccess()) return;
+            router.push("/request/create");
           }}
-          className="cursor-pointer flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg hover:bg-page active:opacity-70"
-          style={{
-            opacity: moreOptionsOpen ? 1 : 0,
-            transform: moreOptionsOpen
-              ? "translateY(0) scale(1)"
-              : "translateY(1rem) scale(0.95)",
-            pointerEvents: moreOptionsOpen ? "auto" : "none",
-            transition: "opacity 300ms ease-out, transform 300ms ease-out",
-          }}
+          className="lg:hidden fixed right-6 bottom-28 z-50 cursor-pointer flex items-center gap-2.5 rounded-3xl bg-[#E1761F] px-5 py-3 shadow-lg hover:bg-[#C96018] active:opacity-70 text-white font-semibold text-sm"
         >
-          <DocumentUpload size={24} variant="Bold" />
-          <p>Upload</p>
+          <MessageQuestion size={20} color="white" variant="Bold" />
+          New Request
         </button>
-        <button
-          aria-label="Request button"
-          type="button"
-          onClick={() => router.push("/request")}
-          className="cursor-pointer flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg hover:bg-page active:opacity-70"
-          style={{
-            opacity: moreOptionsOpen ? 1 : 0,
-            transform: moreOptionsOpen
-              ? "translateY(0) scale(1)"
-              : "translateY(1rem) scale(0.95)",
-            pointerEvents: moreOptionsOpen ? "auto" : "none",
-            transition: "opacity 300ms ease-out, transform 300ms ease-out",
-          }}
-        >
-          <MessageQuestion size={24} variant="Bold" />
-          <p>Request</p>
-        </button>
-        <button
-          aria-label="Notifications button"
-          type="button"
-          className="cursor-pointer flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg hover:bg-page active:opacity-70"
-          style={{
-            opacity: moreOptionsOpen ? 1 : 0,
-            transform: moreOptionsOpen
-              ? "translateY(0) scale(1)"
-              : "translateY(1rem) scale(0.95)",
-            pointerEvents: moreOptionsOpen ? "auto" : "none",
-            transition: "opacity 300ms ease-out, transform 300ms ease-out",
-          }}
-          onClick={() => {
-            if (!requireAuthenticatedAccess()) {
-              return;
-            }
-
-            if (typeof window !== "undefined") {
-              window.localStorage.setItem(
-                NOTIFICATIONS_LAST_OPENED_AT_STORAGE_KEY,
-                String(Date.now()),
-              );
-            }
-            setHasUnopenedNotifications(false);
-            router.push("/notifications");
-          }}
-        >
-          <div className="relative">
-            <Notification size={24} variant="Bold" />
-            {unreadNotificationCount > 0 && (
-              <span
-                className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-red-500 rounded-full flex items-center justify-center text-white text-xs"
-                style={{
-                  transition: "opacity 200ms",
-                  opacity: unreadNotificationCount > 0 ? 1 : 0,
-                }}
-              >
-                {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
-              </span>
-            )}
-          </div>
-          <p>Notification</p>
-        </button>
-        <button
-          title="more actions"
-          type="button"
-          className="cursor-pointer w-12 h-12 relative bg-surface drop-shadow-xl rounded-full flex items-center justify-center hover:bg-page active:opacity-70"
-          onClick={() => setMoreOptionsOpen((prev) => !prev)}
-        >
-          <span
+      ) : (
+        <div className="lg:hidden fixed right-6 bottom-28 z-50 flex flex-col items-end gap-3">
+          <button
+            aria-label="Upload button"
+            type="button"
+            onClick={() => {
+              if (!requireAuthenticatedAccess()) {
+                return;
+              }
+              router.push("/create");
+            }}
+            className="cursor-pointer flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg hover:bg-page active:opacity-70"
             style={{
-              display: "block",
-              transform: `rotate(${moreOptionsOpen ? 180 : 0}deg)`,
-              transition: "transform 300ms ease-out",
+              opacity: moreOptionsOpen ? 1 : 0,
+              transform: moreOptionsOpen
+                ? "translateY(0) scale(1)"
+                : "translateY(1rem) scale(0.95)",
+              pointerEvents: moreOptionsOpen ? "auto" : "none",
+              transition: "opacity 300ms ease-out, transform 300ms ease-out",
             }}
           >
-            <More2 size={30} />
-          </span>
-          <span
+            <DocumentUpload size={24} variant="Bold" />
+            <p>Upload</p>
+          </button>
+          <button
+            aria-label="Notifications button"
+            type="button"
+            className="cursor-pointer flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg hover:bg-page active:opacity-70"
             style={{
-              position: "absolute",
-              top: "-4px",
-              right: "-4px",
-              width: "20px",
-              height: "20px",
-              borderRadius: "50%",
-              background: "rgb(239 68 68)",
-              opacity: hasUnopenedNotifications && !moreOptionsOpen ? 1 : 0,
-              transition: "opacity 200ms",
+              opacity: moreOptionsOpen ? 1 : 0,
+              transform: moreOptionsOpen
+                ? "translateY(0) scale(1)"
+                : "translateY(1rem) scale(0.95)",
+              pointerEvents: moreOptionsOpen ? "auto" : "none",
+              transition: "opacity 300ms ease-out, transform 300ms ease-out",
             }}
-          />
-        </button>
-      </div>
+            onClick={() => {
+              if (!requireAuthenticatedAccess()) {
+                return;
+              }
+
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem(
+                  NOTIFICATIONS_LAST_OPENED_AT_STORAGE_KEY,
+                  String(Date.now()),
+                );
+              }
+              setHasUnopenedNotifications(false);
+              router.push("/notifications");
+            }}
+          >
+            <div className="relative">
+              <Notification size={24} variant="Bold" />
+              {unreadNotificationCount > 0 && (
+                <span
+                  className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-red-500 rounded-full flex items-center justify-center text-white text-xs"
+                  style={{
+                    transition: "opacity 200ms",
+                    opacity: unreadNotificationCount > 0 ? 1 : 0,
+                  }}
+                >
+                  {unreadNotificationCount > 99
+                    ? "99+"
+                    : unreadNotificationCount}
+                </span>
+              )}
+            </div>
+            <p>Notification</p>
+          </button>
+          <button
+            title="more actions"
+            type="button"
+            className="cursor-pointer w-12 h-12 relative bg-surface drop-shadow-xl rounded-full flex items-center justify-center hover:bg-page active:opacity-70"
+            onClick={() => setMoreOptionsOpen((prev) => !prev)}
+          >
+            <span
+              style={{
+                display: "block",
+                transform: `rotate(${moreOptionsOpen ? 180 : 0}deg)`,
+                transition: "transform 300ms ease-out",
+              }}
+            >
+              <More2 size={30} />
+            </span>
+            <span
+              style={{
+                position: "absolute",
+                top: "-4px",
+                right: "-4px",
+                width: "20px",
+                height: "20px",
+                borderRadius: "50%",
+                background: "rgb(239 68 68)",
+                opacity: hasUnopenedNotifications && !moreOptionsOpen ? 1 : 0,
+                transition: "opacity 200ms",
+              }}
+            />
+          </button>
+        </div>
+      )}
       <Header
         activeTab={activeTab}
         onTabChange={(tab) => {
@@ -862,8 +802,7 @@ export default function Home() {
         }}
       />
       <main className="mx-auto w-full max-w-140 2xl:max-w-120 lg:pt-4 lg:pb-8">
-        {/* Desktop tabs */}
-        <div className="hidden lg:flex border-b border-edge mb-4">
+        <div className="hidden lg:flex items-center border-b border-edge mb-4">
           {(["feed", "requests"] as HomeTab[]).map((tab) => (
             <button
               key={tab}
@@ -873,9 +812,7 @@ export default function Home() {
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               className={`relative px-6 pb-3.5 pt-1 text-sm font-semibold transition-colors duration-150 ${
-                activeTab === tab
-                  ? "text-ink"
-                  : "text-ink-3 hover:text-ink-2"
+                activeTab === tab ? "text-ink" : "text-ink-3 hover:text-ink-2"
               }`}
             >
               {tab === "feed" ? "Feed" : "Requests"}
@@ -886,14 +823,33 @@ export default function Home() {
               />
             </button>
           ))}
+          {activeTab === "requests" && (
+            <button
+              type="button"
+              onClick={() => {
+                if (!requireAuthenticatedAccess()) return;
+                router.push("/request/create");
+              }}
+              className="cursor-pointer ml-auto mb-1 flex items-center gap-2 rounded-lg bg-[#E1761F] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#C96018] active:scale-95 transition-all duration-200"
+            >
+              <MessageQuestion size={16} color="white" variant="Bold" />
+              New Request
+            </button>
+          )}
         </div>
 
         {activeTab === "requests" ? (
-          <div className="space-y-0">
-            {MOCK_REQUESTS.map((request) => (
-              <RequestCard key={request.id} request={request} />
-            ))}
-          </div>
+          isLoadingRequests ? (
+            <FeedSkeleton />
+          ) : requests.length === 0 ? (
+            <p className="px-6 py-8 text-sm text-ink-2">No requests yet.</p>
+          ) : (
+            <div className="space-y-0">
+              {requests.map((request) => (
+                <RequestCard key={request.id} request={request} />
+              ))}
+            </div>
+          )
         ) : isLoadingPosts ? (
           <FeedSkeleton />
         ) : posts.length === 0 ? (

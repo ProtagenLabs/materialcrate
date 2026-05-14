@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-const NAV_PATHS = new Set(["/", "/hub", "/saved", "/request"]);
+const NAV_PATHS = new Set(["/", "/hub", "/saved"]);
 
 export default function DesktopSidebarOffset({
   children,

@@ -49,6 +49,7 @@ export default function CreatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const postId = searchParams.get("postId");
+  const requestId = searchParams.get("requestId");
   const isEditMode = Boolean(postId);
 
   const { user, isLoading: isLoadingAuth } = useAuth();
@@ -231,6 +232,20 @@ export default function CreatePage() {
         throw new Error(
           isEditMode ? "Failed to update document" : "Failed to upload document",
         );
+      }
+
+      if (!isEditMode && requestId) {
+        const body = await response.json().catch(() => ({}));
+        const newPostId = body?.post?.id;
+        if (newPostId) {
+          await fetch(`/api/requests/${requestId}/fulfill`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ postId: newPostId }),
+          });
+        }
+        router.push(`/request/${requestId}`);
+        return;
       }
 
       router.back();

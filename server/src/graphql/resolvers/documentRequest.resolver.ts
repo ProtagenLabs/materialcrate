@@ -87,7 +87,6 @@ export const DocumentRequestResolver = {
       const trimmedDesc = description?.trim();
       if (!trimmedTitle) throw new Error("Title is required.");
       if (!trimmedDesc) throw new Error("Description is required.");
-      if (!categories?.length) throw new Error("At least one category is required.");
 
       const normalizedBounty =
         typeof bounty === "number" && bounty > 0 ? Math.round(bounty) : null;

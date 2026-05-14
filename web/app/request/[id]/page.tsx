@@ -1,13 +1,12 @@
 "use client";
 
-import React, { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   User,
   Verify,
   DocumentText1,
-  Messages2,
   Coin1,
   MessageQuestion,
   DocumentUpload,
@@ -17,31 +16,53 @@ import {
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import Header from "@/app/components/Header";
-import type { DocumentRequest } from "@/app/components/request/RequestCard";
+
+type FulfillmentPost = {
+  id: string;
+  title: string;
+  thumbnailUrl?: string | null;
+  fileType?: string | null;
+};
 
 type Fulfillment = {
   id: string;
+  requestId: string;
   postId: string;
-  postTitle: string;
-  isAccepted: boolean;
+  authorId: string;
   likeCount: number;
+  viewerHasLiked: boolean;
+  isAccepted: boolean;
   createdAt: string;
   author: {
+    id?: string;
     displayName: string;
     username: string;
     profilePicture?: string | null;
+    subscriptionPlan?: string | null;
   };
+  post: FulfillmentPost;
 };
 
-type Comment = {
+type RequestDetail = {
   id: string;
-  body: string;
+  title: string;
+  description: string;
+  categories: string[];
+  bounty?: number | null;
+  solved: boolean;
+  closed: boolean;
+  responseCount: number;
+  viewerHasFulfilled: boolean;
+  viewerIsAuthor: boolean;
   createdAt: string;
   author: {
+    id: string;
     displayName: string;
     username: string;
     profilePicture?: string | null;
+    subscriptionPlan?: string | null;
   };
+  fulfillments: Fulfillment[];
 };
 
 function formatTimeAgo(timestamp: string): string {
@@ -57,145 +78,6 @@ function formatTimeAgo(timestamp: string): string {
   return `${days}d ago`;
 }
 
-const ALL_MOCK_REQUESTS: Record<string, DocumentRequest & { fulfillments: Fulfillment[]; comments: Comment[] }> = {
-  req_1: {
-    id: "req_1",
-    title: "Grade 12 Physics Notes – ZSCE",
-    description:
-      "Looking for comprehensive physics notes covering electricity, magnetism, and wave optics for the Grade 12 ZSCE exams. Preferably handwritten or well-organized typed notes. Notes from 2022 or 2023 would be ideal.",
-    categories: ["Physics", "Grade 12"],
-    bounty: 500,
-    solved: false,
-    responseCount: 3,
-    commentCount: 7,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    author: {
-      id: "u1",
-      displayName: "Mwamba Chilufya",
-      username: "mwamba_c",
-      profilePicture: null,
-      subscriptionPlan: null,
-    },
-    fulfillments: [
-      {
-        id: "ful_1",
-        postId: "post_abc",
-        postTitle: "Grade 12 Physics Notes ZSCE 2023 – Electricity & Magnetism",
-        isAccepted: false,
-        likeCount: 14,
-        createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        author: {
-          displayName: "Bwalya Mwansa",
-          username: "bwalya_m",
-          profilePicture: null,
-        },
-      },
-      {
-        id: "ful_2",
-        postId: "post_def",
-        postTitle: "Physics Grade 12 Full Notes – Zambia Curriculum",
-        isAccepted: false,
-        likeCount: 8,
-        createdAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-        author: {
-          displayName: "Natasha Phiri",
-          username: "natasha.p",
-          profilePicture: null,
-        },
-      },
-    ],
-    comments: [
-      {
-        id: "c1",
-        body: "I might have these somewhere. Let me check my files and upload soon.",
-        createdAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-        author: { displayName: "Bwalya Mwansa", username: "bwalya_m", profilePicture: null },
-      },
-      {
-        id: "c2",
-        body: "Check the search – someone posted physics notes last week. Let me find the link.",
-        createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-        author: { displayName: "Natasha Phiri", username: "natasha.p", profilePicture: null },
-      },
-      {
-        id: "c3",
-        body: "Are you specifically looking for the 2022 or 2023 papers?",
-        createdAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-        author: { displayName: "Joseph Banda", username: "jo_banda", profilePicture: null },
-      },
-    ],
-  },
-  req_2: {
-    id: "req_2",
-    title: "Introduction to Algorithms – CLRS 4th Edition PDF",
-    description:
-      "Need the 4th edition of CLRS (Cormen, Leiserson, Rivest, Stein). Looking specifically for chapters on dynamic programming and graph algorithms. This is the 2022 edition published by MIT Press.",
-    categories: ["Computer Science", "Algorithms"],
-    bounty: null,
-    solved: true,
-    responseCount: 12,
-    commentCount: 15,
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    author: {
-      id: "u2",
-      displayName: "Thandiwe Daka",
-      username: "thandiwe.d",
-      profilePicture: null,
-      subscriptionPlan: "pro",
-    },
-    fulfillments: [
-      {
-        id: "ful_a",
-        postId: "post_xyz",
-        postTitle: "CLRS 4th Edition – Introduction to Algorithms (2022)",
-        isAccepted: true,
-        likeCount: 47,
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        author: {
-          displayName: "Chanda Mutale",
-          username: "c.mutale",
-          profilePicture: null,
-        },
-      },
-    ],
-    comments: [
-      {
-        id: "c4",
-        body: "Found it! Uploading the full PDF now. It includes all chapters.",
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        author: { displayName: "Chanda Mutale", username: "c.mutale", profilePicture: null },
-      },
-      {
-        id: "c5",
-        body: "Thank you so much! This is exactly what I needed.",
-        createdAt: new Date(Date.now() - 47 * 60 * 60 * 1000).toISOString(),
-        author: { displayName: "Thandiwe Daka", username: "thandiwe.d", profilePicture: null },
-      },
-    ],
-  },
-};
-
-const FALLBACK_REQUEST: DocumentRequest & { fulfillments: Fulfillment[]; comments: Comment[] } = {
-  id: "req_unknown",
-  title: "Document Request",
-  description: "This request could not be found.",
-  categories: [],
-  bounty: null,
-  solved: false,
-  responseCount: 0,
-  commentCount: 0,
-  createdAt: new Date().toISOString(),
-  author: {
-    id: "unknown",
-    displayName: "Unknown",
-    username: "unknown",
-    profilePicture: null,
-    subscriptionPlan: null,
-  },
-  fulfillments: [],
-  comments: [],
-};
-
 export default function RequestDetailPage({
   params,
 }: {
@@ -204,20 +86,143 @@ export default function RequestDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const { user } = useAuth();
-  const request = ALL_MOCK_REQUESTS[id] ?? FALLBACK_REQUEST;
-  const hasPaidPlan =
-    request.author.subscriptionPlan === "pro" ||
-    request.author.subscriptionPlan === "premium";
 
-  const [commentText, setCommentText] = useState("");
+  const [request, setRequest] = useState<RequestDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [likingId, setLikingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsLoading(true);
+    fetch(`/api/requests/${id}`, { cache: "no-store" })
+      .then((r) => {
+        if (r.status === 404) {
+          setNotFound(true);
+          return null;
+        }
+        return r.json();
+      })
+      .then((data) => {
+        if (data) setRequest(data as RequestDetail);
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setIsLoading(false));
+  }, [id]);
+
+  const handleAccept = async (fulfillmentId: string) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setAcceptingId(fulfillmentId);
+    try {
+      const res = await fetch(`/api/requests/${id}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fulfillmentId }),
+      });
+      if (!res.ok) return;
+      setRequest((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          solved: true,
+          fulfillments: prev.fulfillments.map((f) => ({
+            ...f,
+            isAccepted: f.id === fulfillmentId,
+          })),
+        };
+      });
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const handleLike = async (fulfillmentId: string, viewerHasLiked: boolean) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (likingId) return;
+    setLikingId(fulfillmentId);
+    // Optimistic update
+    setRequest((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        fulfillments: prev.fulfillments.map((f) =>
+          f.id === fulfillmentId
+            ? {
+                ...f,
+                likeCount: viewerHasLiked ? f.likeCount - 1 : f.likeCount + 1,
+                viewerHasLiked: !viewerHasLiked,
+              }
+            : f,
+        ),
+      };
+    });
+    try {
+      await fetch(`/api/requests/fulfillments/${fulfillmentId}/like`, {
+        method: "POST",
+      });
+    } catch {
+      // Revert on failure
+      setRequest((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          fulfillments: prev.fulfillments.map((f) =>
+            f.id === fulfillmentId
+              ? {
+                  ...f,
+                  likeCount: viewerHasLiked ? f.likeCount + 1 : f.likeCount - 1,
+                  viewerHasLiked,
+                }
+              : f,
+          ),
+        };
+      });
+    } finally {
+      setLikingId(null);
+    }
+  };
 
   const handleFulfill = () => {
     if (!user) {
       router.push("/login");
       return;
     }
-    router.push(`/create?requestId=${request.id}`);
+    router.push(`/create?requestId=${id}`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-page">
+        <Header title="Document Request" />
+        <div className="mx-auto max-w-150 pt-22 pb-28 px-4 space-y-3">
+          <div className="skeleton h-40 rounded-2xl" />
+          <div className="skeleton h-16 rounded-2xl" />
+          <div className="skeleton h-32 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (notFound || !request) {
+    return (
+      <div className="min-h-screen bg-page">
+        <Header title="Document Request" />
+        <div className="mx-auto max-w-150 pt-22 pb-28 px-4 text-center">
+          <p className="text-sm text-ink-2">Request not found.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const hasPaidPlan =
+    request.author.subscriptionPlan === "pro" ||
+    request.author.subscriptionPlan === "premium";
 
   return (
     <div className="min-h-screen bg-page">
@@ -242,9 +247,9 @@ export default function RequestDetailPage({
         }
       />
 
-      <div className="mx-auto max-w-150 pt-22 pb-28">
-        <div className="bg-surface lg:rounded-xl lg:border lg:border-edge lg:shadow-sm">
-          <div className="flex items-start justify-between px-4 pt-4">
+      <div className="mx-auto max-w-150 pt-22 pb-20">
+        <div className="lg:bg-surface lg:rounded-xl lg:border lg:border-edge lg:shadow-sm">
+          <div className="flex items-start justify-between px-4">
             <button
               type="button"
               className="cursor-pointer flex min-w-0 items-center gap-3 rounded-xl py-1 text-left transition-colors hover:bg-surface-high active:bg-edge"
@@ -310,7 +315,6 @@ export default function RequestDetailPage({
                 </span>
               ) : null}
             </div>
-
             <h1 className="text-lg font-bold text-ink leading-snug">
               {request.title}
             </h1>
@@ -338,32 +342,8 @@ export default function RequestDetailPage({
               {request.responseCount}{" "}
               {request.responseCount === 1 ? "response" : "responses"}
             </span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-3">
-              <Messages2 size={15} color="var(--ink-3)" />
-              {request.commentCount} comments
-            </span>
           </div>
         </div>
-
-        {!request.solved && (
-          <div className="mx-4 mt-4 lg:mx-0">
-            <button
-              type="button"
-              onClick={handleFulfill}
-              className="cursor-pointer w-full flex items-center justify-center gap-2.5 rounded-2xl bg-[#1D4ED8] px-5 py-4 text-sm font-semibold text-white shadow-[0_4px_20px_rgba(29,78,216,0.25)] transition-all duration-200 hover:bg-[#1A44C2] active:scale-[0.98]"
-            >
-              <DocumentUpload size={20} color="white" />
-              Post This Document
-            </button>
-            <p className="mt-2 text-center text-xs text-ink-3">
-              Upload the document to fulfill this request
-              {request.bounty
-                ? ` and earn ${request.bounty.toLocaleString()} tokens`
-                : ""}
-              .
-            </p>
-          </div>
-        )}
 
         {request.fulfillments.length > 0 && (
           <div className="mt-6 mx-4 lg:mx-0">
@@ -416,10 +396,27 @@ export default function RequestDetailPage({
                             {formatTimeAgo(ful.createdAt)}
                           </p>
                         </div>
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-3 shrink-0">
-                          <Heart size={14} color="var(--ink-3)" />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void handleLike(ful.id, ful.viewerHasLiked)
+                          }
+                          disabled={likingId === ful.id}
+                          className={`cursor-pointer inline-flex items-center gap-1 text-xs font-medium shrink-0 transition-colors duration-150 ${
+                            ful.viewerHasLiked
+                              ? "text-red-500"
+                              : "text-ink-3 hover:text-red-400"
+                          }`}
+                        >
+                          <Heart
+                            size={14}
+                            color={
+                              ful.viewerHasLiked ? "#ef4444" : "var(--ink-3)"
+                            }
+                            variant={ful.viewerHasLiked ? "Bold" : "Linear"}
+                          />
                           {ful.likeCount}
-                        </span>
+                        </button>
                       </div>
 
                       <button
@@ -435,24 +432,27 @@ export default function RequestDetailPage({
                           />
                         </div>
                         <p className="line-clamp-2 flex-1 text-xs font-semibold text-ink">
-                          {ful.postTitle}
+                          {ful.post.title}
                         </p>
                       </button>
 
-                      {!request.solved &&
-                        user?.id === request.author.id && (
-                          <button
-                            type="button"
-                            className="cursor-pointer mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[#16A34A] px-3 py-1.5 text-xs font-semibold text-[#16A34A] transition-all duration-200 hover:bg-[#F0FDF4] active:scale-95"
-                          >
-                            <TickCircle
-                              size={13}
-                              color="#16A34A"
-                              variant="Bold"
-                            />
-                            Mark as accepted
-                          </button>
-                        )}
+                      {!request.solved && request.viewerIsAuthor && (
+                        <button
+                          type="button"
+                          onClick={() => void handleAccept(ful.id)}
+                          disabled={acceptingId === ful.id}
+                          className="cursor-pointer mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[#16A34A] px-3 py-1.5 text-xs font-semibold text-[#16A34A] transition-all duration-200 hover:bg-[#F0FDF4] active:scale-95 disabled:opacity-50"
+                        >
+                          <TickCircle
+                            size={13}
+                            color="#16A34A"
+                            variant="Bold"
+                          />
+                          {acceptingId === ful.id
+                            ? "Accepting…"
+                            : "Mark as accepted"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -460,107 +460,23 @@ export default function RequestDetailPage({
             </div>
           </div>
         )}
-
-        <div className="mt-6 mx-4 lg:mx-0">
-          <h2 className="mb-3 text-sm font-bold text-ink">
-            Discussion
-            {request.comments.length > 0 && (
-              <span className="ml-2 text-xs font-normal text-ink-3">
-                {request.comments.length} comments
-              </span>
-            )}
-          </h2>
-
-          {request.comments.length === 0 ? (
-            <div className="rounded-2xl bg-surface border border-edge py-8 text-center">
-              <div className="flex justify-center mb-2">
-                <Messages2 size={24} color="var(--ink-3)" />
-              </div>
-              <p className="text-sm text-ink-3">
-                No comments yet. Start the discussion!
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-0 rounded-2xl bg-surface border border-edge overflow-hidden">
-              {request.comments.map((comment, idx) => (
-                <div
-                  key={comment.id}
-                  className={`flex items-start gap-3 px-4 py-3.5 ${
-                    idx < request.comments.length - 1
-                      ? "border-b border-edge"
-                      : ""
-                  }`}
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge">
-                    {comment.author.profilePicture ? (
-                      <Image
-                        src={comment.author.profilePicture}
-                        alt=""
-                        width={32}
-                        height={32}
-                        className="rounded-full object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <User size={13} color="var(--ink-3)" variant="Bold" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-ink">
-                        {comment.author.displayName}
-                      </span>
-                      <span className="text-[10px] text-ink-3">
-                        {formatTimeAgo(comment.createdAt)}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-ink-2 leading-5">
-                      {comment.body}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-3 flex items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge">
-              <User size={13} color="var(--ink-3)" variant="Bold" />
-            </div>
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Add a comment…"
-                className="w-full rounded-full border border-edge-mid bg-input px-4 py-2.5 pr-12 text-sm text-ink placeholder:text-ink-3 focus:border-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/15 transition-all duration-200"
-              />
-              {commentText.length > 0 && (
-                <button
-                  type="button"
-                  aria-label="Send comment"
-                  className="cursor-pointer absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-[#1D4ED8] transition-all duration-200 hover:bg-[#1A44C2] active:scale-90"
-                >
-                  <Send2 size={15} color="white" variant="Bold" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
 
-      {!request.solved && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 bg-surface border-t border-edge px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
-          <button
-            type="button"
-            onClick={handleFulfill}
-            className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-2xl bg-[#1D4ED8] py-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#1A44C2] active:scale-[0.98]"
-          >
-            <DocumentUpload size={18} color="white" />
-            Post This Document
-          </button>
-        </div>
-      )}
+      {!request.solved &&
+        !request.closed &&
+        !request.viewerIsAuthor &&
+        !request.viewerHasFulfilled && (
+          <div className="fixed bottom-0 left-0 right-0 z-20 bg-surface border-t border-edge px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
+            <button
+              type="button"
+              onClick={handleFulfill}
+              className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-2xl bg-[#1D4ED8] py-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#1A44C2] active:scale-[0.98]"
+            >
+              <DocumentUpload size={18} color="white" />
+              Post This Document
+            </button>
+          </div>
+        )}
     </div>
   );
 }

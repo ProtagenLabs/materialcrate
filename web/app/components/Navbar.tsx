@@ -15,7 +15,6 @@ import {
   Messages2,
   Notification,
   DocumentUpload,
-  MessageQuestion,
 } from "iconsax-reactjs";
 import type { Icon as IconsaxIcon } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
@@ -231,24 +230,6 @@ export default function Navbar() {
                 )}
               </div>
               <span className="hidden xl:inline">Notifications</span>
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/request"
-              className={`flex items-center gap-4 rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:bg-black/5 active:scale-[0.97] ${
-                pathname === "/request"
-                  ? "text-[#E1761F] bg-[#FFF3E7]"
-                  : "text-ink-2 hover:text-ink"
-              }`}
-              aria-current={pathname === "/request" ? "page" : undefined}
-            >
-              <MessageQuestion
-                size={24}
-                color={pathname === "/request" ? "#E1761F" : "#959595"}
-                variant={pathname === "/request" ? "Bold" : "Linear"}
-              />
-              <span className="hidden xl:inline">Request</span>
             </Link>
           </li>
           {user && (

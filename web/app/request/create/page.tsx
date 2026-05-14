@@ -2,13 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowDown2,
-  CloseCircle,
-  Coin1,
-  DocumentText,
-  MessageQuestion,
-} from "iconsax-reactjs";
+import { ArrowDown2, CloseCircle, Coin1 } from "iconsax-reactjs";
 import {
   POST_CATEGORIES,
   normalizeAllowedCategory,
@@ -28,7 +22,9 @@ export default function CreateRequestPage() {
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [bounty, setBounty] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
-  const [alertType, setAlertType] = useState<"success" | "error" | "info">("error");
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">(
+    "error",
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const categoryInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,7 +56,7 @@ export default function CreateRequestPage() {
     setSelectedCategories((prev) => prev.filter((c) => c !== cat));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       setAlertType("error");
@@ -72,12 +68,35 @@ export default function CreateRequestPage() {
       setAlertMessage("Please describe what you're looking for");
       return;
     }
+
+    const parsedBounty = bounty ? parseInt(bounty, 10) : 0;
+    const bountyNum = parsedBounty > 0 ? parsedBounty : null;
+
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim(),
+          categories: selectedCategories,
+          bounty: bountyNum,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAlertType("error");
+        setAlertMessage(data?.error || "Failed to post request");
+        return;
+      }
+      router.push(`/request/${data.id}`);
+    } catch {
+      setAlertType("error");
+      setAlertMessage("Something went wrong. Please try again.");
+    } finally {
       setIsSubmitting(false);
-      setAlertType("info");
-      setAlertMessage("Request posting is coming soon!");
-    }, 800);
+    }
   };
 
   const canSubmit = title.trim().length > 0 && description.trim().length > 0;
@@ -89,20 +108,9 @@ export default function CreateRequestPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="mx-auto max-w-[600px] px-4 pt-[5.5rem] pb-32"
+        className="mx-auto max-w-150 px-4 pt-20 pb-32 space-y-5"
       >
-        {/* Illustration */}
-        <div className="flex flex-col items-center py-6">
-          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#EFF6FF] mb-3">
-            <MessageQuestion size={40} color="#1D4ED8" variant="Bold" />
-          </div>
-          <p className="text-center text-sm text-ink-2 max-w-[260px] leading-5">
-            Describe the document you need. The community will help you find it.
-          </p>
-        </div>
-
-        <div className="space-y-5">
-          {/* Title */}
+        <div className="space-y-1">
           <div>
             <label
               htmlFor="request-title"
@@ -125,7 +133,6 @@ export default function CreateRequestPage() {
             </p>
           </div>
 
-          {/* Description */}
           <div>
             <label
               htmlFor="request-description"
@@ -148,7 +155,6 @@ export default function CreateRequestPage() {
             </p>
           </div>
 
-          {/* Categories */}
           <div className="relative">
             <label
               htmlFor="request-categories"
@@ -169,6 +175,7 @@ export default function CreateRequestPage() {
                   >
                     {cat}
                     <button
+                      aria-label="remove catergory"
                       type="button"
                       onClick={() => handleRemoveCategory(cat)}
                       className="cursor-pointer rounded-full p-0.5 transition-colors hover:bg-[#DBEAFE]"
@@ -197,13 +204,15 @@ export default function CreateRequestPage() {
                 placeholder="Search categories…"
                 className="w-full rounded-2xl border border-edge-mid bg-input px-4 py-3 pr-10 text-sm text-ink placeholder:text-ink-3 focus:border-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 transition-all duration-200"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+              <span
+                className={`absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none ${isCategoryDropdownOpen && "rotate-180"}`}
+              >
                 <ArrowDown2 size={16} color="var(--ink-3)" />
               </span>
             </div>
 
             {isCategoryDropdownOpen && filteredCategories.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full rounded-2xl border border-edge-mid bg-surface shadow-lg overflow-hidden">
+              <div className="absolute mt-1 w-full rounded-2xl border border-edge-mid bg-surface shadow-lg overflow-hidden z-50">
                 {filteredCategories.map((cat) => (
                   <button
                     key={cat}
@@ -218,8 +227,7 @@ export default function CreateRequestPage() {
             )}
           </div>
 
-          {/* Bounty */}
-          <div>
+          <div className="mt-3">
             <label
               htmlFor="request-bounty"
               className="mb-2 block text-sm font-semibold text-ink"
@@ -238,11 +246,15 @@ export default function CreateRequestPage() {
               </div>
               <input
                 id="request-bounty"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={bounty}
-                onChange={(e) => setBounty(e.target.value)}
-                min={0}
-                max={100000}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "");
+                  if (digits === "" || parseInt(digits, 10) <= 100000) {
+                    setBounty(digits);
+                  }
+                }}
                 placeholder="0"
                 className="w-full rounded-2xl border border-edge-mid bg-input px-4 py-3 pl-28 text-sm text-ink placeholder:text-ink-3 focus:border-[#E1761F] focus:outline-none focus:ring-2 focus:ring-[#E1761F]/20 transition-all duration-200"
               />
@@ -250,16 +262,6 @@ export default function CreateRequestPage() {
             <p className="mt-1.5 text-xs text-ink-3">
               Tokens will be held until the request is fulfilled and released to
               the contributor you choose.
-            </p>
-          </div>
-
-          {/* Hint card */}
-          <div className="flex items-start gap-3 rounded-2xl bg-surface-high border border-edge p-4">
-            <DocumentText size={20} color="var(--ink-3)" variant="Bold" />
-            <p className="text-xs leading-5 text-ink-2">
-              Good requests are specific — mention edition, year, subject level,
-              and exam board where relevant. This helps contributors find the
-              exact document you need.
             </p>
           </div>
         </div>

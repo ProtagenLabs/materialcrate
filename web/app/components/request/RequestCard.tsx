@@ -20,7 +20,7 @@ export type DocumentRequest = {
   bounty?: number | null;
   solved: boolean;
   responseCount: number;
-  commentCount: number;
+  commentCount?: number;
   createdAt: string;
   author: {
     id: string;
@@ -57,7 +57,9 @@ export default function RequestCard({ request }: { request: DocumentRequest }) {
         tabIndex={0}
         className="cursor-pointer border-b border-edge lg:rounded-xl lg:border lg:border-edge lg:mb-4 lg:bg-surface lg:shadow-sm transition-all duration-200"
         onClick={() => router.push(`/request/${request.id}`)}
-        onKeyDown={(e) => e.key === "Enter" && router.push(`/request/${request.id}`)}
+        onKeyDown={(e) =>
+          e.key === "Enter" && router.push(`/request/${request.id}`)
+        }
       >
         <div className="flex items-start justify-between px-2 pt-3">
           <button
@@ -65,7 +67,9 @@ export default function RequestCard({ request }: { request: DocumentRequest }) {
             className="cursor-pointer flex min-w-0 items-center gap-3 text-left rounded-xl py-1 -ml-1 pl-1 transition-colors duration-200 hover:bg-surface-high active:bg-edge"
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/user/${encodeURIComponent(request.author.username)}`);
+              router.push(
+                `/user/${encodeURIComponent(request.author.username)}`,
+              );
             }}
           >
             <div className="flex h-10 w-10 shrink-0 aspect-square items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge">
@@ -101,11 +105,11 @@ export default function RequestCard({ request }: { request: DocumentRequest }) {
 
           <div className="pt-1 shrink-0">
             {request.solved ? (
-              <span className="inline-flex items-center rounded-full bg-[#E8F5E9] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#2E7D32]">
+              <span className="inline-flex items-center rounded-full bg-[#E8F5E9] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#2E7D32]">
                 Fulfilled
               </span>
             ) : (
-              <span className="inline-flex items-center rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#1D4ED8]">
+              <span className="inline-flex items-center rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#1D4ED8]">
                 Open
               </span>
             )}
@@ -113,7 +117,7 @@ export default function RequestCard({ request }: { request: DocumentRequest }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 px-2 pt-3">
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#1D4ED8]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-[#1D4ED8]">
             <MessageQuestion size={10} color="#1D4ED8" variant="Bold" />
             Request
           </span>
@@ -141,7 +145,7 @@ export default function RequestCard({ request }: { request: DocumentRequest }) {
             {request.categories.map((cat) => (
               <span
                 key={cat}
-                className="rounded-full bg-surface-high px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-3"
+                className="rounded-full bg-surface-high px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-ink-3"
               >
                 {cat}
               </span>
@@ -158,10 +162,12 @@ export default function RequestCard({ request }: { request: DocumentRequest }) {
                 {request.responseCount === 1 ? "response" : "responses"}
               </span>
             </span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-3">
-              <Messages2 size={15} color="var(--ink-3)" />
-              <span>{request.commentCount}</span>
-            </span>
+            {(request.commentCount ?? 0) > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-3">
+                <Messages2 size={15} color="var(--ink-3)" />
+                <span>{request.commentCount}</span>
+              </span>
+            )}
           </div>
           {!request.solved && (
             <button

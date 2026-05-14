@@ -127,11 +127,17 @@ export async function POST(request: Request) {
 
   const { ok, body: gqlBody } = await graphql(
     CREATE_MUTATION,
-    { title, description, categories, bounty: bounty ?? null },
+    {
+      title,
+      description,
+      categories: Array.isArray(categories) ? categories : [],
+      bounty: bounty ?? null,
+    },
     token,
   );
 
   if (!ok || gqlBody?.errors?.length) {
+    console.error("[POST /api/requests]", gqlBody?.errors);
     return NextResponse.json(
       { error: gqlBody?.errors?.[0]?.message || "Failed to create request" },
       { status: 400 },
