@@ -111,4 +111,7 @@ extend type Mutation {
   trackFeedInteraction(input: FeedInteractionInput!): Boolean!
   createComment(postId: ID!, content: String!, parentCommentId: ID): Comment!
   toggleCommentLike(commentId: ID!): Comment!
+  deleteComment(commentId: ID!): Boolean!
+  editComment(commentId: ID!, content: String!): Comment!
+  reportComment(commentId: ID!, reason: String!): Boolean!
 }

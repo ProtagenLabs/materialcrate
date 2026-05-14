@@ -2405,6 +2405,131 @@ export const PostResolver = {
 
       return mappedComment;
     },
+
+    deleteComment: async (
+      _: unknown,
+      { commentId }: { commentId: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const comment = await (prisma as any).comment.findUnique({
+        where: { id: commentId },
+        select: { id: true, authorId: true, postId: true },
+      });
+      if (!comment) {
+        throw new Error("Comment not found");
+      }
+
+      const post = await prisma.post.findUnique({
+        where: { id: comment.postId },
+        select: { authorId: true },
+      });
+
+      const isCommentAuthor = comment.authorId === viewerId;
+      const isPostOwner = post?.authorId === viewerId;
+      if (!isCommentAuthor && !isPostOwner) {
+        throw new Error("Not authorized to delete this comment");
+      }
+
+      await (prisma as any).comment.delete({ where: { id: commentId } });
+
+      const commentCount = await (prisma as any).comment.count({
+        where: { postId: comment.postId },
+      });
+
+      emitPostActivity({
+        postId: comment.postId,
+        reason: "comment-deleted",
+        commentId,
+        commentCount,
+      });
+
+      return true;
+    },
+
+    editComment: async (
+      _: unknown,
+      { commentId, content }: { commentId: string; content: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedContent = content?.trim();
+      if (!normalizedContent) {
+        throw new Error("Comment content is required");
+      }
+      if (normalizedContent.length > 2000) {
+        throw new Error("Comment content cannot exceed 2000 characters");
+      }
+
+      const comment = await (prisma as any).comment.findUnique({
+        where: { id: commentId },
+        select: { id: true, authorId: true, postId: true },
+      });
+      if (!comment) {
+        throw new Error("Comment not found");
+      }
+      if (comment.authorId !== viewerId) {
+        throw new Error("Not authorized to edit this comment");
+      }
+
+      const updated = await (prisma as any).comment.update({
+        where: { id: commentId },
+        data: { content: normalizedContent },
+        include: buildCommentInclude(viewerId),
+      });
+
+      emitPostActivity({
+        postId: comment.postId,
+        reason: "comment-edited",
+        commentId,
+      });
+
+      return mapCommentForGraphQL(updated, viewerId);
+    },
+
+    reportComment: async (
+      _: unknown,
+      { commentId, reason }: { commentId: string; reason: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const comment = await (prisma as any).comment.findUnique({
+        where: { id: commentId },
+        select: { id: true, authorId: true, content: true },
+      });
+      if (!comment) {
+        throw new Error("Comment not found");
+      }
+      if (comment.authorId === viewerId) {
+        throw new Error("Cannot report your own comment");
+      }
+
+      const normalizedReason = reason?.trim() || "No reason provided";
+      const contentPreview = (comment.content as string)?.slice(0, 200) || "";
+
+      await prisma.report.create({
+        data: {
+          userId: viewerId,
+          category: "content",
+          title: "Comment report",
+          description: `Comment ID: ${commentId}\nReason: ${normalizedReason}\nContent: ${contentPreview}`,
+        },
+      });
+
+      return true;
+    },
   },
   Post: {
     author: (post: any) => sanitizeAuthorIdentity(post.author),

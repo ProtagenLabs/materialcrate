@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 import { Server as SocketIOServer } from "socket.io";
 
-type PostActivityReason = "post-like" | "comment-created" | "comment-like";
+type PostActivityReason = "post-like" | "comment-created" | "comment-like" | "comment-deleted" | "comment-edited";
 type NotificationActivityReason =
   | "notification-created"
   | "notification-read"

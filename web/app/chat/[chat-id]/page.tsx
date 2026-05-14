@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -325,12 +325,120 @@ function isGifMp4(url: string): boolean {
   return url.endsWith(".mp4");
 }
 
+type MsgOptionsAnchor = { top: number; left: number; right: number; bottom: number };
+
+function MessageOptionsMenu({
+  isOpen,
+  onClose,
+  anchor,
+  message,
+  onCopy,
+  onUnsend,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  anchor: MsgOptionsAnchor | null;
+  message: Message | null;
+  onCopy: () => void;
+  onUnsend: () => void;
+}) {
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState<React.CSSProperties | undefined>();
+
+  useEffect(() => {
+    if (!anchor || !isOpen || typeof window === "undefined") {
+      setPosition(undefined);
+      return;
+    }
+    const gap = 6;
+    const pad = 12;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const menuH = menuRef.current?.offsetHeight ?? 100;
+    const menuW = menuRef.current?.offsetWidth ?? 160;
+
+    // Vertical: prefer below, fall back to above
+    const fitsBelow = anchor.bottom + gap + menuH <= vh - pad;
+    const top = fitsBelow
+      ? Math.round(anchor.bottom + gap)
+      : Math.max(pad, Math.round(anchor.top - menuH - gap));
+
+    // Horizontal: right-align to the button first; if that pushes the left
+    // edge off screen, left-align to the button's left edge instead.
+    const rightFromEdge = Math.max(pad, Math.round(vw - anchor.right));
+    const leftEdgeIfRightAligned = vw - rightFromEdge - menuW;
+
+    let pos: React.CSSProperties;
+    if (leftEdgeIfRightAligned >= pad) {
+      pos = { top: `${top}px`, right: `${rightFromEdge}px` };
+    } else {
+      // Anchor to the left side of the button instead
+      const leftFromEdge = Math.max(pad, Math.round(anchor.left));
+      // But make sure the right edge doesn't overflow
+      const clampedLeft = Math.min(leftFromEdge, vw - menuW - pad);
+      pos = { top: `${top}px`, left: `${Math.max(pad, clampedLeft)}px` };
+    }
+    setPosition(pos);
+  }, [anchor, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const down = (e: MouseEvent | TouchEvent) => {
+      if (!(e.target instanceof Node)) return;
+      if (!menuRef.current?.contains(e.target)) onClose();
+    };
+    document.addEventListener("mousedown", down);
+    document.addEventListener("touchstart", down);
+    return () => {
+      document.removeEventListener("mousedown", down);
+      document.removeEventListener("touchstart", down);
+    };
+  }, [isOpen, onClose]);
+
+  const hasCopy = message && !message.isUnsent && message.text;
+  const hasUnsend = message && message.sentByMe && !message.isUnsent;
+  if (!hasCopy && !hasUnsend) return null;
+
+  return (
+    <div
+      ref={menuRef}
+      style={position}
+      className={`fixed z-[200] rounded-2xl border border-edge bg-surface p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.14)] transition-all duration-200 ease-out min-w-[160px] ${
+        !position ? "right-4 bottom-4" : ""
+      } ${isOpen ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"}`}
+    >
+      <div className="overflow-hidden rounded-xl bg-page">
+        {hasCopy && (
+          <button
+            type="button"
+            onClick={() => { onCopy(); onClose(); }}
+            className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-black/5 active:opacity-60 transition-colors ${hasUnsend ? "border-b border-edge" : ""}`}
+          >
+            <Copy size={16} color="var(--ink)" />
+            <span>Copy text</span>
+          </button>
+        )}
+        {hasUnsend && (
+          <button
+            type="button"
+            onClick={() => { onUnsend(); onClose(); }}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[#D12F2F] hover:bg-black/5 active:opacity-60 transition-colors"
+          >
+            <Trash size={16} color="#D12F2F" />
+            <span>Unsend</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MessageBubble({
   message,
-  onLongPress,
+  onOptions,
 }: {
   message: Message;
-  onLongPress: (msg: Message) => void;
+  onOptions: (msg: Message, anchor: MsgOptionsAnchor) => void;
 }) {
   const { sentByMe, text, timestamp, status, isUnsent, attachments } = message;
   const hasAttachments = attachments && attachments.length > 0;
@@ -341,35 +449,30 @@ function MessageBubble({
   const displayText = textWithoutGif || (!gifUrl ? (textWithoutLink ?? text) : null);
   const showText = !isUnsent && !!displayText;
 
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const didLongPress = useRef(false);
+  const hasActions =
+    (!isUnsent && !!text) || (sentByMe && !isUnsent);
 
-  const startPress = () => {
-    didLongPress.current = false;
-    longPressTimer.current = setTimeout(() => {
-      didLongPress.current = true;
-      onLongPress(message);
-    }, 480);
+  const handleOptionsClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    onOptions(message, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
   };
 
-  const cancelPress = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  };
+  const optionsButton = hasActions ? (
+    <button
+      type="button"
+      aria-label="Message options"
+      onClick={handleOptionsClick}
+      className="mb-5 shrink-0 flex h-7 w-7 items-center justify-center rounded-full opacity-40 hover:opacity-100 hover:bg-black/5 active:opacity-60 transition-opacity duration-150"
+    >
+      <span className="rotate-90 block"><More size={15} color="var(--ink-3)" /></span>
+    </button>
+  ) : null;
 
   return (
-    <div
-      className={`flex ${sentByMe ? "justify-end" : "justify-start"}`}
-      onMouseDown={startPress}
-      onMouseUp={cancelPress}
-      onMouseLeave={cancelPress}
-      onTouchStart={startPress}
-      onTouchEnd={cancelPress}
-      onTouchMove={cancelPress}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onLongPress(message);
-      }}
-    >
+    <div className={`flex items-end gap-1 ${sentByMe ? "justify-end" : "justify-start"}`}>
+      {/* Button to the LEFT of my messages */}
+      {sentByMe && optionsButton}
+
       <div
         className={`flex max-w-[78%] flex-col gap-1 ${
           sentByMe ? "items-end" : "items-start"
@@ -412,7 +515,7 @@ function MessageBubble({
                 : "rounded-bl-md bg-surface-high text-ink"
             }`}
           >
-            <p className="select-none break-all text-sm leading-relaxed">{displayText}</p>
+            <p className="break-all text-sm leading-relaxed">{displayText}</p>
           </div>
         )}
 
@@ -431,98 +534,10 @@ function MessageBubble({
           {sentByMe && <StatusTick status={status} />}
         </div>
       </div>
+
+      {/* Button to the RIGHT of received messages */}
+      {!sentByMe && optionsButton}
     </div>
-  );
-}
-
-// ─── Message action sheet ─────────────────────────────────────────────────────
-
-function MessageActionSheet({
-  message,
-  onClose,
-  onCopy,
-  onUnsend,
-}: {
-  message: Message;
-  onClose: () => void;
-  onCopy: () => void;
-  onUnsend: () => void;
-}) {
-  const preview =
-    message.isUnsent
-      ? "Message unsent"
-      : (message.text?.slice(0, 60) ?? null);
-
-  // Close on backdrop tap
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
-        onClick={onClose}
-      />
-      {/* Sheet */}
-      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-surface pb-safe shadow-2xl lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2">
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="h-1 w-10 rounded-full bg-edge" />
-        </div>
-
-        {/* Preview */}
-        {preview && (
-          <div className="border-b border-edge px-5 py-3">
-            <p className="line-clamp-2 text-sm text-ink-2 italic">
-              &ldquo;{preview}&rdquo;
-            </p>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="px-3 py-2">
-          {!message.isUnsent && message.text && (
-            <button
-              type="button"
-              onClick={onCopy}
-              className="flex w-full items-center gap-3.5 rounded-2xl px-3 py-3.5 text-left transition-colors hover:bg-surface-high active:bg-surface-high active:opacity-70"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-surface-high">
-                <Copy size={18} color="var(--ink)" />
-              </div>
-              <span className="text-sm font-medium text-ink">Copy text</span>
-            </button>
-          )}
-
-          {message.sentByMe && !message.isUnsent && (
-            <button
-              type="button"
-              onClick={onUnsend}
-              className="flex w-full items-center gap-3.5 rounded-2xl px-3 py-3.5 text-left transition-colors hover:bg-red-50 active:opacity-70"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-red-50">
-                <Trash size={18} color="#e53e3e" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-red-600">
-                  Unsend message
-                </p>
-                <p className="text-xs text-red-400">Removes it for everyone</p>
-              </div>
-            </button>
-          )}
-        </div>
-
-        {/* Cancel */}
-        <div className="px-3 pb-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full rounded-2xl bg-surface-high py-3.5 text-sm font-semibold text-ink transition-opacity active:opacity-60"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </>
   );
 }
 
@@ -1030,7 +1045,8 @@ export default function ChatRoomPage() {
   const [isTypingRemote, setIsTypingRemote] = useState(false);
 
   // Overlay states
-  const [actionSheetMsg, setActionSheetMsg] = useState<Message | null>(null);
+  const [optionsMsg, setOptionsMsg] = useState<Message | null>(null);
+  const [optionsAnchor, setOptionsAnchor] = useState<MsgOptionsAnchor | null>(null);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const [gifPickerOpen, setGifPickerOpen] = useState(false);
@@ -1249,14 +1265,16 @@ export default function ChatRoomPage() {
     } catch {
       // clipboard not available (e.g. non-https) — silently fail
     }
-    setActionSheetMsg(null);
+    setOptionsMsg(null);
+    setOptionsAnchor(null);
   }, []);
 
   const handleUnsendConfirm = useCallback(
     async (messageId: string) => {
       if (!conversationId) return;
       setConfirmDelete(null);
-      setActionSheetMsg(null);
+      setOptionsMsg(null);
+      setOptionsAnchor(null);
 
       // Optimistic mark as unsent
       setMessages((prev) =>
@@ -1409,7 +1427,10 @@ export default function ChatRoomPage() {
                     <MessageBubble
                       key={msg.id}
                       message={msg}
-                      onLongPress={(m) => setActionSheetMsg(m)}
+                      onOptions={(m, anchor) => {
+                        setOptionsMsg(m);
+                        setOptionsAnchor(anchor);
+                      }}
                     />
                   ))}
                 </div>
@@ -1491,19 +1512,20 @@ export default function ChatRoomPage() {
         </div>
       </div>
 
-      {/* ── Message action sheet ── */}
-      {actionSheetMsg && (
-        <MessageActionSheet
-          message={actionSheetMsg}
-          onClose={() => setActionSheetMsg(null)}
-          onCopy={() => void handleCopy(actionSheetMsg.text ?? "")}
-          onUnsend={() => {
-            pendingDeleteRef.current = actionSheetMsg.id;
-            setActionSheetMsg(null);
-            setConfirmDelete("message");
-          }}
-        />
-      )}
+      {/* ── Message options popover ── */}
+      <MessageOptionsMenu
+        isOpen={Boolean(optionsMsg)}
+        onClose={() => { setOptionsMsg(null); setOptionsAnchor(null); }}
+        anchor={optionsAnchor}
+        message={optionsMsg}
+        onCopy={() => void handleCopy(optionsMsg?.text ?? "")}
+        onUnsend={() => {
+          pendingDeleteRef.current = optionsMsg?.id ?? null;
+          setOptionsMsg(null);
+          setOptionsAnchor(null);
+          setConfirmDelete("message");
+        }}
+      />
 
       {/* ── GIF picker ── */}
       {gifPickerOpen && (

@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { CloseCircle, Heart, Send, User, Verify } from "iconsax-reactjs";
+import { CloseCircle, Edit2, Flag, Heart, More, Send, Trash, User, Verify } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
+import { useSystemPopup } from "@/app/components/SystemPopup";
 import { subscribeToPostActivity } from "@/app/lib/post-activity-realtime";
 import { hasPaidSubscription } from "@/app/lib/subscription";
 import { renderTextWithMentions } from "@/app/lib/mention-renderer";
@@ -41,6 +42,19 @@ type DrawerComment = {
 type ReplyTarget = {
   parentCommentId: string;
   mention: string;
+};
+
+type OptionsAnchor = {
+  top: number;
+  right: number;
+  bottom: number;
+};
+
+type CommentAction = {
+  label: string;
+  icon: React.ReactNode;
+  isDestructive?: boolean;
+  onClick: () => void;
 };
 
 const REPLIES_BATCH_SIZE = 10;
@@ -102,6 +116,102 @@ function hasPaidAuthorSubscription(author?: CommentAuthor | null) {
   return hasPaidSubscription(author?.subscriptionPlan);
 }
 
+function CommentOptionsMenu({
+  isOpen,
+  onClose,
+  anchor,
+  actions,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  anchor: OptionsAnchor | null;
+  actions: CommentAction[];
+}) {
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState<React.CSSProperties | undefined>();
+
+  useLayoutEffect(() => {
+    if (!anchor || !isOpen || typeof window === "undefined") {
+      setPosition(undefined);
+      return;
+    }
+
+    const gap = 6;
+    const viewportPadding = 16;
+    const menuHeight = menuRef.current?.offsetHeight ?? 120;
+    const right = Math.max(
+      viewportPadding,
+      Math.round(window.innerWidth - anchor.right),
+    );
+    const fitsBelow =
+      anchor.bottom + gap + menuHeight <= window.innerHeight - viewportPadding;
+
+    if (fitsBelow) {
+      setPosition({
+        top: `${Math.round(anchor.bottom + gap)}px`,
+        right: `${right}px`,
+      });
+    } else {
+      setPosition({
+        top: `${Math.max(viewportPadding, Math.round(anchor.top - menuHeight - gap))}px`,
+        right: `${right}px`,
+      });
+    }
+  }, [anchor, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (menuRef.current?.contains(target)) return;
+      onClose();
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [isOpen, onClose]);
+
+  return (
+    <div
+      ref={menuRef}
+      style={position}
+      className={`fixed z-[200] rounded-2xl border border-edge bg-surface p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.14)] transition-all duration-200 ease-out min-w-[160px] ${
+        position ? "left-auto" : "right-4"
+      } ${
+        isOpen
+          ? "opacity-100 scale-100 pointer-events-auto"
+          : "opacity-0 scale-95 pointer-events-none"
+      }`}
+    >
+      <div className="overflow-hidden rounded-xl bg-page">
+        {actions.map((action, index) => (
+          <button
+            key={action.label}
+            type="button"
+            onClick={() => {
+              action.onClick();
+              onClose();
+            }}
+            className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-black/5 active:opacity-60 transition-colors text-sm ${
+              action.isDestructive ? "text-[#D12F2F]" : "text-ink"
+            } ${index < actions.length - 1 ? "border-b border-edge" : ""}`}
+          >
+            <span>{action.icon}</span>
+            <span>{action.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function CommentDrawer({
   isOpen,
   onClose,
@@ -110,6 +220,7 @@ export default function CommentDrawer({
 }: CommentDrawerProps) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const popup = useSystemPopup();
   const [comments, setComments] = useState<DrawerComment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
@@ -127,9 +238,18 @@ export default function CommentDrawer({
   const [isLikingByCommentId, setIsLikingByCommentId] = useState<
     Record<string, boolean>
   >({});
-  const expandedRepliesRef = React.useRef<Record<string, boolean>>({});
-  const realtimeRefreshTimeoutRef = React.useRef<number | null>(null);
-  const lastRealtimeRefreshRef = React.useRef(0);
+
+  const [activeOptionsCommentId, setActiveOptionsCommentId] = useState<string | null>(null);
+  const [optionsAnchor, setOptionsAnchor] = useState<OptionsAnchor | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [isDeletingCommentId, setIsDeletingCommentId] = useState<string | null>(null);
+
+  const expandedRepliesRef = useRef<Record<string, boolean>>({});
+  const realtimeRefreshTimeoutRef = useRef<number | null>(null);
+  const lastRealtimeRefreshRef = useRef(0);
+
   const isOwner =
     Boolean(typeof user?.username === "string" && user.username.trim()) &&
     typeof user?.username === "string" &&
@@ -137,14 +257,20 @@ export default function CommentDrawer({
       post?.author?.username?.trim().toLowerCase();
   const commentsLocked = Boolean(post?.commentsDisabled) && !isOwner;
 
+  const currentUsername =
+    typeof user?.username === "string" ? user.username.trim().toLowerCase() : "";
+
   const resetState = useCallback(() => {
     setExpandedRepliesByCommentId({});
     setRepliesByCommentId({});
     setDraftComment("");
     setReplyTarget(null);
+    setActiveOptionsCommentId(null);
+    setOptionsAnchor(null);
+    setEditingCommentId(null);
+    setEditDraft("");
   }, []);
 
-  const mentionRegex = useMemo(() => /(@[A-Za-z0-9._]+)/g, []);
   const ensureAuthenticated = useCallback(() => {
     if (isLoading) return false;
     if (!user) {
@@ -340,6 +466,22 @@ export default function CommentDrawer({
     },
     [],
   );
+
+  const removeComment = useCallback((commentId: string, parentId?: string | null) => {
+    if (parentId) {
+      setRepliesByCommentId((previous) => ({
+        ...previous,
+        [parentId]: (previous[parentId] ?? []).filter((r) => r.id !== commentId),
+      }));
+      setComments((previous) =>
+        previous.map((c) =>
+          c.id === parentId ? { ...c, replyCount: Math.max(0, c.replyCount - 1) } : c,
+        ),
+      );
+    } else {
+      setComments((previous) => previous.filter((c) => c.id !== commentId));
+    }
+  }, []);
 
   useEffect(() => {
     if (!isOpen || !postId) {
@@ -539,6 +681,181 @@ export default function CommentDrawer({
     }
   };
 
+  const handleDeleteComment = useCallback(
+    async (comment: DrawerComment, label = "Delete comment") => {
+      if (!ensureAuthenticated()) return;
+
+      const confirmed = await popup.confirm({
+        title: label === "Remove comment" ? "Remove this comment?" : "Delete comment?",
+        message:
+          label === "Remove comment"
+            ? "This comment will be permanently removed from your post."
+            : "This will permanently delete your comment.",
+        confirmLabel: label === "Remove comment" ? "Remove" : "Delete",
+        cancelLabel: "Cancel",
+        isDestructive: true,
+      });
+
+      if (!confirmed) return;
+
+      setIsDeletingCommentId(comment.id);
+      try {
+        const response = await fetch("/api/comments/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ commentId: comment.id }),
+        });
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok || !body?.ok) {
+          throw new Error(body?.error || "Failed to delete comment");
+        }
+
+        removeComment(comment.id, comment.parentId);
+        setCommentsError(null);
+      } catch (error) {
+        setCommentsError("Failed to delete comment");
+        console.error("Failed to delete comment", comment.id, error);
+      } finally {
+        setIsDeletingCommentId(null);
+      }
+    },
+    [ensureAuthenticated, popup, removeComment],
+  );
+
+  const handleStartEdit = useCallback((comment: DrawerComment) => {
+    setEditingCommentId(comment.id);
+    setEditDraft(comment.content);
+    setActiveOptionsCommentId(null);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingCommentId(null);
+    setEditDraft("");
+  }, []);
+
+  const handleSubmitEdit = useCallback(
+    async (comment: DrawerComment) => {
+      const trimmedContent = editDraft.trim();
+      if (!trimmedContent || trimmedContent === comment.content || isSubmittingEdit) return;
+
+      setIsSubmittingEdit(true);
+      try {
+        const response = await fetch("/api/comments/edit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ commentId: comment.id, content: trimmedContent }),
+        });
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok || !body?.ok) {
+          throw new Error(body?.error || "Failed to edit comment");
+        }
+
+        if (body?.comment) {
+          applyUpdatedComment({ id: comment.id, content: body.comment.content });
+        }
+        setEditingCommentId(null);
+        setEditDraft("");
+        setCommentsError(null);
+      } catch (error) {
+        setCommentsError("Failed to edit comment");
+        console.error("Failed to edit comment", comment.id, error);
+      } finally {
+        setIsSubmittingEdit(false);
+      }
+    },
+    [applyUpdatedComment, editDraft, isSubmittingEdit],
+  );
+
+  const handleReportComment = useCallback(
+    async (comment: DrawerComment) => {
+      if (!ensureAuthenticated()) return;
+
+      const confirmed = await popup.confirm({
+        title: "Report comment?",
+        message: "This comment will be flagged for review by our team.",
+        confirmLabel: "Report",
+        cancelLabel: "Cancel",
+        isDestructive: false,
+      });
+
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch("/api/comments/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            commentId: comment.id,
+            reason: "Inappropriate content",
+          }),
+        });
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok || !body?.ok) {
+          throw new Error(body?.error || "Failed to report comment");
+        }
+
+        setCommentsError(null);
+      } catch (error) {
+        setCommentsError("Failed to report comment");
+        console.error("Failed to report comment", comment.id, error);
+      }
+    },
+    [ensureAuthenticated, popup],
+  );
+
+  const getCommentActions = useCallback(
+    (comment: DrawerComment): CommentAction[] => {
+      const commentAuthorUsername =
+        comment.author?.username?.trim().toLowerCase() ?? "";
+      const isCommentAuthor =
+        Boolean(currentUsername) && currentUsername === commentAuthorUsername;
+
+      if (isCommentAuthor) {
+        return [
+          {
+            label: "Edit",
+            icon: <Edit2 size={16} color="#111111" variant="Bold" />,
+            onClick: () => handleStartEdit(comment),
+          },
+          {
+            label: "Delete",
+            icon: <Trash size={16} color="#D12F2F" variant="Bold" />,
+            isDestructive: true,
+            onClick: () => void handleDeleteComment(comment, "Delete comment"),
+          },
+        ];
+      }
+
+      if (isOwner) {
+        return [
+          {
+            label: "Remove comment",
+            icon: <Trash size={16} color="#D12F2F" variant="Bold" />,
+            isDestructive: true,
+            onClick: () => void handleDeleteComment(comment, "Remove comment"),
+          },
+          {
+            label: "Report",
+            icon: <Flag size={16} color="#111111" variant="Bold" />,
+            onClick: () => void handleReportComment(comment),
+          },
+        ];
+      }
+
+      return [
+        {
+          label: "Report",
+          icon: <Flag size={16} color="#111111" variant="Bold" />,
+          onClick: () => void handleReportComment(comment),
+        },
+      ];
+    },
+    [currentUsername, handleDeleteComment, handleReportComment, handleStartEdit, isOwner],
+  );
+
   const handleClose = () => {
     if (typeof window !== "undefined" && realtimeRefreshTimeoutRef.current) {
       window.clearTimeout(realtimeRefreshTimeoutRef.current);
@@ -549,9 +866,93 @@ export default function CommentDrawer({
     onClose();
   };
 
+  const handleOptionsButtonClick = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    commentId: string,
+  ) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (activeOptionsCommentId === commentId) {
+      setActiveOptionsCommentId(null);
+      setOptionsAnchor(null);
+    } else {
+      setOptionsAnchor({ top: rect.top, right: rect.right, bottom: rect.bottom });
+      setActiveOptionsCommentId(commentId);
+    }
+  };
+
+  const renderCommentContent = (comment: DrawerComment) => {
+    if (editingCommentId === comment.id) {
+      return (
+        <div className="space-y-2 w-full">
+          <textarea
+            value={editDraft}
+            onChange={(e) => setEditDraft(e.target.value)}
+            maxLength={2000}
+            rows={3}
+            className="w-full text-xs text-ink bg-surface-high rounded-xl px-3 py-2 resize-none focus:outline-none placeholder:text-ink-3"
+            placeholder="Edit your comment..."
+            autoFocus
+          />
+          <div className="flex items-center gap-3 justify-end text-xs font-medium">
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="text-ink-2"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSubmitEdit(comment)}
+              disabled={
+                isSubmittingEdit ||
+                !editDraft.trim() ||
+                editDraft.trim() === comment.content
+              }
+              className="text-[#1A66FF] disabled:opacity-40"
+            >
+              {isSubmittingEdit ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return <p className="text-xs text-ink">{renderContentWithMentions(comment.content)}</p>;
+  };
+
+  const activeOptionsComment = useMemo(() => {
+    if (!activeOptionsCommentId) return null;
+    const top = comments.find((c) => c.id === activeOptionsCommentId);
+    if (top) return top;
+    for (const replies of Object.values(repliesByCommentId)) {
+      const reply = replies.find((r) => r.id === activeOptionsCommentId);
+      if (reply) return reply;
+    }
+    return null;
+  }, [activeOptionsCommentId, comments, repliesByCommentId]);
+
+  const activeCommentActions = useMemo(
+    () => (activeOptionsComment ? getCommentActions(activeOptionsComment) : []),
+    [activeOptionsComment, getCommentActions],
+  );
+
+  const showOptionsButton = Boolean(user);
+
   return (
     <>
       {commentsError && <Alert type="error" message={commentsError} />}
+
+      <CommentOptionsMenu
+        isOpen={Boolean(activeOptionsCommentId)}
+        onClose={() => {
+          setActiveOptionsCommentId(null);
+          setOptionsAnchor(null);
+        }}
+        anchor={optionsAnchor}
+        actions={activeCommentActions}
+      />
+
       <div
         className={`fixed inset-x-0 top-[15%] bottom-0 bg-surface z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2 ${
           isOpen
@@ -589,11 +990,12 @@ export default function CommentDrawer({
               const isLoadingReplies = Boolean(
                 isLoadingRepliesByCommentId[commentId],
               );
+              const isDeleting = isDeletingCommentId === commentId;
 
               return (
-                <div key={commentId}>
+                <div key={commentId} className={isDeleting ? "opacity-50 pointer-events-none" : ""}>
                   <div className="flex items-start gap-3">
-                    <div className="w-10 bg-surface-high aspect-square rounded-full flex items-center justify-center overflow-hidden">
+                    <div className="w-10 bg-surface-high aspect-square rounded-full flex items-center justify-center overflow-hidden shrink-0">
                       {getAuthorProfilePicture(comment.author) ? (
                         <Image
                           src={getAuthorProfilePicture(comment.author)}
@@ -607,51 +1009,63 @@ export default function CommentDrawer({
                         <User size={14} color="#808080" variant="Bold" />
                       )}
                     </div>
-                    <div className="space-y-1 w-full">
-                      <div className="flex items-center gap-0.5">
-                        <p className="text-xs text-ink font-semibold">
-                          {getAuthorName(comment.author)}
-                        </p>
-                        {hasPaidAuthorSubscription(comment.author) ? (
-                          <Verify size={14} color="#E1761F" variant="Bold" />
+                    <div className="space-y-1 w-full min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-0.5 min-w-0">
+                          <p className="text-xs text-ink font-semibold truncate">
+                            {getAuthorName(comment.author)}
+                          </p>
+                          {hasPaidAuthorSubscription(comment.author) ? (
+                            <Verify size={14} color="#E1761F" variant="Bold" />
+                          ) : null}
+                        </div>
+                        {showOptionsButton && editingCommentId !== commentId ? (
+                          <button
+                            type="button"
+                            aria-label="More options"
+                            onClick={(e) => handleOptionsButtonClick(e, commentId)}
+                            className="shrink-0 p-1 -mr-1 rounded-full hover:bg-black/5 active:opacity-60 transition-colors"
+                          >
+                            <More size={16} color="#808080" />
+                          </button>
                         ) : null}
                       </div>
-                      <p className="text-xs text-ink">
-                        {renderContentWithMentions(comment.content)}
-                      </p>
-                      <div className="flex items-center font-medium justify-between text-xs text-ink-2 ">
-                        <div className="flex items-center gap-5">
-                          <p>{formatTimeAgo(comment.createdAt)}</p>
-                          <button
-                            type="button"
-                            onClick={() => handleReplyToComment(comment)}
-                            disabled={commentsLocked}
-                            className="disabled:opacity-50"
-                          >
-                            Reply
-                          </button>
+                      {renderCommentContent(comment)}
+                      {editingCommentId !== commentId ? (
+                        <div className="flex items-center font-medium justify-between text-xs text-ink-2">
+                          <div className="flex items-center gap-5">
+                            <p>{formatTimeAgo(comment.createdAt)}</p>
+                            <button
+                              type="button"
+                              onClick={() => handleReplyToComment(comment)}
+                              disabled={commentsLocked}
+                              className="disabled:opacity-50"
+                            >
+                              Reply
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <p className="">{comment.likeCount ?? 0}</p>
+                            <button
+                              type="button"
+                              aria-label="like button"
+                              onClick={() => void handleLikeComment(comment.id)}
+                              disabled={Boolean(isLikingByCommentId[comment.id])}
+                              className="disabled:opacity-60"
+                            >
+                              <Heart
+                                size={18}
+                                color={
+                                  comment.viewerHasLiked ? "#E00505" : "#808080"
+                                }
+                                variant={
+                                  comment.viewerHasLiked ? "Bold" : "Linear"
+                                }
+                              />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <p className="">{comment.likeCount ?? 0}</p>
-                          <button
-                            type="button"
-                            aria-label="like button"
-                            onClick={() => void handleLikeComment(comment.id)}
-                            disabled={Boolean(isLikingByCommentId[comment.id])}
-                            className="disabled:opacity-60"
-                          >
-                            <Heart
-                              size={18}
-                              color={
-                                comment.viewerHasLiked ? "#E00505" : "#808080"
-                              }
-                              variant={
-                                comment.viewerHasLiked ? "Bold" : "Linear"
-                              }
-                            />
-                          </button>
-                        </div>
-                      </div>
+                      ) : null}
                     </div>
                   </div>
 
@@ -672,80 +1086,98 @@ export default function CommentDrawer({
 
                   {isRepliesOpen ? (
                     <div className="ml-11 mt-3 space-y-3">
-                      {replies.map((reply) => (
-                        <div key={reply.id} className="flex items-start gap-3 ">
-                          <div className="w-10 aspect-square bg-surface-high rounded-full flex items-center justify-center overflow-hidden">
-                            {getAuthorProfilePicture(reply.author) ? (
-                              <Image
-                                src={getAuthorProfilePicture(reply.author)}
-                                alt={`${getAuthorName(reply.author)}'s profile picture`}
-                                width={40}
-                                height={40}
-                                className="w-full h-full object-cover rounded-full"
-                                unoptimized
-                              />
-                            ) : (
-                              <User size={14} color="#808080" variant="Bold" />
-                            )}
-                          </div>
-                          <div className="space-y-1 w-full">
-                            <div className="flex items-center gap-0.5">
-                              <p className="text-xs text-ink font-semibold">
-                                {getAuthorName(reply.author)}
-                              </p>
-                              {hasPaidAuthorSubscription(reply.author) ? (
-                                <Verify
-                                  size={14}
-                                  color="#E1761F"
-                                  variant="Bold"
+                      {replies.map((reply) => {
+                        const isReplyDeleting = isDeletingCommentId === reply.id;
+                        return (
+                          <div
+                            key={reply.id}
+                            className={`flex items-start gap-3 ${isReplyDeleting ? "opacity-50 pointer-events-none" : ""}`}
+                          >
+                            <div className="w-10 aspect-square bg-surface-high rounded-full flex items-center justify-center overflow-hidden shrink-0">
+                              {getAuthorProfilePicture(reply.author) ? (
+                                <Image
+                                  src={getAuthorProfilePicture(reply.author)}
+                                  alt={`${getAuthorName(reply.author)}'s profile picture`}
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover rounded-full"
+                                  unoptimized
                                 />
+                              ) : (
+                                <User size={14} color="#808080" variant="Bold" />
+                              )}
+                            </div>
+                            <div className="space-y-1 w-full min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-0.5 min-w-0">
+                                  <p className="text-xs text-ink font-semibold truncate">
+                                    {getAuthorName(reply.author)}
+                                  </p>
+                                  {hasPaidAuthorSubscription(reply.author) ? (
+                                    <Verify
+                                      size={14}
+                                      color="#E1761F"
+                                      variant="Bold"
+                                    />
+                                  ) : null}
+                                </div>
+                                {showOptionsButton && editingCommentId !== reply.id ? (
+                                  <button
+                                    type="button"
+                                    aria-label="More options"
+                                    onClick={(e) => handleOptionsButtonClick(e, reply.id)}
+                                    className="shrink-0 p-1 -mr-1 rounded-full hover:bg-black/5 active:opacity-60 transition-colors"
+                                  >
+                                    <More size={16} color="#808080" />
+                                  </button>
+                                ) : null}
+                              </div>
+                              {renderCommentContent(reply)}
+                              {editingCommentId !== reply.id ? (
+                                <div className="flex items-center justify-between text-xs text-ink-2 font-medium ">
+                                  <div className="flex items-center gap-5">
+                                    <p>{formatTimeAgo(reply.createdAt)}</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReplyToComment(reply)}
+                                      disabled={commentsLocked}
+                                      className="disabled:opacity-50"
+                                    >
+                                      Reply
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <p>{reply.likeCount ?? 0}</p>
+                                    <button
+                                      type="button"
+                                      aria-label="like comment"
+                                      onClick={() =>
+                                        void handleLikeComment(reply.id)
+                                      }
+                                      disabled={Boolean(
+                                        isLikingByCommentId[reply.id],
+                                      )}
+                                      className="disabled:opacity-60"
+                                    >
+                                      <Heart
+                                        size={18}
+                                        color={
+                                          reply.viewerHasLiked
+                                            ? "#E00505"
+                                            : "#808080"
+                                        }
+                                        variant={
+                                          reply.viewerHasLiked ? "Bold" : "Linear"
+                                        }
+                                      />
+                                    </button>
+                                  </div>
+                                </div>
                               ) : null}
                             </div>
-                            <p className="text-xs text-ink">
-                              {renderContentWithMentions(reply.content)}
-                            </p>
-                            <div className="flex items-center justify-between text-xs text-ink-2 font-medium ">
-                              <div className="flex items-center gap-5">
-                                <p>{formatTimeAgo(reply.createdAt)}</p>
-                                <button
-                                  type="button"
-                                  onClick={() => handleReplyToComment(reply)}
-                                  disabled={commentsLocked}
-                                  className="disabled:opacity-50"
-                                >
-                                  Reply
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <p>{reply.likeCount ?? 0}</p>
-                                <button
-                                  type="button"
-                                  aria-label="like comment"
-                                  onClick={() =>
-                                    void handleLikeComment(reply.id)
-                                  }
-                                  disabled={Boolean(
-                                    isLikingByCommentId[reply.id],
-                                  )}
-                                  className="disabled:opacity-60"
-                                >
-                                  <Heart
-                                    size={18}
-                                    color={
-                                      reply.viewerHasLiked
-                                        ? "#E00505"
-                                        : "#808080"
-                                    }
-                                    variant={
-                                      reply.viewerHasLiked ? "Bold" : "Linear"
-                                    }
-                                  />
-                                </button>
-                              </div>
-                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {isLoadingReplies ? (
                         <p className="text-xs text-ink-2">
                           Loading replies...
