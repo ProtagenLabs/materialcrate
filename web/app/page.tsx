@@ -315,7 +315,7 @@ export default function Home() {
     requestsFetchedRef.current = true;
 
     setIsLoadingRequests(true);
-    fetch("/api/requests?limit=50", { cache: "no-store" })
+    fetch("/api/requests?feed=true&limit=20", { cache: "no-store" })
       .then((r) => r.json())
       .then((data: { requests?: DocumentRequest[] }) => {
         setRequests(Array.isArray(data?.requests) ? data.requests : []);

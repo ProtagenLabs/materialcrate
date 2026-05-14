@@ -42,6 +42,7 @@ extend type Query {
   documentRequest(id: ID!): DocumentRequest
   documentRequests(
     filter: String
+    feed: Boolean
     limit: Int
     offset: Int
   ): DocumentRequestFeed!

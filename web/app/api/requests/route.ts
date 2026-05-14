@@ -5,8 +5,8 @@ const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 
 const LIST_QUERY = `
-  query DocumentRequests($filter: String, $limit: Int, $offset: Int) {
-    documentRequests(filter: $filter, limit: $limit, offset: $offset) {
+  query DocumentRequests($filter: String, $feed: Boolean, $limit: Int, $offset: Int) {
+    documentRequests(filter: $filter, feed: $feed, limit: $limit, offset: $offset) {
       requests {
         id
         title
@@ -92,12 +92,13 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const filter = searchParams.get("filter") ?? undefined;
+  const feed = searchParams.get("feed") === "true" ? true : undefined;
   const limit = Math.min(Number(searchParams.get("limit") || 20), 100);
   const offset = Math.max(Number(searchParams.get("offset") || 0), 0);
 
   const { ok, body } = await graphql(
     LIST_QUERY,
-    { filter, limit, offset },
+    { filter, feed, limit, offset },
     token,
   );
 

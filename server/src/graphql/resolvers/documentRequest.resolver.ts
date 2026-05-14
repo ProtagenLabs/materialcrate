@@ -11,6 +11,172 @@ type GraphQLContext = {
 
 const BOUNTY_AUTO_RELEASE_DAYS = 7;
 
+// ─── Feed helpers ────────────────────────────────────────────────────────────
+
+type RequestFeedSignals = {
+  followingIds: Set<string>;
+  categoryWeights: Map<string, number>;
+  authorWeights: Map<string, number>;
+  isNewUser: boolean;
+};
+
+function incWeight(
+  map: Map<string, number>,
+  key: string | null | undefined,
+  delta: number,
+) {
+  if (!key) return;
+  map.set(key, (map.get(key) ?? 0) + delta);
+}
+
+function addCatWeights(
+  map: Map<string, number>,
+  cats: string[] | null | undefined,
+  weight: number,
+) {
+  for (const cat of cats ?? []) incWeight(map, cat, weight);
+}
+
+async function buildRequestFeedSignals(
+  viewerId?: string,
+): Promise<RequestFeedSignals> {
+  if (!viewerId) {
+    return {
+      followingIds: new Set(),
+      categoryWeights: new Map(),
+      authorWeights: new Map(),
+      isNewUser: true,
+    };
+  }
+
+  const viewer = await prisma.user.findUnique({
+    where: { id: viewerId },
+    select: {
+      followingRelations: {
+        select: { followingId: true },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      },
+      likes: {
+        select: { post: { select: { authorId: true, categories: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      },
+      comments: {
+        select: { post: { select: { authorId: true, categories: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      },
+      posts: {
+        where: { deleted: false },
+        select: { categories: true },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      },
+      archive: {
+        select: {
+          savedPosts: {
+            select: { post: { select: { authorId: true, categories: true } } },
+            orderBy: { createdAt: "desc" },
+            take: 50,
+          },
+        },
+      },
+      workspace: {
+        select: {
+          savedPosts: {
+            select: { post: { select: { authorId: true, categories: true } } },
+            orderBy: { createdAt: "desc" },
+            take: 50,
+          },
+        },
+      },
+    },
+  });
+
+  const followingIds = new Set(
+    (viewer?.followingRelations ?? []).map((r) => r.followingId),
+  );
+  const categoryWeights = new Map<string, number>();
+  const authorWeights = new Map<string, number>();
+
+  for (const r of viewer?.followingRelations ?? [])
+    incWeight(authorWeights, r.followingId, 18);
+  for (const l of viewer?.likes ?? []) {
+    incWeight(authorWeights, l.post?.authorId, 8);
+    addCatWeights(categoryWeights, l.post?.categories, 8);
+  }
+  for (const c of viewer?.comments ?? []) {
+    incWeight(authorWeights, c.post?.authorId, 5);
+    addCatWeights(categoryWeights, c.post?.categories, 5);
+  }
+  for (const s of viewer?.archive?.savedPosts ?? []) {
+    incWeight(authorWeights, s.post?.authorId, 10);
+    addCatWeights(categoryWeights, s.post?.categories, 10);
+  }
+  for (const s of viewer?.workspace?.savedPosts ?? []) {
+    incWeight(authorWeights, s.post?.authorId, 10);
+    addCatWeights(categoryWeights, s.post?.categories, 10);
+  }
+  for (const p of viewer?.posts ?? []) addCatWeights(categoryWeights, p.categories, 4);
+
+  const interactionCount =
+    (viewer?.followingRelations?.length ?? 0) +
+    (viewer?.likes?.length ?? 0) +
+    (viewer?.comments?.length ?? 0) +
+    (viewer?.archive?.savedPosts?.length ?? 0) +
+    (viewer?.workspace?.savedPosts?.length ?? 0);
+
+  return {
+    followingIds,
+    categoryWeights,
+    authorWeights,
+    isNewUser: interactionCount < 5,
+  };
+}
+
+function scoreRequestForFeed(
+  request: any,
+  viewerId: string | undefined,
+  signals: RequestFeedSignals,
+): number {
+  let score = 0;
+
+  // Follow boost — requests from people you follow surface first
+  if (signals.followingIds.has(request.authorId)) score += 50;
+
+  // Author affinity from post interactions
+  score += Math.min(signals.authorWeights.get(request.authorId) ?? 0, 40);
+
+  // Category interest match
+  const cats: string[] = request.categories ?? [];
+  const catScore = cats.reduce(
+    (sum, cat) => sum + (signals.categoryWeights.get(cat) ?? 0),
+    0,
+  );
+  score += Math.min(catScore, 60);
+
+  // Bounty visibility boost (logarithmic so large bounties don't dominate)
+  if (request.bounty) score += Math.min(20 + Math.log(request.bounty) * 3, 35);
+
+  // Open > solved > closed
+  if (!request.solved && !request.closed) score += 15;
+  else if (request.closed) score -= 20;
+
+  // Freshness decay over 1 week
+  const ageHours =
+    (Date.now() - new Date(request.createdAt).getTime()) / 3_600_000;
+  score += Math.max(0, (168 - ageHours) / 168) * 25;
+
+  // Slight exploration boost for new users with no signals
+  if (signals.isNewUser && cats.length > 0) score += 8;
+
+  // Mild own-request penalty so the requester doesn't always see their own at top
+  if (request.authorId === viewerId) score -= 10;
+
+  return score;
+}
+
 export const DocumentRequestResolver = {
   Query: {
     documentRequest: async (
@@ -30,12 +196,41 @@ export const DocumentRequestResolver = {
       _: unknown,
       {
         filter,
+        feed = false,
         limit = 20,
         offset = 0,
-      }: { filter?: string; limit?: number; offset?: number },
+      }: { filter?: string; feed?: boolean; limit?: number; offset?: number },
+      ctx: GraphQLContext,
     ) => {
       const safeLimit = Math.max(1, Math.min(limit ?? 20, 100));
       const safeOffset = Math.max(0, offset ?? 0);
+
+      if (feed) {
+        const viewerId = ctx.user?.sub;
+        const poolSize = Math.min(safeLimit * 4 + safeOffset, 300);
+
+        const [signals, candidates, total] = await Promise.all([
+          buildRequestFeedSignals(viewerId),
+          prisma.documentRequest.findMany({
+            where: { deleted: false },
+            orderBy: { createdAt: "desc" },
+            take: poolSize,
+          }),
+          prisma.documentRequest.count({ where: { deleted: false } }),
+        ]);
+
+        const scored = candidates
+          .map((r) => ({ r, score: scoreRequestForFeed(r, viewerId, signals) }))
+          .sort((a, b) => b.score - a.score);
+
+        const page = scored.slice(safeOffset, safeOffset + safeLimit).map((s) => s.r);
+
+        return {
+          requests: page,
+          total,
+          hasMore: safeOffset + page.length < total,
+        };
+      }
 
       const where: Record<string, unknown> = { deleted: false };
 

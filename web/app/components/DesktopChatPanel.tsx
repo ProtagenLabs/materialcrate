@@ -419,7 +419,30 @@ export default function DesktopChatPanel({ isOpen, onClose }: { isOpen: boolean;
     setIsLoadingConvos(true);
     fetch("/api/chat", { cache: "no-store" })
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data?.conversations)) setConversations(data.conversations); })
+      .then(data => {
+        if (Array.isArray(data?.conversations)) {
+          setConversations(data.conversations.map((conv: {
+            id: string;
+            participant: { id: string; name: string; username: string; avatar: string | null; isOnline: boolean };
+            lastMessage: string | null;
+            lastMessageTime: string | null;
+            lastMessageSentByMe: boolean;
+            lastMessageIsRead: boolean;
+            unreadCount: number;
+          }) => ({
+            id: conv.id,
+            name: conv.participant?.name ?? "",
+            username: conv.participant?.username ?? "",
+            avatar: conv.participant?.avatar ?? null,
+            isOnline: conv.participant?.isOnline ?? false,
+            lastMessage: conv.lastMessage ?? null,
+            lastMessageTime: conv.lastMessageTime ?? null,
+            unreadCount: conv.unreadCount ?? 0,
+            isSentByMe: conv.lastMessageSentByMe ?? false,
+            isRead: conv.lastMessageIsRead ?? false,
+          })));
+        }
+      })
       .catch(() => {})
       .finally(() => setIsLoadingConvos(false));
   }, [user?.id]);
