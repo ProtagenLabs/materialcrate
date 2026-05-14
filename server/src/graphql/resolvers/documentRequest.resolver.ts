@@ -336,6 +336,23 @@ export const DocumentRequestResolver = {
             data: { likeCount: { increment: 1 } },
           }),
         ]);
+
+        if (fulfillment.authorId !== viewerId) {
+          const liker = await prisma.user.findUnique({
+            where: { id: viewerId },
+            select: { profilePicture: true },
+          });
+          await createNotification({
+            userId: fulfillment.authorId,
+            actorId: viewerId,
+            requestId: fulfillment.requestId,
+            type: NOTIFICATION_TYPE.DOCUMENT_REQUEST_FULFILLMENT_LIKED,
+            title: "Someone liked your fulfillment",
+            description: "Your submitted document received a like",
+            icon: NOTIFICATION_ICON.DOCUMENT_REQUEST,
+            profilePicture: liker?.profilePicture ?? null,
+          });
+        }
       }
 
       return prisma.documentRequestFulfillment.findUnique({
@@ -369,6 +386,14 @@ export const DocumentRequestResolver = {
       if (request.closed) throw new Error("Request is already closed.");
       if (request.solved) throw new Error("Cannot close an already solved request.");
 
+      const fulfillments = await prisma.documentRequestFulfillment.findMany({
+        where: { requestId: id },
+        select: { authorId: true },
+      });
+      const uniqueContributorIds = [
+        ...new Set(fulfillments.map((f) => f.authorId).filter((a) => a !== viewerId)),
+      ];
+
       if (request.bounty) {
         const [updatedRequest] = await prisma.$transaction([
           prisma.documentRequest.update({
@@ -392,13 +417,43 @@ export const DocumentRequestResolver = {
           }),
         ]);
 
+        await Promise.allSettled(
+          uniqueContributorIds.map((contributorId) =>
+            createNotification({
+              userId: contributorId,
+              actorId: viewerId,
+              requestId: id,
+              type: NOTIFICATION_TYPE.DOCUMENT_REQUEST_CLOSED,
+              title: "A request you responded to was closed",
+              description: `The request "${request.title}" was closed by the author`,
+              icon: NOTIFICATION_ICON.DOCUMENT_REQUEST,
+            }),
+          ),
+        );
+
         return updatedRequest;
       }
 
-      return prisma.documentRequest.update({
+      const updatedRequest = await prisma.documentRequest.update({
         where: { id },
         data: { closed: true },
       });
+
+      await Promise.allSettled(
+        uniqueContributorIds.map((contributorId) =>
+          createNotification({
+            userId: contributorId,
+            actorId: viewerId,
+            requestId: id,
+            type: NOTIFICATION_TYPE.DOCUMENT_REQUEST_CLOSED,
+            title: "A request you responded to was closed",
+            description: `The request "${request.title}" was closed by the author`,
+            icon: NOTIFICATION_ICON.DOCUMENT_REQUEST,
+          }),
+        ),
+      );
+
+      return updatedRequest;
     },
 
     deleteDocumentRequest: async (
