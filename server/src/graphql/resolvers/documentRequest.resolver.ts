@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma.js";
 import {
   createNotification,
@@ -733,7 +734,7 @@ export const DocumentRequestResolver = {
             throw new Error("Insufficient token balance for this bounty.");
           }
 
-          const ops: Parameters<typeof prisma.$transaction>[0] = [
+          const ops: Prisma.PrismaPromise<unknown>[] = [
             prisma.documentRequest.update({
               where: { id },
               data: {
@@ -768,7 +769,7 @@ export const DocumentRequestResolver = {
             );
           }
 
-          const [updatedRequest] = await prisma.$transaction(ops);
+          const [updatedRequest] = await prisma.$transaction(ops) as [Awaited<ReturnType<typeof prisma.documentRequest.update>>, ...unknown[]];
           return updatedRequest;
         }
       }
