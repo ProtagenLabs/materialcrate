@@ -70,15 +70,10 @@ export default function PdfViewerModal({ post, isOpen, onClose }: Props) {
     <Modal
       visible={isOpen}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        {/* Drag handle */}
-        <View style={styles.dragHandleRow}>
-          <View style={styles.dragHandle} />
-        </View>
-
+      <SafeAreaView style={styles.container} edges={["top", "bottom", "left", "right"]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -176,17 +171,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FAFAF8",
-  },
-  dragHandleRow: {
-    alignItems: "center",
-    paddingTop: 10,
-    paddingBottom: 4,
-  },
-  dragHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
   },
   header: {
     flexDirection: "row",

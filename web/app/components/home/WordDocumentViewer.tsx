@@ -182,8 +182,8 @@ export default function WordDocumentViewer({
   if (!isOpen || !post) return null;
 
   return (
-    <div className="fixed inset-0 z-150 flex items-center justify-center px-4 py-6">
-      <div className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[#F4F1EC] shadow-2xl">
+    <div className="fixed inset-0 z-150 flex items-center justify-center sm:px-4 sm:py-6">
+      <div className="flex h-full w-full max-w-5xl flex-col overflow-hidden bg-[#F4F1EC] shadow-2xl sm:rounded-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-edge-mid px-5 py-4">
           <div className="min-w-0">
             <p className="truncate text-base font-semibold text-ink">
