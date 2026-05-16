@@ -10,6 +10,7 @@ import { SystemPopupProvider } from "./components/SystemPopup";
 import BrowserNotificationBridge from "./components/BrowserNotificationBridge";
 import ScrollRestoration from "./components/ScrollRestoration";
 import ThemeSync from "./components/ThemeSync";
+import { ServerStatusProvider } from "./lib/server-status";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -68,6 +69,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="font-sans relative">
+        <ServerStatusProvider>
         <SystemPopupProvider>
           <Suspense>
             <ScrollRestoration />
@@ -79,6 +81,7 @@ export default function RootLayout({
             <DesktopSidebarOffset>{children}</DesktopSidebarOffset>
           </AuthSplashGate>
         </SystemPopupProvider>
+        </ServerStatusProvider>
       </body>
     </html>
   );

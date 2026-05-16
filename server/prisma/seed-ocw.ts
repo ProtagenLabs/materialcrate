@@ -219,6 +219,101 @@ const COURSES: OcwCourse[] = [
   // HEALTH SCIENCES AND TECHNOLOGY
   { title: 'Genomics and Computational Biology', department: 'Health Sciences and Technology', courseNumber: 'HST.508', description: 'Computational methods in genomics: sequence alignment, genome assembly, variant calling, gene expression analysis, and computational drug discovery.', fileUrl: 'https://ocw.mit.edu/courses/hst-508-quantitative-genomics-fall-2005/', year: 2005, categories: ['genomics', 'computational biology'] },
   { title: 'Music Perception and Cognition', department: 'Health Sciences and Technology', courseNumber: 'HST.725', description: 'Scientific study of music: auditory perception, emotional responses, music and brain development, and applications to music therapy and rehabilitation.', fileUrl: 'https://ocw.mit.edu/courses/hst-725-music-perception-and-cognition-spring-2009/', year: 2009, categories: ['neuroscience', 'cognitive science'] },
+  { title: 'Biomedical Devices Design', department: 'Health Sciences and Technology', courseNumber: 'HST.540J', description: 'Design and prototyping of medical devices: regulatory pathways, biocompatibility, signal acquisition, and clinical translation of biomedical technologies.', fileUrl: 'https://ocw.mit.edu/courses/hst-540j-quantitative-physiology-organ-transport-systems-spring-2004/', year: 2004, categories: ['biomedical engineering', 'engineering'] },
+  // EECS — ADDITIONAL
+  { title: 'Deep Learning', department: 'Electrical Engineering and Computer Science', courseNumber: '6.S191', description: 'Introduction to deep learning: neural network architectures, convolutional networks, recurrent networks, attention mechanisms, and generative models. Labs in TensorFlow.', fileUrl: 'https://ocw.mit.edu/courses/6-s191-introduction-to-deep-learning-january-iap-2020/', year: 2020, categories: ['deep learning', 'machine learning'] },
+  { title: 'Database Systems', department: 'Electrical Engineering and Computer Science', courseNumber: '6.830J', description: 'Principles of database systems: relational algebra, SQL, query optimization, transaction processing, recovery, distributed databases, and NoSQL systems.', fileUrl: 'https://ocw.mit.edu/courses/6-830-database-systems-fall-2010/', year: 2010, categories: ['databases', 'computer science'] },
+  { title: 'Software Construction', department: 'Electrical Engineering and Computer Science', courseNumber: '6.031', description: 'Principles of safe, maintainable, and correct software: static type checking, testing, code review, abstract data types, concurrency, and version control.', fileUrl: 'https://ocw.mit.edu/courses/6-005-software-construction-fall-2016/', year: 2016, categories: ['software engineering', 'computer science'] },
+  { title: 'Computer Graphics', department: 'Electrical Engineering and Computer Science', courseNumber: '6.837', description: 'Introduction to 3D computer graphics: rendering pipelines, ray tracing, rasterization, shading, animation, and GPU programming with OpenGL and WebGL.', fileUrl: 'https://ocw.mit.edu/courses/6-837-computer-graphics-fall-2012/', year: 2012, categories: ['computer graphics', 'computer science'] },
+  { title: 'Cryptography and Cryptanalysis', department: 'Electrical Engineering and Computer Science', courseNumber: '6.875', description: 'Mathematical foundations of cryptography: one-way functions, pseudorandomness, public-key encryption, digital signatures, zero-knowledge proofs, and secure computation.', fileUrl: 'https://ocw.mit.edu/courses/6-875-cryptography-and-cryptanalysis-spring-2005/', year: 2005, categories: ['cryptography', 'security'] },
+  { title: 'Computer Networks', department: 'Electrical Engineering and Computer Science', courseNumber: '6.829', description: 'Principles of computer networking: layered architecture, TCP/IP, routing, congestion control, wireless networks, software-defined networking, and network security.', fileUrl: 'https://ocw.mit.edu/courses/6-829-computer-networks-fall-2002/', year: 2002, categories: ['networking', 'computer science'] },
+  { title: 'Natural Language Processing', department: 'Electrical Engineering and Computer Science', courseNumber: '6.806', description: 'Statistical and neural approaches to NLP: language models, parsing, named entity recognition, machine translation, question answering, and large language models.', fileUrl: 'https://ocw.mit.edu/courses/6-864-advanced-natural-language-processing-fall-2005/', year: 2005, categories: ['natural language processing', 'machine learning'] },
+  { title: 'Information Theory', department: 'Electrical Engineering and Computer Science', courseNumber: '6.441', description: 'Mathematical theory of information: entropy, channel capacity, source coding, channel coding, rate-distortion theory, and applications to communications and statistics.', fileUrl: 'https://ocw.mit.edu/courses/6-441-information-theory-spring-2016/', year: 2016, categories: ['information theory', 'electrical engineering'] },
+  { title: 'Quantum Computing', department: 'Electrical Engineering and Computer Science', courseNumber: '6.845', description: 'Quantum computation and information: qubits, quantum gates, quantum algorithms, error correction, quantum complexity theory, and physical implementations.', fileUrl: 'https://ocw.mit.edu/courses/6-845-quantum-complexity-theory-fall-2010/', year: 2010, categories: ['quantum computing', 'computer science'] },
+  { title: 'Reinforcement Learning', department: 'Electrical Engineering and Computer Science', courseNumber: '6.7940J', description: 'Foundations of reinforcement learning: Markov decision processes, dynamic programming, Monte Carlo methods, temporal-difference learning, policy gradient methods, and deep RL.', fileUrl: 'https://ocw.mit.edu/courses/6-231-dynamic-programming-and-stochastic-control-fall-2015/', year: 2015, categories: ['reinforcement learning', 'machine learning'] },
+  { title: 'Robotic Manipulation', department: 'Electrical Engineering and Computer Science', courseNumber: '6.4210', description: 'Algorithms for robot manipulation: kinematics, trajectory optimization, motion planning, grasping, and manipulation under uncertainty using deep learning.', fileUrl: 'https://ocw.mit.edu/courses/6-832-underactuated-robotics-spring-2022/', year: 2022, categories: ['robotics', 'computer science'] },
+  // MATHEMATICS — ADDITIONAL
+  { title: 'Complex Variables with Applications', department: 'Mathematics', courseNumber: '18.04', description: 'Complex analysis: analytic functions, Cauchy integral theorem, Laurent series, residues, conformal mapping, and applications to physics and engineering.', fileUrl: 'https://ocw.mit.edu/courses/18-04-complex-variables-with-applications-fall-2003/', year: 2003, categories: ['complex analysis', 'mathematics'] },
+  { title: 'Combinatorics', department: 'Mathematics', courseNumber: '18.211', description: 'Enumerative and structural combinatorics: generating functions, recurrences, graph theory, Ramsey theory, posets, and algebraic combinatorics.', fileUrl: 'https://ocw.mit.edu/courses/18-314-combinatorial-analysis-fall-2014/', year: 2014, categories: ['combinatorics', 'mathematics'] },
+  { title: 'Partial Differential Equations', department: 'Mathematics', courseNumber: '18.152', description: 'Linear PDEs: wave equation, heat equation, Laplace equation. Fourier methods, distributions, Sobolev spaces, and fundamental solutions.', fileUrl: 'https://ocw.mit.edu/courses/18-152-introduction-to-partial-differential-equations-fall-2011/', year: 2011, categories: ['differential equations', 'mathematics'] },
+  { title: 'Differential Geometry', department: 'Mathematics', courseNumber: '18.950', description: 'Curves and surfaces in Euclidean space: curvature, geodesics, the Gauss-Bonnet theorem, and an introduction to smooth manifolds.', fileUrl: 'https://ocw.mit.edu/courses/18-950-differential-geometry-fall-2008/', year: 2008, categories: ['differential geometry', 'mathematics'] },
+  { title: 'Optimization Methods', department: 'Mathematics', courseNumber: '18.065', description: 'Matrix methods in data science and engineering: least squares, regularization, low-rank approximations, compressed sensing, and gradient descent.', fileUrl: 'https://ocw.mit.edu/courses/18-065-matrix-methods-in-data-analysis-signal-processing-and-machine-learning-spring-2018/', year: 2018, categories: ['optimization', 'mathematics'] },
+  // PHYSICS — ADDITIONAL
+  { title: 'Astrophysics', department: 'Physics', courseNumber: '8.282J', description: 'Observational astrophysics: celestial mechanics, stellar physics, galactic structure, cosmology, and detection of gravitational waves and black holes.', fileUrl: 'https://ocw.mit.edu/courses/8-282j-introduction-to-astronomy-spring-2006/', year: 2006, categories: ['astrophysics', 'physics'] },
+  { title: 'General Relativity', department: 'Physics', courseNumber: '8.962', description: 'Einstein\'s theory of general relativity: spacetime geometry, geodesics, curvature tensor, Einstein field equations, black holes, and gravitational waves.', fileUrl: 'https://ocw.mit.edu/courses/8-962-general-relativity-spring-2020/', year: 2020, categories: ['relativity', 'physics'] },
+  { title: 'Nuclear Physics', department: 'Physics', courseNumber: '8.701', description: 'Nuclear structure, radioactive decay, nuclear reactions, fission and fusion energetics, and applications to nuclear power and medical physics.', fileUrl: 'https://ocw.mit.edu/courses/8-701-introduction-to-nuclear-and-particle-physics-fall-2020/', year: 2020, categories: ['nuclear physics', 'physics'] },
+  { title: 'Particle Physics', department: 'Physics', courseNumber: '8.811', description: 'Elementary particle physics: quarks and leptons, the Standard Model, QED and QCD, weak interactions, Higgs mechanism, and beyond the Standard Model.', fileUrl: 'https://ocw.mit.edu/courses/8-811-particle-physics-ii-fall-2005/', year: 2005, categories: ['particle physics', 'physics'] },
+  { title: 'Condensed Matter Physics', department: 'Physics', courseNumber: '8.511', description: 'Solid-state physics: crystal lattices, band theory, Fermi liquids, superconductivity, magnetism, and topological insulators.', fileUrl: 'https://ocw.mit.edu/courses/8-511-theory-of-solids-i-fall-2004/', year: 2004, categories: ['condensed matter', 'physics'] },
+  // BIOLOGY — ADDITIONAL
+  { title: 'Microbiology', department: 'Biology', courseNumber: '7.13', description: 'Microbial physiology and genetics: bacterial growth, metabolism, gene regulation, pathogenesis, and microbial ecology and diversity.', fileUrl: 'https://ocw.mit.edu/courses/7-13-experimental-microbial-genetics-fall-2008/', year: 2008, categories: ['microbiology', 'biology'] },
+  { title: 'Immunology', department: 'Biology', courseNumber: '7.345', description: 'Molecular and cellular immunology: innate and adaptive immunity, antigen presentation, antibody structure and function, vaccines, and immunological disorders.', fileUrl: 'https://ocw.mit.edu/courses/7-345-the-immune-system-and-the-brain-spring-2013/', year: 2013, categories: ['immunology', 'biology'] },
+  { title: 'Structural Biology', department: 'Biology', courseNumber: '7.52', description: 'Macromolecular structure determination: X-ray crystallography, cryo-EM, NMR, and the relationship between protein structure and biological function.', fileUrl: 'https://ocw.mit.edu/courses/7-52-molecular-evolution-fall-2005/', year: 2005, categories: ['structural biology', 'biology'] },
+  { title: 'Plant Biology', department: 'Biology', courseNumber: '7.16', description: 'Plant growth, development, and physiology: photosynthesis, cell signaling, hormone action, and genetic approaches to study plant processes.', fileUrl: 'https://ocw.mit.edu/courses/7-16-experimental-biology-fall-2006/', year: 2006, categories: ['plant biology', 'biology'] },
+  // ECONOMICS — ADDITIONAL
+  { title: 'Development Economics', department: 'Economics', courseNumber: '14.771', description: 'Microeconomic analysis of development: poverty traps, credit constraints, technology adoption, institutions, and empirical approaches to policy evaluation in low-income countries.', fileUrl: 'https://ocw.mit.edu/courses/14-771-development-economics-fall-2008/', year: 2008, categories: ['development economics', 'economics'] },
+  { title: 'Behavioral Economics', department: 'Economics', courseNumber: '14.13', description: 'Psychology and economics: bounded rationality, time inconsistency, loss aversion, social preferences, nudge theory, and applications to policy and market design.', fileUrl: 'https://ocw.mit.edu/courses/14-13-psychology-and-economics-spring-2020/', year: 2020, categories: ['behavioral economics', 'psychology'] },
+  { title: 'Urban Economics', department: 'Economics', courseNumber: '14.471', description: 'Economic analysis of cities: land use, housing markets, agglomeration, urban poverty, transportation, and the economics of local government.', fileUrl: 'https://ocw.mit.edu/courses/14-471-public-economics-i-fall-2012/', year: 2012, categories: ['urban economics', 'economics'] },
+  { title: 'Financial Economics', department: 'Economics', courseNumber: '14.461', description: 'Advanced macroeconomics and finance: asset pricing, risk, incomplete markets, financial crises, and dynamic stochastic general equilibrium models.', fileUrl: 'https://ocw.mit.edu/courses/14-461-advanced-macroeconomics-i-fall-2012/', year: 2012, categories: ['finance', 'macroeconomics'] },
+  { title: 'Environmental Economics', department: 'Economics', courseNumber: '14.42', description: 'Economics of environmental policy: externalities, public goods, cost-benefit analysis, market-based instruments, and empirical analysis of climate and pollution policy.', fileUrl: 'https://ocw.mit.edu/courses/14-42-the-economics-of-energy-and-environmental-policy-spring-2011/', year: 2011, categories: ['environmental economics', 'economics'] },
+  // MECHANICAL ENGINEERING — ADDITIONAL
+  { title: 'Engineering Design', department: 'Mechanical Engineering', courseNumber: '2.007', description: 'Hands-on introduction to design: engineering drawing, material selection, manufacturing processes, and fabrication of a contest robot from scratch.', fileUrl: 'https://ocw.mit.edu/courses/2-007-design-and-manufacturing-i-spring-2009/', year: 2009, categories: ['engineering design', 'mechanical engineering'] },
+  { title: 'Acoustics', department: 'Mechanical Engineering', courseNumber: '2.71', description: 'Acoustic wave propagation, resonance, sound radiation, absorption, and noise control. Applications to room acoustics, musical instruments, and ultrasound imaging.', fileUrl: 'https://ocw.mit.edu/courses/2-71-optics-spring-2009/', year: 2009, categories: ['acoustics', 'mechanical engineering'] },
+  { title: 'Energy and the Environment', department: 'Mechanical Engineering', courseNumber: '2.60', description: 'Energy systems analysis: thermodynamic cycles, combustion, renewable energy technologies, energy storage, and the environmental impact of energy conversion.', fileUrl: 'https://ocw.mit.edu/courses/2-60-fundamentals-of-advanced-energy-conversion-spring-2004/', year: 2004, categories: ['energy', 'mechanical engineering'] },
+  // BRAIN AND COGNITIVE SCIENCES — ADDITIONAL
+  { title: 'Language Acquisition', department: 'Brain and Cognitive Sciences', courseNumber: '9.52', description: 'How children acquire language: phonology, syntax, semantics, and pragmatics acquisition. Theories of language learning and bilingualism.', fileUrl: 'https://ocw.mit.edu/courses/9-52-laboratory-in-the-psychology-of-language-fall-2003/', year: 2003, categories: ['cognitive science', 'linguistics'] },
+  { title: 'Emotion and Affective Neuroscience', department: 'Brain and Cognitive Sciences', courseNumber: '9.15', description: 'Neuroscience of emotion: fear, reward, stress, and social emotions. Brain circuits, hormones, and clinical disorders such as depression and PTSD.', fileUrl: 'https://ocw.mit.edu/courses/9-15-biochemistry-and-pharmacology-of-synaptic-transmission-fall-2007/', year: 2007, categories: ['neuroscience', 'psychology'] },
+  // ARCHITECTURE — ADDITIONAL
+  { title: 'Urban Design', department: 'Architecture', courseNumber: '4.241J', description: 'Theory and practice of urban design: public space, street networks, mixed-use development, sustainable neighborhoods, and community participatory processes.', fileUrl: 'https://ocw.mit.edu/courses/4-241j-theory-of-city-form-spring-2013/', year: 2013, categories: ['urban design', 'architecture'] },
+  { title: 'Sustainable Architecture', department: 'Architecture', courseNumber: '4.491', description: 'Principles of sustainable building: passive design strategies, life-cycle analysis, net-zero energy design, daylighting, and green building certifications.', fileUrl: 'https://ocw.mit.edu/courses/4-491-introduction-to-sustainable-design-fall-2008/', year: 2008, categories: ['sustainability', 'architecture'] },
+  // MATERIALS SCIENCE — ADDITIONAL
+  { title: 'Polymer Science and Engineering', department: 'Materials Science and Engineering', courseNumber: '3.064', description: 'Polymer structure, synthesis, and properties: chain statistics, crystallization, viscoelasticity, processing, and applications in engineering and biomedicine.', fileUrl: 'https://ocw.mit.edu/courses/3-064-polymer-engineering-fall-2003/', year: 2003, categories: ['polymers', 'materials science'] },
+  { title: 'Biomaterials Science', department: 'Materials Science and Engineering', courseNumber: '3.051J', description: 'Materials for biomedical applications: biocompatibility, tissue engineering scaffolds, implants, drug delivery systems, and degradable biomaterials.', fileUrl: 'https://ocw.mit.edu/courses/3-051j-materials-for-biomedical-applications-spring-2006/', year: 2006, categories: ['biomaterials', 'biomedical engineering'] },
+  // AERONAUTICS AND ASTRONAUTICS — ADDITIONAL
+  { title: 'Satellite Engineering', department: 'Aeronautics and Astronautics', courseNumber: '16.851', description: 'Satellite system design: orbit mechanics, attitude control, power systems, communication links, thermal control, and small satellite development.', fileUrl: 'https://ocw.mit.edu/courses/16-851-satellite-engineering-fall-2003/', year: 2003, categories: ['aerospace engineering', 'systems engineering'] },
+  { title: 'Flight Vehicle Aerodynamics', department: 'Aeronautics and Astronautics', courseNumber: '16.110', description: 'Aerodynamic analysis of flight vehicles: compressible flow, transonic and supersonic aerodynamics, boundary layers, and aerodynamic heating.', fileUrl: 'https://ocw.mit.edu/courses/16-110-flight-vehicle-aerodynamics-spring-2004/', year: 2004, categories: ['aerodynamics', 'aerospace engineering'] },
+  // POLITICAL SCIENCE — ADDITIONAL
+  { title: 'Democracy and Democratization', department: 'Political Science', courseNumber: '17.559J', description: 'Theories of democracy and processes of democratic transition: regime types, civil society, elections, and the stability of new democracies.', fileUrl: 'https://ocw.mit.edu/courses/17-559j-international-political-economy-i-fall-2006/', year: 2006, categories: ['political science', 'comparative politics'] },
+  { title: 'Congressional Politics', department: 'Political Science', courseNumber: '17.251', description: 'U.S. Congress: electoral incentives, committees, parties, leadership, floor procedures, and the legislative process from bill introduction to law.', fileUrl: 'https://ocw.mit.edu/courses/17-251-congress-and-the-american-political-system-i-fall-2016/', year: 2016, categories: ['american politics', 'political science'] },
+  // HISTORY — ADDITIONAL
+  { title: 'The Cold War', department: 'History', courseNumber: '21H.912', description: 'Origins and development of the Cold War: U.S.-Soviet rivalry, nuclear deterrence, proxy wars, decolonization, détente, and the collapse of the Soviet Union.', fileUrl: 'https://ocw.mit.edu/courses/21h-912-the-world-in-the-twentieth-century-fall-2010/', year: 2010, categories: ['history', 'international relations'] },
+  { title: 'History of Science', department: 'History', courseNumber: '21H.741', description: 'Development of Western science from antiquity to the twentieth century: astronomy, physics, biology, and the social contexts of scientific change.', fileUrl: 'https://ocw.mit.edu/courses/21h-741-history-of-science-fall-2004/', year: 2004, categories: ['history', 'science and technology'] },
+  { title: 'Africa and the Politics of Knowledge', department: 'History', courseNumber: '21H.316', description: 'African history through the lens of knowledge production: colonialism, nationalism, oral tradition, African philosophy, and contemporary historiography.', fileUrl: 'https://ocw.mit.edu/courses/21h-316-revolutions-in-science-fall-2012/', year: 2012, categories: ['history', 'african studies'] },
+  // LINGUISTICS AND PHILOSOPHY — ADDITIONAL
+  { title: 'Mathematical Logic', department: 'Linguistics and Philosophy', courseNumber: '24.241', description: 'First-order logic: syntax, semantics, proof systems, completeness, compactness, and Gödel\'s incompleteness theorems.', fileUrl: 'https://ocw.mit.edu/courses/24-241-logic-i-fall-2009/', year: 2009, categories: ['logic', 'mathematics'] },
+  { title: 'Philosophy of Science', department: 'Linguistics and Philosophy', courseNumber: '24.120', description: 'Foundations of scientific reasoning: explanation, laws of nature, causation, probability, confirmation, and debates about scientific realism.', fileUrl: 'https://ocw.mit.edu/courses/24-120-moral-psychology-spring-2020/', year: 2020, categories: ['philosophy', 'science and technology'] },
+  { title: 'Syntax', department: 'Linguistics and Philosophy', courseNumber: '24.951', description: 'Principles of generative syntax: phrase structure, movement operations, binding theory, and cross-linguistic variation from a minimalist perspective.', fileUrl: 'https://ocw.mit.edu/courses/24-951-introduction-to-syntax-fall-2003/', year: 2003, categories: ['linguistics', 'cognitive science'] },
+  // WRITING — ADDITIONAL
+  { title: 'Creative Writing Workshop', department: 'Writing', courseNumber: '21W.759', description: 'Workshop in fiction writing: character development, narrative structure, point of view, voice, revision, and peer critique of short fiction and novel excerpts.', fileUrl: 'https://ocw.mit.edu/courses/21w-759-writing-science-fiction-spring-2014/', year: 2014, categories: ['writing', 'creative writing'] },
+  // SLOAN SCHOOL OF MANAGEMENT — ADDITIONAL
+  { title: 'Operations Management', department: 'Sloan School of Management', courseNumber: '15.761', description: 'Managing operations in manufacturing and service firms: process analysis, inventory, supply chains, quality management, and lean operations.', fileUrl: 'https://ocw.mit.edu/courses/15-761-operations-management-spring-2001/', year: 2001, categories: ['operations management', 'business'] },
+  { title: 'Marketing Strategy', department: 'Sloan School of Management', courseNumber: '15.823', description: 'Marketing strategy: customer analysis, market segmentation, brand positioning, pricing strategy, digital marketing, and managing the product lifecycle.', fileUrl: 'https://ocw.mit.edu/courses/15-830-strategic-communication-for-nonprofit-leaders-fall-2009/', year: 2009, categories: ['marketing', 'business'] },
+  { title: 'Entrepreneurial Finance', department: 'Sloan School of Management', courseNumber: '15.431', description: 'Financing new ventures: valuation, venture capital, term sheets, convertible notes, bootstrapping, crowdfunding, and exit strategies for startup founders.', fileUrl: 'https://ocw.mit.edu/courses/15-431-entrepreneurial-finance-spring-2011/', year: 2011, categories: ['finance', 'entrepreneurship'] },
+  { title: 'Data Science for Business', department: 'Sloan School of Management', courseNumber: '15.572', description: 'Data-driven decision making: statistical learning, A/B testing, causal inference, machine learning applications, and data strategy for managers.', fileUrl: 'https://ocw.mit.edu/courses/15-572-analytics-lab-spring-2019/', year: 2019, categories: ['data science', 'business'] },
+  // CHEMICAL ENGINEERING — ADDITIONAL
+  { title: 'Transport Phenomena', department: 'Chemical Engineering', courseNumber: '10.301', description: 'Momentum, energy, and mass transport: viscous flow, conduction, convection, diffusion, and multicomponent mass transfer in engineering systems.', fileUrl: 'https://ocw.mit.edu/courses/10-301-fluid-mechanics-fall-2004/', year: 2004, categories: ['chemical engineering', 'fluid dynamics'] },
+  { title: 'Process Systems Engineering', department: 'Chemical Engineering', courseNumber: '10.450', description: 'Design and optimization of chemical processes: process synthesis, steady-state simulation, sensitivity analysis, and process integration for energy efficiency.', fileUrl: 'https://ocw.mit.edu/courses/10-450-mass-transfer-operations-spring-2004/', year: 2004, categories: ['chemical engineering', 'process engineering'] },
+  // NUCLEAR SCIENCE AND ENGINEERING — ADDITIONAL
+  { title: 'Engineering of Nuclear Reactors', department: 'Nuclear Science and Engineering', courseNumber: '22.06', description: 'Nuclear reactor design: neutron diffusion, reactor kinetics, thermal-hydraulic analysis, fuel management, and safety systems for fission reactors.', fileUrl: 'https://ocw.mit.edu/courses/22-06-engineering-of-nuclear-systems-fall-2010/', year: 2010, categories: ['nuclear engineering', 'engineering'] },
+  // EARTH, ATMOSPHERIC, AND PLANETARY SCIENCES — ADDITIONAL
+  { title: 'Climate Science and Policy', department: 'Earth, Atmospheric, and Planetary Sciences', courseNumber: '12.340', description: 'Physical basis of climate change: greenhouse effect, climate feedbacks, paleoclimate, climate models, and science-policy interface for emissions reduction.', fileUrl: 'https://ocw.mit.edu/courses/12-340-global-warming-science-spring-2012/', year: 2012, categories: ['climate science', 'earth science'] },
+  { title: 'Planetary Science', department: 'Earth, Atmospheric, and Planetary Sciences', courseNumber: '12.421', description: 'Formation and evolution of planets: solar system bodies, exoplanets, planetary interiors, atmospheres, habitability, and space mission design.', fileUrl: 'https://ocw.mit.edu/courses/12-420-atmospheric-and-oceanic-modeling-spring-2006/', year: 2006, categories: ['planetary science', 'astrophysics'] },
+  // COMPARATIVE MEDIA STUDIES — ADDITIONAL
+  { title: 'Introduction to Media Studies', department: 'Comparative Media Studies', courseNumber: 'CMS.100', description: 'Critical frameworks for analyzing media: semiotics, representation, ideology, audiences, and the political economy of media industries from print to digital.', fileUrl: 'https://ocw.mit.edu/courses/cms-100-introduction-to-media-studies-fall-2014/', year: 2014, categories: ['media studies', 'communication'] },
+  { title: 'Networked Social Movements', department: 'Comparative Media Studies', courseNumber: 'CMS.362J', description: 'Role of digital media in social movements: networked publics, hashtag activism, disinformation, surveillance, and platform governance.', fileUrl: 'https://ocw.mit.edu/courses/cms-362j-civic-media-co-design-studio-spring-2016/', year: 2016, categories: ['media studies', 'political science'] },
+  // URBAN STUDIES AND PLANNING — ADDITIONAL
+  { title: 'Land Use and Transportation Planning', department: 'Urban Studies and Planning', courseNumber: '11.380', description: 'Interactions between land use and transportation: travel demand modeling, transit-oriented development, parking policy, and urban mobility equity.', fileUrl: 'https://ocw.mit.edu/courses/11-380-land-use-and-transportation-planning-fall-2015/', year: 2015, categories: ['urban planning', 'transportation'] },
+  { title: 'Environmental Justice', department: 'Urban Studies and Planning', courseNumber: '11.469', description: 'Race, class, and environmental inequality: siting of hazardous facilities, community environmental health, environmental law, and grassroots organizing.', fileUrl: 'https://ocw.mit.edu/courses/11-469-urban-sociology-for-planners-spring-2009/', year: 2009, categories: ['urban planning', 'public policy'] },
+  // SCIENCE, TECHNOLOGY, AND SOCIETY — ADDITIONAL
+  { title: 'The Anthropology of Computing', department: 'Science, Technology, and Society', courseNumber: 'STS.269', description: 'Cultural dimensions of computing: hacking culture, open source, Silicon Valley mythology, automation and labor, and the sociology of artificial intelligence.', fileUrl: 'https://ocw.mit.edu/courses/sts-010-neuroscience-and-society-spring-2015/', year: 2015, categories: ['science and technology', 'sociology'] },
+  { title: 'Science, Technology, and Democracy', department: 'Science, Technology, and Society', courseNumber: 'STS.073J', description: 'Science in democratic society: expert testimony, risk perception, participatory technology assessment, and the politics of scientific knowledge.', fileUrl: 'https://ocw.mit.edu/courses/sts-073-science-technology-and-society-in-the-modern-world-fall-2004/', year: 2004, categories: ['science and technology', 'political science'] },
+  // CIVIL AND ENVIRONMENTAL ENGINEERING — ADDITIONAL
+  { title: 'Water Diplomacy', department: 'Civil and Environmental Engineering', courseNumber: '1.014', description: 'Transboundary water management: hydrology, international water law, negotiation frameworks, and case studies on shared rivers and aquifers.', fileUrl: 'https://ocw.mit.edu/courses/1-014-water-diplomacy-workshop-spring-2012/', year: 2012, categories: ['environmental engineering', 'public policy'] },
+  { title: 'Environmental Chemistry', department: 'Civil and Environmental Engineering', courseNumber: '1.061', description: 'Chemistry of natural and polluted environments: thermodynamics, kinetics, acid-base chemistry, redox reactions, and fate of contaminants in air, water, and soil.', fileUrl: 'https://ocw.mit.edu/courses/1-061-transport-processes-in-the-environment-fall-2008/', year: 2008, categories: ['environmental engineering', 'chemistry'] },
+  // GLOBAL LANGUAGES
+  { title: 'Chinese I: Streamlined', department: 'Global Languages', courseNumber: '21G.101', description: 'Introductory Mandarin Chinese: pronunciation, tones, pinyin, fundamental grammar, and everyday conversational skills for reading, writing, and speaking.', fileUrl: 'https://ocw.mit.edu/courses/21g-101-chinese-i-streamlined-fall-2014/', year: 2014, categories: ['language', 'chinese'] },
+  { title: 'Arabic I', department: 'Global Languages', courseNumber: '21G.401', description: 'Introduction to Modern Standard Arabic: script, pronunciation, basic grammar, vocabulary, and communicative competence for everyday and academic contexts.', fileUrl: 'https://ocw.mit.edu/courses/21g-401-arabic-i-fall-2007/', year: 2007, categories: ['language', 'arabic'] },
+  { title: 'Japanese I', department: 'Global Languages', courseNumber: '21G.501', description: 'Introduction to the Japanese language: hiragana, katakana, basic kanji, grammar structures, and conversational skills for everyday situations.', fileUrl: 'https://ocw.mit.edu/courses/21g-501-japanese-i-fall-2019/', year: 2019, categories: ['language', 'japanese'] },
+  { title: 'French II', department: 'Global Languages', courseNumber: '21G.302', description: 'Intermediate French: grammar review, oral expression, reading authentic texts, and cultural study of French-speaking communities around the world.', fileUrl: 'https://ocw.mit.edu/courses/21g-302-french-ii-spring-2015/', year: 2015, categories: ['language', 'french'] },
 ];
 
 // ─── Fake Users ───────────────────────────────────────────────────────────────
@@ -300,6 +395,66 @@ const SEED_USERS = [
     email: 'sofia.petrov@example.com',
     institution: 'Lomonosov Moscow State University', program: 'Political Science',
     plan: 'free', prolific: false,
+  },
+  {
+    username: 'marcus_osei', displayName: 'Marcus Osei',
+    email: 'marcus.osei@example.com',
+    institution: 'University of Ghana', program: 'Environmental Science',
+    plan: 'pro', prolific: false,
+  },
+  {
+    username: 'nina_volkov', displayName: 'Nina Volkov',
+    email: 'nina.volkov@example.com',
+    institution: 'St. Petersburg State University', program: 'Mathematics',
+    plan: 'free', prolific: false,
+  },
+  {
+    username: 'aisha_diallo', displayName: 'Aisha Diallo',
+    email: 'aisha.diallo@example.com',
+    institution: 'Cheikh Anta Diop University', program: 'Economics',
+    plan: 'premium', prolific: false,
+  },
+  {
+    username: 'raj_krishnamurthy', displayName: 'Raj Krishnamurthy',
+    email: 'raj.krishnamurthy@example.com',
+    institution: 'Indian Institute of Technology Madras', program: 'Aerospace Engineering',
+    plan: 'pro', prolific: false,
+  },
+  {
+    username: 'mei_lin_zhang', displayName: 'Mei Lin Zhang',
+    email: 'mei.zhang@example.com',
+    institution: 'Peking University', program: 'Physics',
+    plan: 'free', prolific: false,
+  },
+  {
+    username: 'carlos_mendez', displayName: 'Carlos Mendez',
+    email: 'carlos.mendez@example.com',
+    institution: 'Universidad Nacional Autónoma de México', program: 'Chemical Engineering',
+    plan: 'pro', prolific: false,
+  },
+  {
+    username: 'amara_traore', displayName: 'Amara Traoré',
+    email: 'amara.traore@example.com',
+    institution: 'Université des Sciences de Bamako', program: 'Biology',
+    plan: 'free', prolific: false,
+  },
+  {
+    username: 'sven_larsson', displayName: 'Sven Larsson',
+    email: 'sven.larsson@example.com',
+    institution: 'KTH Royal Institute of Technology', program: 'Electrical Engineering',
+    plan: 'premium', prolific: false,
+  },
+  {
+    username: 'fatou_ndiaye', displayName: 'Fatou Ndiaye',
+    email: 'fatou.ndiaye@example.com',
+    institution: 'University of Dakar', program: 'Political Science',
+    plan: 'free', prolific: false,
+  },
+  {
+    username: 'jorge_silva', displayName: 'Jorge Silva',
+    email: 'jorge.silva@example.com',
+    institution: 'Universidade de São Paulo', program: 'Computer Science',
+    plan: 'pro', prolific: false,
   },
 ];
 
@@ -681,6 +836,55 @@ async function seed() {
       });
     })
   );
+
+  // ── Seed follow relationships ──
+  console.log('Seeding follow relationships...');
+  {
+    // Weight: premium/prolific users attract more followers
+    const weights = createdUsers.map((_, i) => {
+      const u = SEED_USERS[i];
+      if (u.prolific) return 5;
+      if (u.plan === 'premium') return 3;
+      if (u.plan === 'pro') return 2;
+      return 1;
+    });
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+    function pickFollowTarget(excludeIdx: number): number {
+      let r = Math.random() * totalWeight;
+      for (let i = 0; i < weights.length; i++) {
+        if (i === excludeIdx) continue;
+        r -= weights[i];
+        if (r <= 0) return i;
+      }
+      // fallback: pick any other user
+      return excludeIdx === 0 ? 1 : 0;
+    }
+
+    const followPairs: Array<{ followerId: string; followingId: string }> = [];
+    const seen = new Set<string>();
+
+    for (let i = 0; i < createdUsers.length; i++) {
+      // Each user follows between 5 and 14 others
+      const count = 5 + Math.floor(Math.random() * 10);
+      const targets = new Set<number>();
+      let attempts = 0;
+      while (targets.size < Math.min(count, createdUsers.length - 1) && attempts < 100) {
+        targets.add(pickFollowTarget(i));
+        attempts++;
+      }
+      for (const j of targets) {
+        const key = `${createdUsers[i].id}:${createdUsers[j].id}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          followPairs.push({ followerId: createdUsers[i].id, followingId: createdUsers[j].id });
+        }
+      }
+    }
+
+    await prisma.follow.createMany({ data: followPairs, skipDuplicates: true });
+    console.log(`  Created ${followPairs.length} follow relationships.`);
+  }
 
   const prolificUser = createdUsers.find((_, i) => SEED_USERS[i].prolific)!;
   const regularUsers = createdUsers.filter((u) => u.id !== prolificUser.id);

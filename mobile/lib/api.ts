@@ -28,21 +28,42 @@ export function apiUrl(path: string): string {
   return `${BASE_URL}${path}`;
 }
 
+export class NetworkError extends Error {
+  constructor() {
+    super("Server is unavailable. Please check your connection.");
+    this.name = "NetworkError";
+  }
+}
+
+type NetworkErrorHandler = () => void;
+let _networkErrorHandler: NetworkErrorHandler | null = null;
+
+export function setNetworkErrorHandler(handler: NetworkErrorHandler | null) {
+  _networkErrorHandler = handler;
+}
+
 export async function gql<T = unknown>(
   query: string,
   variables?: Record<string, unknown>,
   token?: string,
   signal?: AbortSignal,
 ): Promise<T> {
-  const res = await fetch(GRAPHQL_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ query, variables }),
-    signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(GRAPHQL_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ query, variables }),
+      signal,
+    });
+  } catch (err) {
+    if ((err as Error)?.name === "AbortError") throw err;
+    _networkErrorHandler?.();
+    throw new NetworkError();
+  }
 
   const json = await res.json();
   if (json.errors?.length) throw new Error(json.errors[0].message);
