@@ -2311,6 +2311,610 @@ const COURSES: OcwCourse[] = [
     year: 2015,
     categories: ["language", "french"],
   },
+  // GLOBAL LANGUAGES — ADDITIONAL
+  {
+    title: "Spanish I",
+    department: "Global Languages",
+    courseNumber: "21G.701",
+    description:
+      "Beginning Spanish: pronunciation, essential grammar, vocabulary, and conversational skills for everyday situations in Spanish-speaking cultures.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/21g-701-spanish-i-fall-2003/",
+    year: 2003,
+    categories: ["language", "spanish"],
+  },
+  {
+    title: "German I",
+    department: "Global Languages",
+    courseNumber: "21G.201",
+    description:
+      "Introductory German: basic grammar, vocabulary, pronunciation, and communicative competence for everyday situations and cultural understanding.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/21g-201-german-i-fall-2019/",
+    year: 2019,
+    categories: ["language", "german"],
+  },
+  {
+    title: "Portuguese I",
+    department: "Global Languages",
+    courseNumber: "21G.801",
+    description:
+      "Introduction to Portuguese: pronunciation, basic grammar, vocabulary, and communicative skills in Brazilian and European Portuguese cultural contexts.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/21g-801-portuguese-i-fall-2009/",
+    year: 2009,
+    categories: ["language", "portuguese"],
+  },
+  // MUSIC AND THEATER ARTS
+  {
+    title: "Introduction to Music Theory",
+    department: "Music and Theater Arts",
+    courseNumber: "21M.011",
+    description:
+      "Fundamentals of Western music theory: pitch, rhythm, scales, intervals, chords, harmony, counterpoint, and formal analysis through score reading and listening.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/21m-011-introduction-to-western-music-spring-2006/",
+    year: 2006,
+    categories: ["music", "arts"],
+  },
+  {
+    title: "Music Composition",
+    department: "Music and Theater Arts",
+    courseNumber: "21M.310",
+    description:
+      "Fundamentals of musical composition: melodic writing, harmonization, voice leading, counterpoint, and electronic music production using notation software and DAWs.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/21m-310-harmony-and-counterpoint-i-spring-2005/",
+    year: 2005,
+    categories: ["music", "creative arts"],
+  },
+  {
+    title: "Music and Technology",
+    department: "Music and Theater Arts",
+    courseNumber: "21M.380",
+    description:
+      "Intersection of music and technology: electronic music, digital audio, synthesis, sampling, MIDI, and the cultural impact of music technology from the phonograph to streaming.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/21m-380-music-and-technology-contemporary-history-and-aesthetics-spring-2010/",
+    year: 2010,
+    categories: ["music", "technology"],
+  },
+  {
+    title: "Introduction to Theater",
+    department: "Music and Theater Arts",
+    courseNumber: "21M.600",
+    description:
+      "Survey of world theater history and practice: dramatic texts, production design, acting methods, directing, and contemporary performance across cultures.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/21m-600-introduction-to-theater-fall-2006/",
+    year: 2006,
+    categories: ["theater", "arts"],
+  },
+  // EECS — COMPILERS, SYSTEMS, AND VISION
+  {
+    title: "Computer Language Engineering",
+    department: "Electrical Engineering and Computer Science",
+    courseNumber: "6.035",
+    description:
+      "Compiler construction: scanning, parsing, semantic analysis, intermediate representations, code generation, optimization, and runtime systems for modern languages.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/6-035-computer-language-engineering-fall-2005/",
+    year: 2005,
+    categories: ["compilers", "computer science"],
+  },
+  {
+    title: "Computer Systems Engineering",
+    department: "Electrical Engineering and Computer Science",
+    courseNumber: "6.033",
+    description:
+      "Principles of computer system design: modularity, fault tolerance, atomicity, concurrent systems, and case studies of real-world operating systems, networks, and storage systems.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/6-033-computer-system-engineering-spring-2018/",
+    year: 2018,
+    categories: ["systems engineering", "computer science"],
+  },
+  {
+    title: "Advanced Algorithms",
+    department: "Electrical Engineering and Computer Science",
+    courseNumber: "6.854J",
+    description:
+      "Advanced algorithm design and analysis: amortized analysis, network flow, linear programming, approximation algorithms, online algorithms, and randomized algorithms.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/6-854j-advanced-algorithms-fall-2008/",
+    year: 2008,
+    categories: ["algorithms", "computer science"],
+  },
+  {
+    title: "Computer Vision",
+    department: "Electrical Engineering and Computer Science",
+    courseNumber: "6.869",
+    description:
+      "Fundamentals of computer vision: image formation, edge detection, feature matching, camera geometry, object recognition, segmentation, and deep learning for vision.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/6-869-advances-in-computer-vision-spring-2018/",
+    year: 2018,
+    categories: ["computer vision", "machine learning"],
+  },
+  {
+    title: "Programming Languages",
+    department: "Electrical Engineering and Computer Science",
+    courseNumber: "6.820",
+    description:
+      "Foundations of programming language design: type systems, operational semantics, lambda calculus, functional and object-oriented language features, and program analysis.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/6-820-fundamentals-of-program-analysis-fall-2015/",
+    year: 2015,
+    categories: ["programming languages", "computer science"],
+  },
+  {
+    title: "Computational Biology",
+    department: "Electrical Engineering and Computer Science",
+    courseNumber: "6.047",
+    description:
+      "Algorithms for computational biology: sequence alignment, hidden Markov models, phylogenetics, genome annotation, network biology, and genome-wide association studies.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/6-047-computational-biology-fall-2015/",
+    year: 2015,
+    categories: ["computational biology", "bioinformatics"],
+  },
+  {
+    title: "User Interface Design and Implementation",
+    department: "Electrical Engineering and Computer Science",
+    courseNumber: "6.831",
+    description:
+      "Human-computer interaction: user-centered design, prototyping, usability testing, visual design principles, accessibility, and front-end web development.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/6-831-user-interface-design-and-implementation-spring-2011/",
+    year: 2011,
+    categories: ["human-computer interaction", "software engineering"],
+  },
+  // MATHEMATICS — ADVANCED
+  {
+    title: "Algebraic Geometry",
+    department: "Mathematics",
+    courseNumber: "18.725",
+    description:
+      "Introduction to algebraic geometry: affine and projective varieties, morphisms, sheaves, schemes, divisors, and the Riemann-Roch theorem.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/18-725-algebraic-geometry-fall-2015/",
+    year: 2015,
+    categories: ["algebraic geometry", "mathematics"],
+  },
+  {
+    title: "Stochastic Processes",
+    department: "Mathematics",
+    courseNumber: "18.175",
+    description:
+      "Random walks, Markov chains, martingales, Brownian motion, Poisson processes, and stochastic calculus with applications to finance and queueing theory.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/18-175-theory-of-probability-spring-2015/",
+    year: 2015,
+    categories: ["probability", "stochastic processes"],
+  },
+  {
+    title: "Applied Mathematics",
+    department: "Mathematics",
+    courseNumber: "18.085",
+    description:
+      "Computational science and engineering: finite differences, finite elements, Fourier analysis, graph theory, and applications to heat flow, elasticity, and fluids.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/18-085-computational-science-and-engineering-i-fall-2008/",
+    year: 2008,
+    categories: ["applied mathematics", "numerical methods"],
+  },
+  {
+    title: "Functional Analysis",
+    department: "Mathematics",
+    courseNumber: "18.102",
+    description:
+      "Hilbert and Banach spaces, bounded linear operators, compact operators, spectral theory, and applications to differential equations.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/18-102-introduction-to-functional-analysis-spring-2021/",
+    year: 2021,
+    categories: ["analysis", "mathematics"],
+  },
+  {
+    title: "Numerical Analysis",
+    department: "Mathematics",
+    courseNumber: "18.330",
+    description:
+      "Numerical methods and their mathematical analysis: floating-point arithmetic, root finding, interpolation, quadrature, ODEs, and iterative solvers for linear systems.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/18-330-introduction-to-numerical-analysis-spring-2004/",
+    year: 2004,
+    categories: ["numerical methods", "mathematics"],
+  },
+  // PHYSICS — ADVANCED
+  {
+    title: "Plasma Physics",
+    department: "Physics",
+    courseNumber: "8.624",
+    description:
+      "Kinetic and fluid theory of plasmas: Vlasov equation, magnetohydrodynamics, plasma waves, instabilities, and applications to fusion and astrophysical plasmas.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/8-624-plasma-spectroscopy-spring-2003/",
+    year: 2003,
+    categories: ["plasma physics", "physics"],
+  },
+  {
+    title: "Biophysics",
+    department: "Physics",
+    courseNumber: "8.592J",
+    description:
+      "Physical principles underlying biological processes: diffusion, polymers, membranes, molecular motors, and neural computation from a statistical physics perspective.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/8-592j-statistical-physics-in-biology-spring-2011/",
+    year: 2011,
+    categories: ["biophysics", "physics"],
+  },
+  {
+    title: "Nonlinear Dynamics and Chaos",
+    department: "Physics",
+    courseNumber: "8.385",
+    description:
+      "Nonlinear systems and chaos: phase portraits, bifurcations, limit cycles, strange attractors, the logistic map, and applications in mechanics and biology.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/2-050j-nonlinear-dynamics-and-chaos-fall-2006/",
+    year: 2006,
+    categories: ["nonlinear dynamics", "physics"],
+  },
+  // CHEMISTRY — ADDITIONAL
+  {
+    title: "Inorganic Chemistry",
+    department: "Chemistry",
+    courseNumber: "5.04",
+    description:
+      "Structure, bonding, and reactivity of inorganic compounds: coordination chemistry, organometallics, solid-state chemistry, and bioinorganic applications.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/5-04-principles-of-inorganic-chemistry-ii-fall-2008/",
+    year: 2008,
+    categories: ["inorganic chemistry", "chemistry"],
+  },
+  {
+    title: "Advanced Chemical Experimentation",
+    department: "Chemistry",
+    courseNumber: "5.35",
+    description:
+      "Laboratory methods in modern chemistry: spectroscopic techniques, synthesis, kinetics measurements, and data analysis applied to real research problems.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/5-35-introduction-to-experimental-chemistry-fall-2012/",
+    year: 2012,
+    categories: ["analytical chemistry", "chemistry"],
+  },
+  // BIOLOGY — ADDITIONAL
+  {
+    title: "Cancer Biology",
+    department: "Biology",
+    courseNumber: "7.343",
+    description:
+      "Molecular and cellular basis of cancer: oncogenes, tumor suppressors, cell cycle deregulation, metastasis, angiogenesis, and targeted cancer therapies.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/7-343-cell-signaling-in-cancer-spring-2012/",
+    year: 2012,
+    categories: ["cancer biology", "biology"],
+  },
+  {
+    title: "Developmental Biology",
+    department: "Biology",
+    courseNumber: "7.22",
+    description:
+      "Mechanisms of animal development: fertilization, cleavage, gastrulation, organogenesis, cell signaling, and gene regulatory networks controlling development.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/7-22-developmental-biology-fall-2005/",
+    year: 2005,
+    categories: ["developmental biology", "biology"],
+  },
+  {
+    title: "Ecology",
+    department: "Biology",
+    courseNumber: "7.30J",
+    description:
+      "Population ecology, community ecology, and ecosystem dynamics: species interactions, food webs, biodiversity, ecological modeling, and conservation biology.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/7-30j-ecology-i-the-earth-system-fall-2003/",
+    year: 2003,
+    categories: ["ecology", "biology"],
+  },
+  // ECONOMICS — ADDITIONAL FIELDS
+  {
+    title: "Industrial Organization",
+    department: "Economics",
+    courseNumber: "14.271",
+    description:
+      "Theory of markets and firms: price theory, market power, vertical integration, auctions, market design, antitrust policy, and the economics of platforms.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/14-271-industrial-organization-i-fall-2013/",
+    year: 2013,
+    categories: ["industrial organization", "economics"],
+  },
+  {
+    title: "Monetary Economics",
+    department: "Economics",
+    courseNumber: "14.452",
+    description:
+      "Money, inflation, and business cycles: monetary policy frameworks, central banking, interest rates, quantitative easing, and international monetary economics.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/14-452-macroeconomic-theory-ii-spring-2007/",
+    year: 2007,
+    categories: ["monetary economics", "macroeconomics"],
+  },
+  {
+    title: "Political Economy and Economic Development",
+    department: "Economics",
+    courseNumber: "14.770",
+    description:
+      "Political economy: how political institutions shape economic policy. Topics include rent-seeking, electoral competition, state capacity, and economic reform.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/14-770-introduction-to-political-economy-fall-2017/",
+    year: 2017,
+    categories: ["political economy", "economics"],
+  },
+  // HISTORY — ADDITIONAL REGIONS
+  {
+    title: "Medieval History",
+    department: "History",
+    courseNumber: "21H.251",
+    description:
+      "Medieval Europe from the fall of Rome to 1500: feudalism, the Catholic Church, crusades, plague, and the transition to the Renaissance.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/21h-251-medieval-history-spring-2008/",
+    year: 2008,
+    categories: ["history", "medieval history"],
+  },
+  {
+    title: "Latin American History",
+    department: "History",
+    courseNumber: "21H.802",
+    description:
+      "Colonial Latin America and the independence era to the present: indigenous cultures, Spanish empire, revolutions, dictatorship, economic development, and social movements.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/21h-802-modern-latin-america-1808-present-spring-2003/",
+    year: 2003,
+    categories: ["history", "latin american studies"],
+  },
+  {
+    title: "History of India",
+    department: "History",
+    courseNumber: "21H.732",
+    description:
+      "South Asian history from ancient civilization to independence: the Mughal Empire, British colonialism, nationalism, and partition.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/21h-732-the-making-of-modern-south-asia-1600-1947-spring-2013/",
+    year: 2013,
+    categories: ["history", "south asian studies"],
+  },
+  // LINGUISTICS AND PHILOSOPHY — ADDITIONAL
+  {
+    title: "Metaphysics",
+    department: "Linguistics and Philosophy",
+    courseNumber: "24.211",
+    description:
+      "Fundamental questions of metaphysics: existence and identity, universals and particulars, causation, free will, time, and the nature of modality.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/24-211-theory-of-knowledge-spring-2014/",
+    year: 2014,
+    categories: ["metaphysics", "philosophy"],
+  },
+  {
+    title: "Philosophy of Mind",
+    department: "Linguistics and Philosophy",
+    courseNumber: "24.09J",
+    description:
+      "Nature of mind and mental states: consciousness, intentionality, qualia, functionalism, physicalism, and the relationship between mind and brain.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/24-09-minds-and-machines-fall-2011/",
+    year: 2011,
+    categories: ["philosophy of mind", "cognitive science"],
+  },
+  // CIVIL AND ENVIRONMENTAL ENGINEERING — STRUCTURAL
+  {
+    title: "Structural Engineering",
+    department: "Civil and Environmental Engineering",
+    courseNumber: "1.050",
+    description:
+      "Mechanics and design of structures: equilibrium, trusses, beams, columns, energy methods, and introduction to structural systems in buildings and bridges.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/1-050-solid-mechanics-fall-2004/",
+    year: 2004,
+    categories: ["structural engineering", "civil engineering"],
+  },
+  {
+    title: "Geotechnical Engineering",
+    department: "Civil and Environmental Engineering",
+    courseNumber: "1.361",
+    description:
+      "Soil mechanics and foundation engineering: soil classification, effective stress, consolidation, shear strength, slope stability, and foundation design.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/1-361-advanced-geotechnical-engineering-spring-2004/",
+    year: 2004,
+    categories: ["geotechnical engineering", "civil engineering"],
+  },
+  // AERONAUTICS — PROPULSION AND GUIDANCE
+  {
+    title: "Propulsion Systems",
+    department: "Aeronautics and Astronautics",
+    courseNumber: "16.50",
+    description:
+      "Principles of propulsion: thermodynamics of gas turbines, jet engines, rocket motors, and advanced concepts including scramjets and electric propulsion.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/16-50-introduction-to-propulsion-systems-spring-2012/",
+    year: 2012,
+    categories: ["propulsion", "aerospace engineering"],
+  },
+  {
+    title: "Guidance and Control",
+    department: "Aeronautics and Astronautics",
+    courseNumber: "16.322",
+    description:
+      "Estimation and control for aerospace vehicles: Kalman filtering, stochastic optimal control, inertial navigation, and guidance law design for missiles and spacecraft.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/16-322-stochastic-estimation-and-control-fall-2004/",
+    year: 2004,
+    categories: ["control systems", "aerospace engineering"],
+  },
+  // MECHANICAL ENGINEERING — ADDITIONAL
+  {
+    title: "Tribology",
+    department: "Mechanical Engineering",
+    courseNumber: "2.800",
+    description:
+      "Friction, wear, and lubrication: contact mechanics, boundary and hydrodynamic lubrication, surface engineering, and tribological systems in machines.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/2-800-tribology-fall-2004/",
+    year: 2004,
+    categories: ["mechanical engineering", "materials science"],
+  },
+  {
+    title: "Combustion Engineering",
+    department: "Mechanical Engineering",
+    courseNumber: "2.57",
+    description:
+      "Combustion fundamentals: chemical kinetics, thermochemistry, flame structure, pollutant formation, and applications to engines and gas turbines.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/2-57-nano-to-macro-transport-processes-spring-2012/",
+    year: 2012,
+    categories: ["thermodynamics", "mechanical engineering"],
+  },
+  // NUCLEAR SCIENCE AND ENGINEERING — PLASMA FUSION
+  {
+    title: "Plasma Science and Fusion Technology",
+    department: "Nuclear Science and Engineering",
+    courseNumber: "22.611J",
+    description:
+      "Plasma physics and fusion energy: equilibrium and stability of magnetically confined plasmas, tokamak design, heating, diagnostics, and materials challenges.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/22-611j-introduction-to-plasma-physics-i-fall-2006/",
+    year: 2006,
+    categories: ["plasma physics", "nuclear engineering"],
+  },
+  // EARTH, ATMOSPHERIC, AND PLANETARY SCIENCES — ADDITIONAL
+  {
+    title: "Geobiology",
+    department: "Earth, Atmospheric, and Planetary Sciences",
+    courseNumber: "12.007",
+    description:
+      "Interactions between life and the solid Earth: origin of life, biogeochemical cycles, mass extinctions, Snowball Earth, and astrobiology.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/12-007-geobiology-fall-2005/",
+    year: 2005,
+    categories: ["geology", "biology"],
+  },
+  {
+    title: "Remote Sensing",
+    department: "Earth, Atmospheric, and Planetary Sciences",
+    courseNumber: "12.213",
+    description:
+      "Principles and applications of remote sensing: electromagnetic radiation, sensors, image processing, and satellite observations of land, ocean, and atmosphere.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/12-213-atmospheres-oceans-and-climate-change-spring-2006/",
+    year: 2006,
+    categories: ["remote sensing", "earth science"],
+  },
+  // COMPARATIVE MEDIA STUDIES — ADDITIONAL
+  {
+    title: "Documentary Film",
+    department: "Comparative Media Studies",
+    courseNumber: "CMS.845",
+    description:
+      "History and theory of documentary film: observational, expository, and participatory modes. Students produce short documentary projects on social and scientific topics.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/cms-845-documentary-video-production-spring-2004/",
+    year: 2004,
+    categories: ["film", "media studies"],
+  },
+  // URBAN STUDIES AND PLANNING — ADDITIONAL
+  {
+    title: "Housing and Community Development",
+    department: "Urban Studies and Planning",
+    courseNumber: "11.401",
+    description:
+      "Housing policy and community development: affordable housing finance, community land trusts, neighborhood revitalization, and equitable development strategies.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/11-401-introduction-to-housing-fall-2015/",
+    year: 2015,
+    categories: ["urban planning", "housing policy"],
+  },
+  // SCIENCE, TECHNOLOGY, AND SOCIETY — ADDITIONAL
+  {
+    title: "Privacy and Security in the Digital Age",
+    department: "Science, Technology, and Society",
+    courseNumber: "STS.425",
+    description:
+      "Intersection of technology, law, and society: surveillance capitalism, data privacy, cybersecurity policy, algorithmic bias, and democratic implications of AI.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/sts-085-technology-and-the-law-spring-2011/",
+    year: 2011,
+    categories: ["science and technology", "law"],
+  },
+  // SLOAN SCHOOL OF MANAGEMENT — ADDITIONAL
+  {
+    title: "Negotiations and Conflict Resolution",
+    department: "Sloan School of Management",
+    courseNumber: "15.665",
+    description:
+      "Theory and practice of negotiation: distributive and integrative bargaining, multi-party negotiations, cross-cultural negotiation, and dispute resolution.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/15-665-power-and-negotiation-spring-2014/",
+    year: 2014,
+    categories: ["negotiation", "business"],
+  },
+  {
+    title: "Leadership and Ethics",
+    department: "Sloan School of Management",
+    courseNumber: "15.317",
+    description:
+      "Leadership in organizations: theories of leadership, team dynamics, organizational culture, ethical decision-making, and developing leadership capacity.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/15-317-organizational-processes-and-advanced-leadership-spring-2005/",
+    year: 2005,
+    categories: ["leadership", "business"],
+  },
+  {
+    title: "System Dynamics",
+    department: "Sloan School of Management",
+    courseNumber: "15.871",
+    description:
+      "Modeling and simulation of complex dynamic systems: feedback loops, stock-and-flow diagrams, nonlinearity, delay, and applications to business and policy.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/15-871-introduction-to-system-dynamics-fall-2013/",
+    year: 2013,
+    categories: ["systems thinking", "business"],
+  },
+  // MATERIALS SCIENCE AND ENGINEERING — COMPUTATIONAL
+  {
+    title: "Atomistic Computer Modeling of Materials",
+    department: "Materials Science and Engineering",
+    courseNumber: "3.320",
+    description:
+      "Computational methods for materials science: density functional theory, molecular dynamics, Monte Carlo simulation, and machine learning potentials.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/3-320-atomistic-computer-modeling-of-materials-sma-5107-spring-2005/",
+    year: 2005,
+    categories: ["computational materials science", "materials science"],
+  },
+  // HEALTH SCIENCES AND TECHNOLOGY — ADDITIONAL
+  {
+    title: "Global Health and Infectious Disease",
+    department: "Health Sciences and Technology",
+    courseNumber: "HST.161",
+    description:
+      "Epidemiology and control of infectious diseases globally: pathogen biology, transmission dynamics, vaccines, drug resistance, and global health governance.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/hst-161-molecular-biology-and-genetics-in-modern-medicine-fall-2007/",
+    year: 2007,
+    categories: ["global health", "biology"],
+  },
+  {
+    title: "Neural Interfaces",
+    department: "Health Sciences and Technology",
+    courseNumber: "HST.584J",
+    description:
+      "Brain-machine interfaces: neural signal recording and stimulation, signal processing, prosthetics, deep brain stimulation, and ethical dimensions of neurotechnology.",
+    fileUrl:
+      "https://ocw.mit.edu/courses/hst-584j-magnetic-resonance-analytic-biochemical-and-imaging-techniques-spring-2006/",
+    year: 2006,
+    categories: ["neuroscience", "biomedical engineering"],
+  },
 ];
 
 // ─── Fake Users ───────────────────────────────────────────────────────────────
