@@ -1,121 +1,23 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
-// ─── Adsterra Ad Zones ────────────────────────────────────────────────────────
-type AdZone =
-  | { type: "native"; src: string; containerId: string }
-  | { type: "banner"; key: string; src: string; width: number; height: number }
-  | { type: "socialbar"; src: string };
-
-const AD_ZONES: AdZone[] = [
-  {
-    type: "native",
-    src: "https://pl29107546.profitablecpmratenetwork.com/dca3faf47483a0c15be4506365e921d8/invoke.js",
-    containerId: "container-dca3faf47483a0c15be4506365e921d8",
-  },
-  {
-    type: "banner",
-    key: "44be9916dcda20992159a6ccdf64c31e",
-    src: "https://www.highperformanceformat.com/44be9916dcda20992159a6ccdf64c31e/invoke.js",
-    width: 468,
-    height: 60,
-  },
-  {
-    type: "socialbar",
-    src: "https://pl29109074.profitablecpmratenetwork.com/c5/54/ee/c554ee202f818aef11daa36cba5961d3.js",
-  },
-];
-
-const AD_SANDBOX_SCRIPT = `<script>
-(function(){
-  var _open = window.open.bind(window);
-  window.open = function(url, name, features) {
-    var f = (features || '') + ',noopener,noreferrer';
-    return _open(url, '_blank', f);
-  };
-  try { window.top.location; } catch(e) {}
-  Object.defineProperty(window, 'top', { get: function(){ return window; } });
-})();
-<\/script>`;
-
-function buildAdHtml(zone: AdZone, cacheBust: string): string {
-  const base = `<!DOCTYPE html><html><head><style>body{margin:0;padding:0;}</style></head><body>${AD_SANDBOX_SCRIPT}`;
-  const close = `</body></html>`;
-
-  if (zone.type === "native") {
-    return (
-      base +
-      `<script async="async" data-cfasync="false" src="${zone.src}?r=${cacheBust}"><\/script>` +
-      `<div id="${zone.containerId}"></div>` +
-      close
-    );
-  }
-  if (zone.type === "banner") {
-    return (
-      base +
-      `<script>atOptions={'key':'${zone.key}','format':'iframe','height':${zone.height},'width':${zone.width},'params':{}};<\/script>` +
-      `<script src="${zone.src}?r=${cacheBust}"><\/script>` +
-      close
-    );
-  }
-  return base + `<script src="${zone.src}?r=${cacheBust}"><\/script>` + close;
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-let zoneCounter = 0;
+const ADSENSE_CLIENT = "ca-pub-4938895869648539";
+const ADSENSE_SLOT = "5899842940";
 
 export default function FeedAd() {
-  const containerRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const zone = AD_ZONES[zoneCounter % AD_ZONES.length];
-    zoneCounter += 1;
-
-    const minHeight = zone.type === "banner" ? zone.height : 120;
-
-    const iframe = document.createElement("iframe");
-    iframe.style.cssText = `width:100%;height:${minHeight}px;border:none;display:block;overflow:hidden;`;
-    iframe.sandbox.add(
-      "allow-scripts",
-      "allow-same-origin",
-      "allow-popups",
-      "allow-popups-to-escape-sandbox",
-      "allow-forms",
-    );
-    container.appendChild(iframe);
-
-    const cacheBust = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const iframeDoc = iframe.contentDocument ?? iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(buildAdHtml(zone, cacheBust));
-      iframeDoc.close();
+    if (!document.querySelector(`script[src*="pagead2.googlesyndication.com"]`)) {
+      const script = document.createElement("script");
+      script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`;
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      document.head.appendChild(script);
     }
 
-    const resizeToContent = () => {
-      const body = iframe.contentDocument?.body;
-      if (body && body.scrollHeight > minHeight) {
-        iframe.style.height = `${body.scrollHeight}px`;
-      }
-    };
-
-    iframe.addEventListener("load", () => {
-      resizeToContent();
-      let attempts = 0;
-      const poll = setInterval(() => {
-        resizeToContent();
-        attempts += 1;
-        if (attempts >= 10) clearInterval(poll);
-      }, 300);
-    });
-
-    return () => {
-      container.innerHTML = "";
-    };
+    try {
+      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+    } catch {}
   }, []);
 
   return (
@@ -153,7 +55,14 @@ export default function FeedAd() {
 
       <div className="px-2 pt-2 pb-4">
         <div className="overflow-hidden rounded-[22px] bg-doc-card p-3">
-          <div ref={containerRef} />
+          <ins
+            className="adsbygoogle"
+            style={{ display: "block" }}
+            data-ad-client={ADSENSE_CLIENT}
+            data-ad-slot={ADSENSE_SLOT}
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          />
         </div>
       </div>
     </article>

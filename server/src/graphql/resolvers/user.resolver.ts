@@ -41,6 +41,20 @@ const createToken = (userId: string, email: string) => {
   return jwt.sign({ sub: userId, email }, secret, { expiresIn: "7d" });
 };
 
+const DICEBEAR_STYLES = [
+  "adventurer", "adventurer-neutral", "avataaars", "avataaars-neutral",
+  "big-ears", "big-ears-neutral", "big-smile", "bottts", "bottts-neutral",
+  "croodles", "croodles-neutral", "dylan", "fun-emoji", "glass", "icons",
+  "identicon", "initials", "lorelei", "lorelei-neutral", "micah", "miniavs",
+  "notionists", "notionists-neutral", "open-peeps", "personas",
+  "pixel-art", "pixel-art-neutral", "rings", "shapes", "thumbs",
+];
+
+const randomDicebearUrl = (username: string) => {
+  const style = DICEBEAR_STYLES[Math.floor(Math.random() * DICEBEAR_STYLES.length)];
+  return `https://api.dicebear.com/9.x/${style}/png?seed=${encodeURIComponent(username)}&size=200`;
+};
+
 const RESERVED_USERNAMES = new Set(["deleted", "disabled"]);
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const ACCOUNT_RESTORE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
@@ -724,6 +738,7 @@ export const UserResolver = {
         displayName: normalizedDisplayName,
         institution: institution ?? null,
         program: program ?? null,
+        profilePicture: randomDicebearUrl(normalizedUsername),
       };
 
       const user = await prisma.user
@@ -975,6 +990,7 @@ export const UserResolver = {
           displayName: derivedDisplayName,
           emailVerified: true,
           linkedSEOs: [provider],
+          profilePicture: randomDicebearUrl(username),
           seoAccounts: {
             create: {
               provider,
