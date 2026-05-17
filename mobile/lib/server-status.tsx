@@ -8,20 +8,22 @@ import React, {
 } from "react";
 import { GRAPHQL_URL, setNetworkErrorHandler } from "./api";
 
+type Status = "checking" | "online" | "offline";
+
 interface ServerStatusContextValue {
-  isOffline: boolean;
+  status: Status;
   retry: () => Promise<void>;
 }
 
 const ServerStatusContext = createContext<ServerStatusContextValue>({
-  isOffline: false,
+  status: "checking",
   retry: async () => {},
 });
 
 export function ServerStatusProvider({ children }: { children: ReactNode }) {
-  const [isOffline, setIsOffline] = useState(false);
+  const [status, setStatus] = useState<Status>("checking");
 
-  const retry = useCallback(async () => {
+  const check = useCallback(async () => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     try {
@@ -31,21 +33,34 @@ export function ServerStatusProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ query: "{ __typename }" }),
         signal: controller.signal,
       });
-      if (res.ok) setIsOffline(false);
+      setStatus(res.ok ? "online" : "offline");
     } catch {
-      // still offline — state unchanged
+      setStatus("offline");
     } finally {
       clearTimeout(timeout);
     }
   }, []);
 
+  // Initial health check on mount
   useEffect(() => {
-    setNetworkErrorHandler(() => setIsOffline(true));
+    check();
+  }, [check]);
+
+  // Re-check every 15s while offline
+  useEffect(() => {
+    if (status !== "offline") return;
+    const interval = setInterval(check, 15_000);
+    return () => clearInterval(interval);
+  }, [status, check]);
+
+  // Catch mid-session network failures from any gql() call
+  useEffect(() => {
+    setNetworkErrorHandler(() => setStatus("offline"));
     return () => setNetworkErrorHandler(null);
   }, []);
 
   return (
-    <ServerStatusContext.Provider value={{ isOffline, retry }}>
+    <ServerStatusContext.Provider value={{ status, retry: check }}>
       {children}
     </ServerStatusContext.Provider>
   );

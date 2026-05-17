@@ -15,11 +15,17 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 function AppContent() {
-  const { isOffline } = useServerStatus();
+  const { status } = useServerStatus();
 
-  if (isOffline) {
-    return <ServerDownScreen />;
-  }
+  // Keep the native splash up until we know the server status
+  useEffect(() => {
+    if (status !== 'checking') {
+      SplashScreen.hideAsync();
+    }
+  }, [status]);
+
+  if (status === 'checking') return null;
+  if (status === 'offline') return <ServerDownScreen />;
 
   return (
     <Stack>
@@ -31,16 +37,14 @@ function AppContent() {
 }
 
 export default function RootLayout() {
-  const [ready, setReady] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    loadStoredAuth().finally(() => {
-      setReady(true);
-      SplashScreen.hideAsync();
-    });
+    loadStoredAuth().finally(() => setAuthReady(true));
   }, []);
 
-  if (!ready) return null;
+  // Keep splash visible until auth is loaded; server check runs after
+  if (!authReady) return null;
 
   return (
     <SafeAreaProvider>
