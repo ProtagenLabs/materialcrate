@@ -78,16 +78,16 @@ export default function OptionsOptions({
     ? `Unblock ${username}`
     : `Block ${username}`;
   const pinActionIcon = post?.pinned ? (
-    <LocationSlash size={20} color="#111111" variant="Bold" />
+    <LocationSlash size={20} color="var(--ink)" variant="Bold" />
   ) : (
-    <Location size={20} color="#111111" variant="Bold" />
+    <Location size={20} color="var(--ink)" variant="Bold" />
   );
 
   const primaryActions = isOwner
     ? [
         {
           label: "Edit post",
-          icon: <Edit2 size={20} color="#111111" variant="Bold" />,
+          icon: <Edit2 size={20} color="var(--ink)" variant="Bold" />,
         },
         {
           label: pinActionLabel,
@@ -95,36 +95,36 @@ export default function OptionsOptions({
         },
         {
           label: commentsActionLabel,
-          icon: <MessageQuestion size={20} color="#111111" variant="Bold" />,
+          icon: <MessageQuestion size={20} color="var(--ink)" variant="Bold" />,
         },
       ]
     : [
         {
           label: followActionLabel,
-          icon: <ProfileAdd size={20} color="#111111" variant="Bold" />,
+          icon: <ProfileAdd size={20} color="var(--ink)" variant="Bold" />,
         },
         {
           label: muteActionLabel,
-          icon: <VolumeMute size={20} color="#111111" variant="Bold" />,
+          icon: <VolumeMute size={20} color="var(--ink)" variant="Bold" />,
         },
         {
           label: "Not interested in this post",
-          icon: <EyeSlash size={20} color="#111111" variant="Bold" />,
+          icon: <EyeSlash size={20} color="var(--ink)" variant="Bold" />,
         },
         {
           label: blockActionLabel,
-          icon: <Slash size={20} color="#111111" variant="Bold" />,
+          icon: <Slash size={20} color="var(--ink)" variant="Bold" />,
         },
       ];
 
   const secondaryActions = [
     {
       label: "Open in Hub",
-      icon: <Clipboard size={20} color="#111111" variant="Bold" />,
+      icon: <Clipboard size={20} color="var(--ink)" variant="Bold" />,
     },
     {
       label: "View history",
-      icon: <Clock size={20} color="#111111" variant="Bold" />,
+      icon: <Clock size={20} color="var(--ink)" variant="Bold" />,
     },
   ];
 
