@@ -73,7 +73,10 @@ export default function PdfViewerModal({ post, isOpen, onClose }: Props) {
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.container} edges={["top", "bottom", "left", "right"]}>
+      <SafeAreaView
+        style={styles.container}
+        edges={["top", "bottom", "left", "right"]}
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -88,9 +91,7 @@ export default function PdfViewerModal({ post, isOpen, onClose }: Props) {
                 <View style={styles.chips}>
                   {post!.categories.slice(0, 3).map((cat) => (
                     <View key={cat} style={styles.chip}>
-                      <Text style={styles.chipText}>
-                        {cat.toUpperCase()}
-                      </Text>
+                      <Text style={styles.chipText}>{cat.toUpperCase()}</Text>
                     </View>
                   ))}
                   {post!.year != null && (
@@ -171,6 +172,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FAFAF8",
+    paddingTop: 6,
   },
   header: {
     flexDirection: "row",
