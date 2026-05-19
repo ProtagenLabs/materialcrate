@@ -50,3 +50,22 @@ export function useAuth(): AuthState {
   }, []);
   return _state;
 }
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const part = token.split('.')[1];
+    if (!part) return null;
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    // eslint-disable-next-line no-undef
+    return JSON.parse(atob(base64)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+export function getCurrentUserId(): string | null {
+  const { token } = _state;
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  return typeof payload?.sub === 'string' ? payload.sub : null;
+}

@@ -11,6 +11,7 @@ import Post, { HomePost, PostOptionsAnchor } from "@/components/home/Post";
 import CommentDrawer from "@/components/home/CommentDrawer";
 import PdfViewerModal from "@/components/home/PdfViewerModal";
 import PostOptionsSheet from "@/components/home/PostOptionsSheet";
+import HomeFAB from "@/components/home/HomeFAB";
 import { gql } from "@/lib/api";
 import { getAuth } from "@/lib/auth-store";
 
@@ -169,6 +170,7 @@ export default function HomeScreen() {
         isOpen={selectedPost !== null}
         onClose={() => setSelectedPost(null)}
       />
+      <HomeFAB />
     </View>
   );
 }

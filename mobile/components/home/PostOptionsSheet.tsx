@@ -27,12 +27,12 @@ import {
   MessageQuestion,
 } from "iconsax-react-nativejs";
 import { gql } from "@/lib/api";
+import { getAuth, getCurrentUserId } from "@/lib/auth-store";
 import type { HomePost, PostOptionsAnchor } from "./Post";
 
 const POPUP_WIDTH = 270;
 const GAP = 8;
 const EDGE_PADDING = 16;
-// Approximate row height × (max primary actions + secondary + destructive) + group gaps + outer padding
 const ESTIMATED_POPUP_HEIGHT = 4 * 50 + 2 * 50 + 50 + 8 * 2 + 8 * 2;
 
 type Props = {
@@ -46,7 +46,7 @@ type Props = {
 };
 
 const M = {
-  followUser: `mutation FollowUser($username: String!) { followUser(username: $username) }`,
+  followUser: `mutation FollowUser($username: String!) { followUser(username: $username) { followed pending } }`,
   muteUser: `mutation MuteUser($username: String!) { muteUser(username: $username) }`,
   blockUser: `mutation BlockUser($username: String!) { blockUser(username: $username) }`,
   markNotInterested: `mutation MarkPostNotInterested($postId: ID!) { markPostNotInterested(postId: $postId) }`,
@@ -74,11 +74,16 @@ export default function PostOptionsPopup({
   const router = useRouter();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const [busy, setBusy] = useState(false);
+  const [visible, setVisible] = useState(false);
+
   const scaleAnim = useRef(new Animated.Value(0.92)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (isOpen) {
+      scaleAnim.setValue(0.92);
+      opacityAnim.setValue(0);
+      setVisible(true);
       Animated.parallel([
         Animated.spring(scaleAnim, {
           toValue: 1,
@@ -93,14 +98,26 @@ export default function PostOptionsPopup({
         }),
       ]).start();
     } else {
-      scaleAnim.setValue(0.92);
-      opacityAnim.setValue(0);
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 0.88,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setVisible(false));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   if (!post) return null;
 
-  const isOwner = false; // TODO: wire up once auth context is available
+  const currentUserId = getCurrentUserId();
+  const isOwner = Boolean(currentUserId && post.author?.id && currentUserId === post.author.id);
   const authorUsername = post.author?.username?.trim() ?? "";
   const handle = authorUsername ? `@${authorUsername}` : "@unknown";
 
@@ -115,12 +132,14 @@ export default function PostOptionsPopup({
   }
 
   async function handleFollow() {
-    await gql(M.followUser, { username: authorUsername }).catch(() => null);
+    const { token } = getAuth();
+    await gql(M.followUser, { username: authorUsername }, token ?? undefined).catch(() => null);
     onClose();
   }
 
   async function handleMute() {
-    await gql(M.muteUser, { username: authorUsername }).catch(() => null);
+    const { token } = getAuth();
+    await gql(M.muteUser, { username: authorUsername }, token ?? undefined).catch(() => null);
     onClose();
   }
 
@@ -135,7 +154,8 @@ export default function PostOptionsPopup({
           style: "destructive",
           onPress: () =>
             run(async () => {
-              await gql(M.blockUser, { username: authorUsername }).catch(() => null);
+              const { token } = getAuth();
+              await gql(M.blockUser, { username: authorUsername }, token ?? undefined).catch(() => null);
               onClose();
             }),
         },
@@ -144,20 +164,23 @@ export default function PostOptionsPopup({
   }
 
   async function handleNotInterested() {
-    await gql(M.markNotInterested, { postId: post!.id }).catch(() => null);
-    onPostHidden?.(post!.id);
+    const { token } = getAuth();
+    await gql(M.markNotInterested, { postId: post.id }, token ?? undefined).catch(() => null);
+    onPostHidden?.(post.id);
     onClose();
   }
 
   async function handlePin() {
-    await gql(M.pinPost, { postId: post!.id }).catch(() => null);
-    onPostUpdated?.({ ...post!, pinned: !post!.pinned });
+    const { token } = getAuth();
+    await gql(M.pinPost, { postId: post.id }, token ?? undefined).catch(() => null);
+    onPostUpdated?.({ ...post, pinned: !post.pinned });
     onClose();
   }
 
   async function handleToggleComments() {
-    await gql(M.toggleComments, { postId: post!.id }).catch(() => null);
-    onPostUpdated?.({ ...post!, commentsDisabled: !post!.commentsDisabled });
+    const { token } = getAuth();
+    await gql(M.toggleComments, { postId: post.id }, token ?? undefined).catch(() => null);
+    onPostUpdated?.({ ...post, commentsDisabled: !post.commentsDisabled });
     onClose();
   }
 
@@ -172,13 +195,25 @@ export default function PostOptionsPopup({
           style: "destructive",
           onPress: () =>
             run(async () => {
-              await gql(M.deletePost, { postId: post!.id }).catch(() => null);
-              onPostDeleted?.(post!.id);
+              const { token } = getAuth();
+              await gql(M.deletePost, { postId: post.id }, token ?? undefined).catch(() => null);
+              onPostDeleted?.(post.id);
               onClose();
             }),
         },
       ],
     );
+  }
+
+  function handleReport() {
+    Alert.alert("Report post", "Are you sure you want to report this post?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Report",
+        style: "destructive",
+        onPress: () => onClose(),
+      },
+    ]);
   }
 
   const primaryActions: ActionItem[] = isOwner
@@ -267,7 +302,7 @@ export default function PostOptionsPopup({
 
   return (
     <Modal
-      visible={isOpen}
+      visible={visible}
       transparent
       animationType="none"
       onRequestClose={onClose}
@@ -289,7 +324,6 @@ export default function PostOptionsPopup({
             )}
 
             <View style={styles.gap}>
-              {/* Primary group */}
               <View style={styles.group}>
                 {primaryActions.map((action, i) => (
                   <TouchableOpacity
@@ -305,7 +339,6 @@ export default function PostOptionsPopup({
                 ))}
               </View>
 
-              {/* Secondary group */}
               <View style={styles.group}>
                 {secondaryActions.map((action, i) => (
                   <TouchableOpacity
@@ -321,11 +354,10 @@ export default function PostOptionsPopup({
                 ))}
               </View>
 
-              {/* Destructive group */}
               <View style={[styles.group, styles.groupDestructive]}>
                 <TouchableOpacity
                   style={styles.row}
-                  onPress={isOwner ? handleDelete : () => {}}
+                  onPress={isOwner ? handleDelete : handleReport}
                   disabled={busy}
                   activeOpacity={0.5}
                 >

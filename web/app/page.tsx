@@ -3,9 +3,9 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Add,
   DocumentUpload,
   MessageQuestion,
-  More2,
   Notification,
 } from "iconsax-reactjs";
 import { useAuth } from "./lib/auth-client";
@@ -772,11 +772,11 @@ export default function Home() {
             <span
               style={{
                 display: "block",
-                transform: `rotate(${moreOptionsOpen ? 180 : 0}deg)`,
+                transform: `rotate(${moreOptionsOpen ? 45 : 0}deg)`,
                 transition: "transform 300ms ease-out",
               }}
             >
-              <More2 size={30} />
+              <Add size={30} />
             </span>
             <span
               style={{

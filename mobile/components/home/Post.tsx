@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Share,
+  Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -102,6 +103,8 @@ export default function Post({
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const optionsRef = useRef<TouchableOpacity>(null);
+
+  const moreScaleAnim = useRef(new Animated.Value(1)).current;
 
   const [likeCount, setLikeCount] = useState(post.likeCount ?? 0);
   const [viewerHasLiked, setViewerHasLiked] = useState(
@@ -201,16 +204,34 @@ export default function Post({
 
         <TouchableOpacity
           ref={optionsRef}
+          onPressIn={() =>
+            Animated.spring(moreScaleAnim, {
+              toValue: 0.8,
+              useNativeDriver: true,
+              damping: 15,
+              stiffness: 500,
+            }).start()
+          }
+          onPressOut={() =>
+            Animated.spring(moreScaleAnim, {
+              toValue: 1,
+              useNativeDriver: true,
+              damping: 10,
+              stiffness: 200,
+            }).start()
+          }
           onPress={() => {
             optionsRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
               onOptionsClick?.(post, { pageX, pageY, width, height });
             });
           }}
-          activeOpacity={0.7}
+          activeOpacity={1}
           hitSlop={8}
           style={styles.optionsButton}
         >
-          <More size={18} color="#959595" />
+          <Animated.View style={{ transform: [{ scale: moreScaleAnim }] }}>
+            <More size={18} color="#959595" />
+          </Animated.View>
         </TouchableOpacity>
       </View>
 
