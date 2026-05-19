@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { ArrowLeft2, Verify } from "iconsax-react-nativejs";
-import { apiUrl } from "@/lib/api";
+import { gql } from "@/lib/api";
 import { getAuth } from "@/lib/auth-store";
 import { hasPaidSubscription } from "@/lib/subscription";
 
@@ -54,6 +54,71 @@ function actionLabel(
   return "Follow";
 }
 
+const CONNECTIONS_QUERY = `
+  query UserConnections($username: String!) {
+    me { id username following { username } followers { username } }
+    userByUsername(username: $username) {
+      followers { id username displayName profilePicture subscriptionPlan }
+      following { id username displayName profilePicture subscriptionPlan }
+    }
+  }
+`;
+
+const FOLLOW_MUTATION = `
+  mutation FollowUser($username: String!) {
+    followUser(username: $username) { followed pending }
+  }
+`;
+
+const UNFOLLOW_MUTATION = `
+  mutation UnfollowUser($username: String!) {
+    unfollowUser(username: $username)
+  }
+`;
+
+type GqlUser = {
+  id: string;
+  username: string;
+  displayName: string;
+  profilePicture?: string | null;
+  subscriptionPlan?: string | null;
+};
+
+type ConnectionsData = {
+  me?: {
+    id: string;
+    username: string;
+    following: { username: string }[];
+    followers: { username: string }[];
+  } | null;
+  userByUsername?: {
+    followers: GqlUser[];
+    following: GqlUser[];
+  } | null;
+};
+
+function buildConnections(
+  list: GqlUser[],
+  meId: string | undefined,
+  meUsername: string | undefined,
+  meFollowingUsernames: Set<string>,
+  meFollowerUsernames: Set<string>
+): FollowConnection[] {
+  return list.map((u) => {
+    const isCurrentUser = Boolean(meId && u.id === meId);
+    const isFollowedByCurrentUser = meFollowingUsernames.has(norm(u.username));
+    const isFollowingCurrentUser = meFollowerUsernames.has(norm(u.username));
+    const entry = { isCurrentUser, isFollowedByCurrentUser, isFollowingCurrentUser };
+    return {
+      ...u,
+      isCurrentUser,
+      isFollowedByCurrentUser,
+      isFollowingCurrentUser,
+      followActionLabel: actionLabel(entry),
+    };
+  });
+}
+
 export default function FollowListModal({
   isOpen,
   username,
@@ -75,41 +140,65 @@ export default function FollowListModal({
 
   useEffect(() => {
     if (!isOpen || !username?.trim()) return;
-    const controller = new AbortController();
+    let cancelled = false;
     const { token } = getAuth();
 
     const load = async () => {
       setIsLoading(true);
       setError("");
       try {
-        const res = await fetch(
-          apiUrl(`/api/users/${encodeURIComponent(username)}/connections`),
-          {
-            signal: controller.signal,
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }
+        const data = await gql<ConnectionsData>(
+          CONNECTIONS_QUERY,
+          { username },
+          token ?? undefined
         );
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(body?.error || "Failed to load");
-        if (!controller.signal.aborted) {
-          const nextF = Array.isArray(body?.followers) ? body.followers : [];
-          const nextFg = Array.isArray(body?.following) ? body.following : [];
-          setFollowers(nextF);
-          setFollowing(nextFg);
-          onCountsChange?.({
-            followersCount: nextF.length,
-            followingCount: nextFg.length,
-          });
-        }
+        if (cancelled) return;
+
+        const me = data.me;
+        const meId = me?.id;
+        const meUsername = me?.username;
+        const meFollowingUsernames = new Set(
+          (me?.following ?? []).map((f) => norm(f.username))
+        );
+        const meFollowerUsernames = new Set(
+          (me?.followers ?? []).map((f) => norm(f.username))
+        );
+
+        const rawFollowers = data.userByUsername?.followers ?? [];
+        const rawFollowing = data.userByUsername?.following ?? [];
+
+        const builtFollowers = buildConnections(
+          rawFollowers,
+          meId,
+          meUsername,
+          meFollowingUsernames,
+          meFollowerUsernames
+        );
+        const builtFollowing = buildConnections(
+          rawFollowing,
+          meId,
+          meUsername,
+          meFollowingUsernames,
+          meFollowerUsernames
+        );
+
+        setFollowers(builtFollowers);
+        setFollowing(builtFollowing);
+        onCountsChange?.({
+          followersCount: builtFollowers.length,
+          followingCount: builtFollowing.length,
+        });
       } catch {
-        if (!controller.signal.aborted) setError("Failed to load connections.");
+        if (!cancelled) setError("Failed to load connections.");
       } finally {
-        if (!controller.signal.aborted) setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     void load();
-    return () => controller.abort();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, username, onCountsChange]);
 
   const activeList = useMemo(
@@ -140,14 +229,11 @@ export default function FollowListModal({
       return { ...next, followActionLabel: actionLabel(next) };
     });
     try {
-      const res = await fetch(
-        apiUrl(`/api/users/${encodeURIComponent(entry.username)}/follow`),
-        {
-          method: shouldUnfollow ? "DELETE" : "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
+      await gql(
+        shouldUnfollow ? UNFOLLOW_MUTATION : FOLLOW_MUTATION,
+        { username: entry.username },
+        token ?? undefined
       );
-      if (!res.ok) throw new Error();
     } catch {
       updateEntry(target, (e) => {
         const next = { ...e, isFollowedByCurrentUser: shouldUnfollow };
@@ -166,7 +252,6 @@ export default function FollowListModal({
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <TouchableOpacity
@@ -184,7 +269,6 @@ export default function FollowListModal({
             </View>
           </View>
 
-          {/* Tabs */}
           <View style={styles.tabsRow}>
             {(["followers", "following"] as const).map((tab) => (
               <TouchableOpacity
@@ -214,7 +298,6 @@ export default function FollowListModal({
           </View>
         </View>
 
-        {/* Content */}
         {error ? (
           <Text style={styles.statusText}>{error}</Text>
         ) : isLoading ? (

@@ -19,8 +19,8 @@ import {
   Send2,
   Eye,
 } from "iconsax-react-nativejs";
-import { apiUrl } from "@/lib/api";
-import { useAuth } from "@/lib/auth-store";
+import { gql } from "@/lib/api";
+import { useAuth, getAuth } from "@/lib/auth-store";
 
 export type PostOptionsAnchor = {
   pageX: number;
@@ -125,29 +125,28 @@ export default function Post({
     if (isLiking) return;
     setIsLiking(true);
     const wasLiked = viewerHasLiked;
-    // Optimistic update
     setViewerHasLiked(!wasLiked);
     setLikeCount((prev) => (wasLiked ? prev - 1 : prev + 1));
     try {
-      const res = await fetch(apiUrl("/api/posts/like"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postId: post.id }),
-      });
-
-      const body = await res.json().catch(() => ({}));
-      if (res.ok && body?.post) {
-        setLikeCount(body.post.likeCount ?? likeCount);
-        setViewerHasLiked(Boolean(body.post.viewerHasLiked));
-      }
+      const { token } = getAuth();
+      const data = await gql<{
+        togglePostLike: { id: string; likeCount: number; viewerHasLiked: boolean };
+      }>(
+        `mutation TogglePostLike($postId: ID!) {
+          togglePostLike(postId: $postId) { id likeCount viewerHasLiked }
+        }`,
+        { postId: post.id },
+        token ?? undefined,
+      );
+      setLikeCount(data.togglePostLike.likeCount);
+      setViewerHasLiked(data.togglePostLike.viewerHasLiked);
     } catch {
-      // Revert on failure
       setViewerHasLiked(wasLiked);
       setLikeCount((prev) => (wasLiked ? prev + 1 : prev - 1));
     } finally {
       setIsLiking(false);
     }
-  }, [isAuthenticated, isLiking, viewerHasLiked, likeCount, post.id, router]);
+  }, [isAuthenticated, isLiking, viewerHasLiked, post.id, router]);
 
   const handleShare = useCallback(async () => {
     await Share.share({

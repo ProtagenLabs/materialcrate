@@ -19,7 +19,7 @@ import {
   VolumeMute,
   UserRemove,
 } from "iconsax-react-nativejs";
-import { apiUrl, gql } from "@/lib/api";
+import { gql, apiUrl } from "@/lib/api";
 import { getAuth, useAuth } from "@/lib/auth-store";
 import Post, {
   type HomePost,
@@ -32,6 +32,9 @@ import ProfileHeader, { type ProfileTab } from "./ProfileHeader";
 import AchievementCard, { type AchievementData } from "./AchievementCard";
 import FollowListModal from "./FollowListModal";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 type ProfileUser = {
   id: string;
   username: string;
@@ -54,6 +57,9 @@ type ProfileUser = {
   isMutedByCurrentUser?: boolean;
 };
 
+// ---------------------------------------------------------------------------
+// GraphQL strings
+// ---------------------------------------------------------------------------
 const ME_QUERY = `
   query Me {
     me {
@@ -65,8 +71,60 @@ const ME_QUERY = `
   }
 `;
 
-const ME_BASIC_QUERY = `query Me { me { id username } }`;
+// Mirrors exactly what web/app/api/users/[username]/route.ts does internally:
+// fetch me + userByUsername + pendingFollowRequestId in one round-trip,
+// then compute the boolean social-graph fields client-side.
+const PUBLIC_PROFILE_QUERY = `
+  query PublicProfile($username: String!) {
+    me {
+      id
+      username
+      blockedUserIds
+      mutedUsers { username }
+    }
+    userByUsername(username: $username) {
+      id username displayName profilePicture profileBackground
+      visibilityPublicProfile followersCount followingCount
+      subscriptionPlan isBot
+      institution institutionVisibility program programVisibility
+      followers { username }
+      following { username }
+    }
+    pendingFollowRequestId(username: $username)
+  }
+`;
 
+const PROFILE_POSTS_QUERY = `
+  query ProfilePosts($authorUsername: String!) {
+    posts(authorUsername: $authorUsername, limit: 50, offset: 0) {
+      id fileUrl thumbnailUrl title categories description year pinned
+      commentsDisabled likeCount commentCount viewerHasLiked viewCount createdAt
+      author { id displayName username profilePicture subscriptionPlan isBot }
+    }
+  }
+`;
+
+const ACHIEVEMENTS_QUERY = `
+  query UserAchievements($username: String!) {
+    userAchievements(username: $username) {
+      id title description icon rarity unlockedAt holderPercentage
+    }
+  }
+`;
+
+const M = {
+  follow: `mutation FollowUser($username: String!) { followUser(username: $username) { followed pending } }`,
+  unfollow: `mutation UnfollowUser($username: String!) { unfollowUser(username: $username) }`,
+  cancelFollow: `mutation CancelFollowRequest($username: String!) { cancelFollowRequest(username: $username) }`,
+  block: `mutation BlockUser($username: String!) { blockUser(username: $username) }`,
+  unblock: `mutation UnblockUser($username: String!) { unblockUser(username: $username) }`,
+  mute: `mutation MuteUser($username: String!) { muteUser(username: $username) }`,
+  unmute: `mutation UnmuteUser($username: String!) { unmuteUser(username: $username) }`,
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 const norm = (v?: string | null) => String(v || "").trim().toLowerCase();
 
 function normFieldVisibility(
@@ -106,55 +164,19 @@ function ProfileSkeleton() {
 const skStyles = StyleSheet.create({
   container: { padding: 16, gap: 16 },
   header: { flexDirection: "row", gap: 12, marginBottom: 8 },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
-    backgroundColor: "#E5E7EB",
-  },
+  avatar: { width: 72, height: 72, borderRadius: 16, backgroundColor: "#E5E7EB" },
   nameBlock: { flex: 1, justifyContent: "center", gap: 8 },
-  line1: {
-    height: 14,
-    width: "55%",
-    borderRadius: 8,
-    backgroundColor: "#E5E7EB",
-  },
-  line2: {
-    height: 11,
-    width: "35%",
-    borderRadius: 8,
-    backgroundColor: "#E5E7EB",
-  },
-  card: {
-    flexDirection: "row",
-    gap: 12,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 16,
-    padding: 12,
-  },
-  cardThumb: {
-    width: 80,
-    height: 100,
-    borderRadius: 10,
-    backgroundColor: "#E5E7EB",
-  },
+  line1: { height: 14, width: "55%", borderRadius: 8, backgroundColor: "#E5E7EB" },
+  line2: { height: 11, width: "35%", borderRadius: 8, backgroundColor: "#E5E7EB" },
+  card: { flexDirection: "row", gap: 12, backgroundColor: "#F9FAFB", borderRadius: 16, padding: 12 },
+  cardThumb: { width: 80, height: 100, borderRadius: 10, backgroundColor: "#E5E7EB" },
   cardMeta: { flex: 1, justifyContent: "flex-start", gap: 8, paddingTop: 4 },
-  metaLine1: {
-    height: 12,
-    width: "70%",
-    borderRadius: 8,
-    backgroundColor: "#E5E7EB",
-  },
-  metaLine2: {
-    height: 10,
-    width: "45%",
-    borderRadius: 8,
-    backgroundColor: "#E5E7EB",
-  },
+  metaLine1: { height: 12, width: "70%", borderRadius: 8, backgroundColor: "#E5E7EB" },
+  metaLine2: { height: 10, width: "45%", borderRadius: 8, backgroundColor: "#E5E7EB" },
 });
 
 // ---------------------------------------------------------------------------
-// Profile options menu (More button for non-owners)
+// Profile options bottom sheet (More button for non-owners)
 // ---------------------------------------------------------------------------
 type ProfileMenuProps = {
   visible: boolean;
@@ -203,9 +225,7 @@ function ProfileOptionsMenu({
                 activeOpacity={0.6}
               >
                 <UserRemove size={18} color="#111111" variant="Bold" />
-                <Text style={mStyles.rowLabel}>
-                  Unfollow @{profile?.username}
-                </Text>
+                <Text style={mStyles.rowLabel}>Unfollow @{profile?.username}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -216,8 +236,7 @@ function ProfileOptionsMenu({
             >
               <VolumeMute size={18} color="#111111" variant="Bold" />
               <Text style={mStyles.rowLabel}>
-                {profile?.isMutedByCurrentUser ? "Unmute" : "Mute"} @
-                {profile?.username}
+                {profile?.isMutedByCurrentUser ? "Unmute" : "Mute"} @{profile?.username}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -236,21 +255,14 @@ function ProfileOptionsMenu({
             >
               <Slash size={18} color="#D12F2F" variant="Bold" />
               <Text style={[mStyles.rowLabel, mStyles.rowLabelRed]}>
-                {profile?.isBlockedByCurrentUser ? "Unblock" : "Block"} @
-                {profile?.username}
+                {profile?.isBlockedByCurrentUser ? "Unblock" : "Block"} @{profile?.username}
               </Text>
             </TouchableOpacity>
           </View>
           <View style={[mStyles.group, mStyles.groupRed]}>
-            <TouchableOpacity
-              style={mStyles.row}
-              onPress={onReport}
-              activeOpacity={0.6}
-            >
+            <TouchableOpacity style={mStyles.row} onPress={onReport} activeOpacity={0.6}>
               <Flag size={18} color="#D12F2F" variant="Bold" />
-              <Text style={[mStyles.rowLabel, mStyles.rowLabelRed]}>
-                Report account
-              </Text>
+              <Text style={[mStyles.rowLabel, mStyles.rowLabelRed]}>Report account</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -273,11 +285,7 @@ const mStyles = StyleSheet.create({
     paddingBottom: 32,
     gap: 8,
   },
-  group: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    overflow: "hidden",
-  },
+  group: { backgroundColor: "#ffffff", borderRadius: 20, overflow: "hidden" },
   groupRed: { backgroundColor: "#FFF1F1" },
   row: {
     flexDirection: "row",
@@ -305,7 +313,7 @@ export default function ProfileScreen({ username }: Props) {
   const isPublicProfile = Boolean(username?.trim());
 
   const [profile, setProfile] = useState<ProfileUser | null>(null);
-  const [currentUserUsername, setCurrentUserUsername] = useState<string>("");
+  const [isOwner, setIsOwner] = useState(!isPublicProfile);
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
@@ -321,7 +329,6 @@ export default function ProfileScreen({ username }: Props) {
   >(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
-  // Post drawers
   const [commentPost, setCommentPost] = useState<HomePost | null>(null);
   const [optionsState, setOptionsState] = useState<{
     post: HomePost;
@@ -331,30 +338,11 @@ export default function ProfileScreen({ username }: Props) {
 
   const isMountedRef = useRef(true);
   useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
+    return () => { isMountedRef.current = false; };
   }, []);
 
   // ------------------------------------------------------------------
-  // Load current user identity (to compute isOwner on public profiles)
-  // ------------------------------------------------------------------
-  useEffect(() => {
-    if (!isAuthenticated || !isPublicProfile) return;
-    const { token } = getAuth();
-    gql<{ me: { id: string; username: string } }>(
-      ME_BASIC_QUERY,
-      {},
-      token ?? undefined
-    )
-      .then((d) => {
-        if (isMountedRef.current) setCurrentUserUsername(norm(d.me?.username));
-      })
-      .catch(() => {});
-  }, [isAuthenticated, isPublicProfile]);
-
-  // ------------------------------------------------------------------
-  // Load own profile (own tab, no username)
+  // Load own profile via GraphQL `me`
   // ------------------------------------------------------------------
   useEffect(() => {
     if (isPublicProfile) return;
@@ -362,22 +350,18 @@ export default function ProfileScreen({ username }: Props) {
       setIsLoadingProfile(false);
       return;
     }
-
     const { token } = getAuth();
     setIsLoadingProfile(true);
     setError("");
-
     gql<{ me: ProfileUser }>(ME_QUERY, {}, token ?? undefined)
       .then((d) => {
         if (!isMountedRef.current) return;
         setProfile(d.me ?? null);
-        setCurrentUserUsername(norm(d.me?.username));
+        setIsOwner(true);
       })
       .catch((err) => {
         if (!isMountedRef.current) return;
-        setError(
-          err instanceof Error ? err.message : "Failed to load profile"
-        );
+        setError(err instanceof Error ? err.message : "Failed to load profile");
       })
       .finally(() => {
         if (isMountedRef.current) setIsLoadingProfile(false);
@@ -385,121 +369,159 @@ export default function ProfileScreen({ username }: Props) {
   }, [isAuthenticated, isPublicProfile]);
 
   // ------------------------------------------------------------------
-  // Load public profile
+  // Load public profile — replicate web REST route's combined query
   // ------------------------------------------------------------------
   useEffect(() => {
     if (!isPublicProfile || !username) return;
     const { token } = getAuth();
-    const controller = new AbortController();
     setIsLoadingProfile(true);
     setError("");
 
-    fetch(apiUrl(`/api/users/${encodeURIComponent(username)}`), {
-      signal: controller.signal,
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
-      .then((body) => {
-        if (controller.signal.aborted) return;
-        if (body?.error) throw new Error(body.error);
-        setProfile(body?.user ?? null);
+    gql<{
+      me?: {
+        id: string;
+        username: string;
+        blockedUserIds: string[];
+        mutedUsers: { username: string }[];
+      } | null;
+      userByUsername?: {
+        id: string;
+        username: string;
+        displayName: string;
+        profilePicture?: string | null;
+        profileBackground?: string | null;
+        visibilityPublicProfile: boolean;
+        followersCount: number;
+        followingCount: number;
+        subscriptionPlan: string;
+        isBot: boolean;
+        institution?: string | null;
+        institutionVisibility: string;
+        program?: string | null;
+        programVisibility: string;
+        followers: { username: string }[];
+        following: { username: string }[];
+      } | null;
+      pendingFollowRequestId?: string | null;
+    }>(PUBLIC_PROFILE_QUERY, { username }, token ?? undefined)
+      .then((d) => {
+        if (!isMountedRef.current) return;
+        const u = d.userByUsername;
+        if (!u) { setProfile(null); return; }
+
+        const viewerUsername = norm(d.me?.username);
+        const followers = u.followers ?? [];
+        const following = u.following ?? [];
+
+        const isFollowedByCurrentUser = viewerUsername
+          ? followers.some((f) => norm(f.username) === viewerUsername)
+          : false;
+        const isFollowingCurrentUser = viewerUsername
+          ? following.some((f) => norm(f.username) === viewerUsername)
+          : false;
+        const isBlockedByCurrentUser = viewerUsername
+          ? (d.me?.blockedUserIds ?? []).includes(u.id)
+          : false;
+        const isMutedByCurrentUser = viewerUsername
+          ? (d.me?.mutedUsers ?? []).some(
+              (mu) => norm(mu.username) === norm(u.username)
+            )
+          : false;
+        const hasPendingFollowRequest = Boolean(d.pendingFollowRequestId);
+
+        const currentUsername = norm(d.me?.username);
+        setIsOwner(currentUsername !== "" && currentUsername === norm(u.username));
+
+        setProfile({
+          ...u,
+          isFollowedByCurrentUser,
+          isFollowingCurrentUser,
+          hasPendingFollowRequest,
+          isBlockedByCurrentUser,
+          isMutedByCurrentUser,
+        });
       })
       .catch((err) => {
-        if (controller.signal.aborted) return;
-        setError(
-          err instanceof Error ? err.message : "Failed to load profile"
-        );
+        if (!isMountedRef.current) return;
+        setError(err instanceof Error ? err.message : "Profile not found");
       })
       .finally(() => {
-        if (!controller.signal.aborted) setIsLoadingProfile(false);
+        if (isMountedRef.current) setIsLoadingProfile(false);
       });
-
-    return () => controller.abort();
   }, [isPublicProfile, username]);
 
   // ------------------------------------------------------------------
-  // Load posts once we have the profile username
+  // Load posts via GraphQL `posts(authorUsername: ...)`
   // ------------------------------------------------------------------
   useEffect(() => {
     const profileUsername = profile?.username?.trim();
-    if (!profileUsername) {
-      setPosts([]);
-      setIsLoadingPosts(false);
-      return;
-    }
+    if (!profileUsername) { setPosts([]); setIsLoadingPosts(false); return; }
 
     const { token } = getAuth();
-    const controller = new AbortController();
+    let cancelled = false;
     setIsLoadingPosts(true);
 
-    fetch(apiUrl(`/api/posts?author=${encodeURIComponent(profileUsername)}`), {
-      signal: controller.signal,
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
-      .then((body) => {
-        if (controller.signal.aborted) return;
-        setPosts(Array.isArray(body?.posts) ? body.posts : []);
+    gql<{ posts: HomePost[] }>(
+      PROFILE_POSTS_QUERY,
+      { authorUsername: profileUsername },
+      token ?? undefined
+    )
+      .then((d) => {
+        if (cancelled) return;
+        setPosts(Array.isArray(d.posts) ? d.posts : []);
       })
-      .catch(() => {
-        if (!controller.signal.aborted) setPosts([]);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoadingPosts(false);
-      });
+      .catch(() => { if (!cancelled) setPosts([]); })
+      .finally(() => { if (!cancelled) setIsLoadingPosts(false); });
 
-    return () => controller.abort();
+    return () => { cancelled = true; };
   }, [profile?.username]);
 
   // ------------------------------------------------------------------
-  // Load achievements on tab change
+  // Load achievements — try GraphQL first, fall back to REST
   // ------------------------------------------------------------------
   useEffect(() => {
     const profileUsername = profile?.username?.trim();
     if (!profileUsername || selectedTab !== "achievements") return;
 
     const { token } = getAuth();
-    const controller = new AbortController();
+    let cancelled = false;
     setIsLoadingAchievements(true);
 
-    fetch(
-      apiUrl(
-        `/api/users/${encodeURIComponent(profileUsername)}/achievements`
-      ),
-      {
-        signal: controller.signal,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      }
+    gql<{ userAchievements: AchievementData[] }>(
+      ACHIEVEMENTS_QUERY,
+      { username: profileUsername },
+      token ?? undefined
     )
-      .then((r) => r.json())
-      .then((body) => {
-        if (!controller.signal.aborted)
-          setAchievements(
-            Array.isArray(body?.achievements) ? body.achievements : []
-          );
+      .then((d) => {
+        if (cancelled) return;
+        setAchievements(Array.isArray(d.userAchievements) ? d.userAchievements : []);
       })
       .catch(() => {
-        if (!controller.signal.aborted) setAchievements([]);
+        // Fallback to REST if GraphQL query doesn't exist yet
+        if (cancelled) return;
+        fetch(apiUrl(`/api/users/${encodeURIComponent(profileUsername)}/achievements`), {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+          .then((r) => r.json())
+          .then((body) => {
+            if (!cancelled)
+              setAchievements(Array.isArray(body?.achievements) ? body.achievements : []);
+          })
+          .catch(() => { if (!cancelled) setAchievements([]); })
+          .finally(() => { if (!cancelled) setIsLoadingAchievements(false); });
+        return; // final() already handled in REST branch
       })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoadingAchievements(false);
-      });
+      .finally(() => { if (!cancelled) setIsLoadingAchievements(false); });
 
-    return () => controller.abort();
+    return () => { cancelled = true; };
   }, [profile?.username, selectedTab]);
 
   // ------------------------------------------------------------------
   // Derived state
   // ------------------------------------------------------------------
-  const isOwner =
-    !isPublicProfile ||
-    (currentUserUsername !== "" &&
-      currentUserUsername === norm(profile?.username));
   const displayName =
     profile?.displayName?.trim() || profile?.username?.trim() || "Unknown";
-  const profileUsername = profile?.username
-    ? `@${profile.username}`
-    : "@unknown";
+  const profileUsername = profile?.username ? `@${profile.username}` : "@unknown";
   const profilePictureUrl = profile?.profilePicture?.trim() || "";
   const followerCount = profile?.followersCount ?? 0;
   const followingCount = profile?.followingCount ?? 0;
@@ -508,10 +530,8 @@ export default function ProfileScreen({ username }: Props) {
   const isFollower = Boolean(profile?.isFollowedByCurrentUser);
   const hasPendingRequest = Boolean(profile?.hasPendingFollowRequest);
   const canViewContent = isOwner || !isPrivateProfile || isFollower;
-  const showInstitution =
-    normFieldVisibility(profile?.institutionVisibility) !== "only_you";
-  const showProgram =
-    normFieldVisibility(profile?.programVisibility) !== "only_you";
+  const showInstitution = normFieldVisibility(profile?.institutionVisibility) !== "only_you";
+  const showProgram = normFieldVisibility(profile?.programVisibility) !== "only_you";
 
   const followLabel: "Follow" | "Following" | "Follow back" | "Requested" =
     profile?.isFollowedByCurrentUser
@@ -523,20 +543,16 @@ export default function ProfileScreen({ username }: Props) {
       : "Follow";
 
   // ------------------------------------------------------------------
-  // Follow toggle
+  // Follow toggle — GraphQL mutations (not REST)
   // ------------------------------------------------------------------
   const handleFollowToggle = useCallback(async () => {
     if (!profile?.username) return;
-    if (!isAuthenticated) {
-      router.push("/(auth)/login" as never);
-      return;
-    }
+    if (!isAuthenticated) { router.push("/(auth)/login" as never); return; }
     if (isUpdatingFollow) return;
 
     const { token } = getAuth();
     const shouldUnfollow = Boolean(profile.isFollowedByCurrentUser);
-    const shouldCancelRequest =
-      Boolean(profile.hasPendingFollowRequest) && !shouldUnfollow;
+    const shouldCancelRequest = Boolean(profile.hasPendingFollowRequest) && !shouldUnfollow;
     const prevFollowed = Boolean(profile.isFollowedByCurrentUser);
     const prevPending = Boolean(profile.hasPendingFollowRequest);
     const prevCount = profile.followersCount ?? 0;
@@ -546,18 +562,24 @@ export default function ProfileScreen({ username }: Props) {
     if (shouldCancelRequest) {
       setProfile((c) => (c ? { ...c, hasPendingFollowRequest: false } : c));
       try {
-        await fetch(
-          apiUrl(
-            `/api/users/${encodeURIComponent(profile.username)}/follow?cancelRequest=true`
-          ),
-          {
-            method: "DELETE",
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }
-        );
+        await gql(M.cancelFollow, { username: profile.username }, token ?? undefined);
+      } catch {
+        setProfile((c) => (c ? { ...c, hasPendingFollowRequest: prevPending } : c));
+      } finally {
+        setIsUpdatingFollow(false);
+      }
+      return;
+    }
+
+    if (shouldUnfollow) {
+      setProfile((c) =>
+        c ? { ...c, isFollowedByCurrentUser: false, followersCount: Math.max(0, prevCount - 1) } : c
+      );
+      try {
+        await gql(M.unfollow, { username: profile.username }, token ?? undefined);
       } catch {
         setProfile((c) =>
-          c ? { ...c, hasPendingFollowRequest: prevPending } : c
+          c ? { ...c, isFollowedByCurrentUser: prevFollowed, followersCount: prevCount } : c
         );
       } finally {
         setIsUpdatingFollow(false);
@@ -565,66 +587,45 @@ export default function ProfileScreen({ username }: Props) {
       return;
     }
 
-    const isTargetPrivate = isPrivateProfile && !shouldUnfollow;
+    // Follow — optimistic pending for private profiles
+    const isTargetPrivate = isPrivateProfile;
     setProfile((c) =>
       c
         ? {
             ...c,
-            isFollowedByCurrentUser: isTargetPrivate ? false : !shouldUnfollow,
+            isFollowedByCurrentUser: isTargetPrivate ? false : true,
             hasPendingFollowRequest: isTargetPrivate ? true : prevPending,
-            followersCount: isTargetPrivate
-              ? prevCount
-              : Math.max(0, prevCount + (shouldUnfollow ? -1 : 1)),
+            followersCount: isTargetPrivate ? prevCount : prevCount + 1,
           }
         : c
     );
 
     try {
-      const res = await fetch(
-        apiUrl(`/api/users/${encodeURIComponent(profile.username)}/follow`),
-        {
-          method: shouldUnfollow ? "DELETE" : "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
+      const data = await gql<{ followUser: { followed: boolean; pending: boolean } }>(
+        M.follow,
+        { username: profile.username },
+        token ?? undefined
       );
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error);
-      if (body?.pending) {
+      if (data.followUser.pending) {
         setProfile((c) =>
-          c
-            ? {
-                ...c,
-                isFollowedByCurrentUser: false,
-                hasPendingFollowRequest: true,
-                followersCount: prevCount,
-              }
-            : c
+          c ? { ...c, isFollowedByCurrentUser: false, hasPendingFollowRequest: true, followersCount: prevCount } : c
+        );
+      } else {
+        setProfile((c) =>
+          c ? { ...c, isFollowedByCurrentUser: true, hasPendingFollowRequest: false, followersCount: prevCount + 1 } : c
         );
       }
     } catch {
       setProfile((c) =>
-        c
-          ? {
-              ...c,
-              isFollowedByCurrentUser: prevFollowed,
-              hasPendingFollowRequest: prevPending,
-              followersCount: prevCount,
-            }
-          : c
+        c ? { ...c, isFollowedByCurrentUser: prevFollowed, hasPendingFollowRequest: prevPending, followersCount: prevCount } : c
       );
     } finally {
       setIsUpdatingFollow(false);
     }
-  }, [
-    profile,
-    isAuthenticated,
-    isUpdatingFollow,
-    isPrivateProfile,
-    router,
-  ]);
+  }, [profile, isAuthenticated, isUpdatingFollow, isPrivateProfile, router]);
 
   // ------------------------------------------------------------------
-  // Block toggle
+  // Block toggle — GraphQL mutations
   // ------------------------------------------------------------------
   const handleBlockToggle = async () => {
     if (!profile?.username) return;
@@ -637,11 +638,7 @@ export default function ProfileScreen({ username }: Props) {
           "They won't be able to find your profile or posts.",
           [
             { text: "Cancel", onPress: () => resolve(false), style: "cancel" },
-            {
-              text: "Block",
-              onPress: () => resolve(true),
-              style: "destructive",
-            },
+            { text: "Block", onPress: () => resolve(true), style: "destructive" },
           ]
         );
       });
@@ -651,25 +648,20 @@ export default function ProfileScreen({ username }: Props) {
     setIsProfileMenuOpen(false);
     setProfile((c) => (c ? { ...c, isBlockedByCurrentUser: !shouldUnblock } : c));
     try {
-      const res = await fetch(
-        apiUrl(`/api/users/${encodeURIComponent(profile.username)}/block`),
-        {
-          method: shouldUnblock ? "DELETE" : "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
+      await gql(
+        shouldUnblock ? M.unblock : M.block,
+        { username: profile.username },
+        token ?? undefined
       );
-      if (!res.ok) throw new Error();
     } catch {
-      setProfile((c) =>
-        c ? { ...c, isBlockedByCurrentUser: shouldUnblock } : c
-      );
+      setProfile((c) => (c ? { ...c, isBlockedByCurrentUser: shouldUnblock } : c));
     } finally {
       setIsUpdatingBlock(false);
     }
   };
 
   // ------------------------------------------------------------------
-  // Mute toggle
+  // Mute toggle — GraphQL mutations
   // ------------------------------------------------------------------
   const handleMuteToggle = async () => {
     if (!profile?.username) return;
@@ -679,18 +671,13 @@ export default function ProfileScreen({ username }: Props) {
     setIsProfileMenuOpen(false);
     setProfile((c) => (c ? { ...c, isMutedByCurrentUser: !shouldUnmute } : c));
     try {
-      const res = await fetch(
-        apiUrl(`/api/users/${encodeURIComponent(profile.username)}/mute`),
-        {
-          method: shouldUnmute ? "DELETE" : "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
+      await gql(
+        shouldUnmute ? M.unmute : M.mute,
+        { username: profile.username },
+        token ?? undefined
       );
-      if (!res.ok) throw new Error();
     } catch {
-      setProfile((c) =>
-        c ? { ...c, isMutedByCurrentUser: shouldUnmute } : c
-      );
+      setProfile((c) => (c ? { ...c, isMutedByCurrentUser: shouldUnmute } : c));
     } finally {
       setIsUpdatingMute(false);
     }
@@ -719,10 +706,7 @@ export default function ProfileScreen({ username }: Props) {
   // ------------------------------------------------------------------
   const handleMessageClick = async () => {
     if (!profile?.id) return;
-    if (!isAuthenticated) {
-      router.push("/(auth)/login" as never);
-      return;
-    }
+    if (!isAuthenticated) { router.push("/(auth)/login" as never); return; }
     const { token } = getAuth();
     try {
       const res = await fetch(apiUrl("/api/chat"), {
@@ -735,9 +719,7 @@ export default function ProfileScreen({ username }: Props) {
       });
       const body = await res.json().catch(() => ({}));
       if (body?.conversation?.id) {
-        router.push(
-          `/chat/${encodeURIComponent(body.conversation.id)}` as never
-        );
+        router.push(`/chat/${encodeURIComponent(body.conversation.id)}` as never);
       }
     } catch {
       // silently fail
@@ -748,37 +730,22 @@ export default function ProfileScreen({ username }: Props) {
   // Post event handlers
   // ------------------------------------------------------------------
   const handlePostUpdated = useCallback((updated: HomePost) => {
-    setPosts((prev) =>
-      prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
-    );
+    setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
     setOptionsState((prev) =>
       prev?.post.id === updated.id ? { ...prev, post: updated } : prev
     );
-    setCommentPost((prev) =>
-      prev?.id === updated.id ? { ...prev, ...updated } : prev
-    );
+    setCommentPost((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
   }, []);
 
   const handlePostDeleted = useCallback((postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
-    setOptionsState((prev) =>
-      prev?.post.id === postId ? null : prev
-    );
+    setOptionsState((prev) => (prev?.post.id === postId ? null : prev));
     setCommentPost((prev) => (prev?.id === postId ? null : prev));
     setPdfPost((prev) => (prev?.id === postId ? null : prev));
   }, []);
 
-  // ------------------------------------------------------------------
-  // Follow counts update from FollowListModal
-  // ------------------------------------------------------------------
   const handleFollowCountsChange = useCallback(
-    ({
-      followersCount,
-      followingCount,
-    }: {
-      followersCount: number;
-      followingCount: number;
-    }) => {
+    ({ followersCount, followingCount }: { followersCount: number; followingCount: number }) => {
       setProfile((c) => (c ? { ...c, followersCount, followingCount } : c));
     },
     []
@@ -790,9 +757,7 @@ export default function ProfileScreen({ username }: Props) {
   if (!isPublicProfile && !isAuthenticated && !isLoadingProfile) {
     return (
       <View style={styles.signInBox}>
-        <Text style={styles.signInText}>
-          Sign in to view your profile.
-        </Text>
+        <Text style={styles.signInText}>Sign in to view your profile.</Text>
         <TouchableOpacity
           style={styles.signInBtn}
           onPress={() => router.push("/(auth)/login" as never)}
@@ -834,20 +799,15 @@ export default function ProfileScreen({ username }: Props) {
     />
   );
 
-  // Content under the header depending on tab / state
   const renderContent = () => {
-    if (isLoadingProfile) return null; // skeleton is shown outside FlatList
+    if (isLoadingProfile) return null;
     if (!profile) {
-      return (
-        <Text style={styles.emptyText}>{error || "Profile not found."}</Text>
-      );
+      return <Text style={styles.emptyText}>{error || "Profile not found."}</Text>;
     }
     if (!canViewContent) {
       return (
         <View style={styles.privateBox}>
-          <View style={styles.lockIcon}>
-            <Text style={styles.lockIconText}>🔒</Text>
-          </View>
+          <View style={styles.lockIcon}><Text style={styles.lockIconText}>🔒</Text></View>
           <Text style={styles.privateTitle}>This account is private</Text>
           <Text style={styles.privateSubtitle}>
             {hasPendingRequest
@@ -858,91 +818,62 @@ export default function ProfileScreen({ username }: Props) {
       );
     }
     if (selectedTab === "achievements") {
-      if (isLoadingAchievements) {
-        return (
-          <ActivityIndicator
-            color="#E1761F"
-            style={{ marginTop: 40 }}
-          />
-        );
-      }
+      if (isLoadingAchievements) return <ActivityIndicator color="#E1761F" style={{ marginTop: 40 }} />;
       if (achievements.length === 0) {
         return (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyIcon}>🏆</Text>
             <Text style={styles.emptyTitle}>No achievements yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Achievements unlock as you use Material Crate.
-            </Text>
+            <Text style={styles.emptySubtitle}>Achievements unlock as you use Material Crate.</Text>
           </View>
         );
       }
       return (
         <View style={styles.achievementsGrid}>
-          {achievements.map((a) => (
-            <AchievementCard key={a.id} achievement={a} />
-          ))}
+          {achievements.map((a) => <AchievementCard key={a.id} achievement={a} />)}
         </View>
       );
     }
-
-    // Posts tab
     if (isLoadingPosts && posts.length === 0) {
-      return (
-        <ActivityIndicator color="#E1761F" style={{ marginTop: 40 }} />
-      );
+      return <ActivityIndicator color="#E1761F" style={{ marginTop: 40 }} />;
     }
     if (posts.length === 0) {
       return <Text style={styles.emptyText}>No posts yet.</Text>;
     }
-    return null; // posts are rendered by FlatList
+    return null;
   };
-
-  const headerContent = (
-    <>
-      {renderHeader()}
-      {renderContent()}
-    </>
-  );
 
   return (
     <View style={styles.flex}>
       {isLoadingProfile ? (
-        <>
-          <ProfileSkeleton />
-        </>
+        <ProfileSkeleton />
       ) : (
         <FlatList
-          data={
-            canViewContent && selectedTab === "posts" && !isLoadingPosts
-              ? posts
-              : []
-          }
+          data={canViewContent && selectedTab === "posts" && !isLoadingPosts ? posts : []}
           keyExtractor={(item) => item.id}
-          ListHeaderComponent={headerContent}
+          ListHeaderComponent={
+            <>
+              {renderHeader()}
+              {renderContent()}
+            </>
+          }
           renderItem={({ item }) => (
             <Post
               post={item}
               onCommentClick={setCommentPost}
-              onOptionsClick={(post, anchor) =>
-                setOptionsState({ post, anchor })
-              }
+              onOptionsClick={(post, anchor) => setOptionsState({ post, anchor })}
               onFileClick={setPdfPost}
             />
           )}
           ListFooterComponent={
             isLoadingPosts && posts.length > 0 ? (
-              <ActivityIndicator
-                color="#E1761F"
-                style={{ paddingVertical: 24 }}
-              />
+              <ActivityIndicator color="#E1761F" style={{ paddingVertical: 24 }} />
             ) : null
           }
           contentContainerStyle={styles.listContent}
         />
       )}
 
-      {/* Drawers / modals */}
       <CommentDrawer
         postId={commentPost?.id ?? null}
         post={commentPost}
@@ -979,10 +910,7 @@ export default function ProfileScreen({ username }: Props) {
         isUpdatingBlock={isUpdatingBlock}
         isUpdatingMute={isUpdatingMute}
         onClose={() => setIsProfileMenuOpen(false)}
-        onUnfollow={() => {
-          setIsProfileMenuOpen(false);
-          void handleFollowToggle();
-        }}
+        onUnfollow={() => { setIsProfileMenuOpen(false); void handleFollowToggle(); }}
         onMuteToggle={() => void handleMuteToggle()}
         onBlockToggle={() => void handleBlockToggle()}
         onCopyLink={handleShareProfile}
@@ -995,8 +923,6 @@ export default function ProfileScreen({ username }: Props) {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: "#ffffff" },
   listContent: { paddingBottom: 32 },
-
-  // Sign-in box
   signInBox: {
     margin: 20,
     backgroundColor: "#ffffff",
@@ -1018,13 +944,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   signInBtnText: { fontSize: 14, fontWeight: "600", color: "#ffffff" },
-
-  // Private account
-  privateBox: {
-    paddingVertical: 48,
-    paddingHorizontal: 24,
-    alignItems: "center",
-  },
+  privateBox: { paddingVertical: 48, paddingHorizontal: 24, alignItems: "center" },
   lockIcon: {
     width: 56,
     height: 56,
@@ -1035,12 +955,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   lockIconText: { fontSize: 24 },
-  privateTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111111",
-    textAlign: "center",
-  },
+  privateTitle: { fontSize: 15, fontWeight: "600", color: "#111111", textAlign: "center" },
   privateSubtitle: {
     fontSize: 13,
     color: "#6B7280",
@@ -1048,32 +963,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 20,
   },
-
-  // Empty / error
-  emptyText: {
-    fontSize: 14,
-    color: "#9CA3AF",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  emptyBox: {
-    paddingVertical: 48,
-    paddingHorizontal: 24,
-    alignItems: "center",
-  },
+  emptyText: { fontSize: 14, color: "#9CA3AF", paddingHorizontal: 20, paddingTop: 20 },
+  emptyBox: { paddingVertical: 48, paddingHorizontal: 24, alignItems: "center" },
   emptyIcon: { fontSize: 36, marginBottom: 12 },
   emptyTitle: { fontSize: 15, fontWeight: "600", color: "#111111" },
-  emptySubtitle: {
-    fontSize: 13,
-    color: "#6B7280",
-    textAlign: "center",
-    marginTop: 4,
-  },
-
-  // Achievements grid
-  achievementsGrid: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 12,
-  },
+  emptySubtitle: { fontSize: 13, color: "#6B7280", textAlign: "center", marginTop: 4 },
+  achievementsGrid: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
 });

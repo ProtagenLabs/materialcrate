@@ -12,6 +12,7 @@ import CommentDrawer from "@/components/home/CommentDrawer";
 import PdfViewerModal from "@/components/home/PdfViewerModal";
 import PostOptionsSheet from "@/components/home/PostOptionsSheet";
 import { gql } from "@/lib/api";
+import { getAuth } from "@/lib/auth-store";
 
 const PAGE_SIZE = 20;
 
@@ -80,10 +81,11 @@ export default function HomeScreen() {
       isFetchingRef.current = true;
       setLoading(true);
       try {
+        const { token } = getAuth();
         const data = await gql<{ posts: HomePost[] }>(POSTS_QUERY, {
           limit: PAGE_SIZE,
           offset: nextOffset,
-        });
+        }, token ?? undefined);
         const newPosts = data.posts ?? [];
 
         setPosts((prev) =>
