@@ -7,6 +7,10 @@ import {
   StyleSheet,
   Share,
   Animated,
+  Modal,
+  Pressable,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -20,9 +24,221 @@ import {
   Send2,
   Eye,
   DocumentText,
+  Folder2,
 } from "iconsax-react-nativejs";
 import { gql, WEB_URL } from "@/lib/api";
 import { useAuth, getAuth } from "@/lib/auth-store";
+
+// ---------------------------------------------------------------------------
+// Archive GraphQL + types
+// ---------------------------------------------------------------------------
+const ARCHIVE_LITE_QUERY = `
+  query ArchiveLite {
+    myArchive {
+      folders { id name }
+      savedPosts { id postId }
+    }
+  }
+`;
+
+const SAVE_POST_MUTATION = `
+  mutation SavePostToArchive($postId: ID!, $folderId: ID) {
+    savePostToArchive(postId: $postId, folderId: $folderId) { id }
+  }
+`;
+
+const REMOVE_POST_MUTATION = `
+  mutation RemoveArchivedPost($savedPostId: ID!) {
+    removeArchivedPost(savedPostId: $savedPostId)
+  }
+`;
+
+type ArchiveFolder = { id: string; name: string };
+
+// ---------------------------------------------------------------------------
+// ArchiveSheet
+// ---------------------------------------------------------------------------
+type ArchiveSheetProps = {
+  visible: boolean;
+  postId: string;
+  onClose: () => void;
+  onSaved: (savedPostId: string) => void;
+  onUnsaved: () => void;
+};
+
+function ArchiveSheet({
+  visible,
+  postId,
+  onClose,
+  onSaved,
+  onUnsaved,
+}: ArchiveSheetProps) {
+  const { token } = getAuth();
+  const [folders, setFolders] = useState<ArchiveFolder[]>([]);
+  const [savedPostId, setSavedPostId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isBusy, setIsBusy] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return;
+    setIsLoading(true);
+    gql<{
+      myArchive: {
+        folders: ArchiveFolder[];
+        savedPosts: { id: string; postId: string }[];
+      } | null;
+    }>(ARCHIVE_LITE_QUERY, {}, token ?? undefined)
+      .then((data) => {
+        setFolders(data.myArchive?.folders ?? []);
+        const match = data.myArchive?.savedPosts?.find(
+          (p) => p.postId === postId,
+        );
+        setSavedPostId(match?.id ?? null);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, [visible, postId, token]);
+
+  const handleSave = async (folderId?: string) => {
+    if (isBusy) return;
+    setIsBusy(true);
+    try {
+      const data = await gql<{ savePostToArchive: { id: string } }>(
+        SAVE_POST_MUTATION,
+        { postId, folderId: folderId ?? null },
+        token ?? undefined,
+      );
+      onSaved(data.savePostToArchive.id);
+      onClose();
+    } catch {
+      Alert.alert("Error", "Failed to save file.");
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleUnsave = async () => {
+    if (!savedPostId || isBusy) return;
+    setIsBusy(true);
+    try {
+      await gql(REMOVE_POST_MUTATION, { savedPostId }, token ?? undefined);
+      onUnsaved();
+      onClose();
+    } catch {
+      Alert.alert("Error", "Failed to remove saved file.");
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const isAlreadySaved = Boolean(savedPostId);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable style={asStyles.backdrop} onPress={onClose}>
+        <Pressable style={asStyles.sheet} onPress={() => {}}>
+          <View style={asStyles.handle} />
+          <Text style={asStyles.title}>
+            {isAlreadySaved ? "Saved to Library" : "Save to Library"}
+          </Text>
+
+          {isLoading ? (
+            <ActivityIndicator color="#E1761F" style={asStyles.loader} />
+          ) : isAlreadySaved ? (
+            <TouchableOpacity
+              style={asStyles.removeBtn}
+              onPress={() => void handleUnsave()}
+              disabled={isBusy}
+              activeOpacity={0.8}
+            >
+              {isBusy ? (
+                <ActivityIndicator size="small" color="#D12F2F" />
+              ) : (
+                <Text style={asStyles.removeBtnText}>Remove from saved</Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={asStyles.option}
+                onPress={() => void handleSave()}
+                disabled={isBusy}
+                activeOpacity={0.75}
+              >
+                <Archive size={18} color="#E1761F" variant="Bold" />
+                <Text style={asStyles.optionText}>Save to Library</Text>
+                {isBusy && !folders.length && (
+                  <ActivityIndicator size="small" color="#E1761F" />
+                )}
+              </TouchableOpacity>
+
+              {folders.map((folder) => (
+                <TouchableOpacity
+                  key={folder.id}
+                  style={asStyles.option}
+                  onPress={() => void handleSave(folder.id)}
+                  disabled={isBusy}
+                  activeOpacity={0.75}
+                >
+                  <Folder2 size={18} color="#9CA3AF" variant="Bold" />
+                  <Text style={asStyles.optionText}>{folder.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const asStyles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: "#FAFAF8",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    paddingBottom: 40,
+    gap: 4,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D1D5DB",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  title: { fontSize: 15, fontWeight: "700", color: "#111111", marginBottom: 8 },
+  loader: { marginVertical: 20 },
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#F3F4F6",
+  },
+  optionText: { fontSize: 14, fontWeight: "500", color: "#111111", flex: 1 },
+  removeBtn: {
+    marginTop: 8,
+    alignItems: "center",
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: "#FEE2E2",
+  },
+  removeBtnText: { fontSize: 14, fontWeight: "600", color: "#D12F2F" },
+});
 
 export type PostOptionsAnchor = {
   pageX: number;
@@ -103,7 +319,7 @@ export default function Post({
 }: PostProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const optionsRef = useRef<TouchableOpacity>(null);
+  const optionsRef = useRef<View>(null);
 
   const moreScaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -115,9 +331,19 @@ export default function Post({
   const [thumbError, setThumbError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
 
+  const [localIsArchived, setLocalIsArchived] = useState(isArchived);
+  const [showArchiveSheet, setShowArchiveSheet] = useState(false);
+  useEffect(() => {
+    setLocalIsArchived(isArchived);
+  }, [isArchived]);
+
   // Reset image errors when FlatList recycles this component for a different post
-  useEffect(() => { setThumbError(false); }, [post.id]);
-  useEffect(() => { setAvatarError(false); }, [post.author?.profilePicture]);
+  useEffect(() => {
+    setThumbError(false);
+  }, [post.id]);
+  useEffect(() => {
+    setAvatarError(false);
+  }, [post.author?.profilePicture]);
 
   const authorFullName = post.author?.displayName?.trim() || "Unknown user";
   const authorUsername = post.author?.username
@@ -140,7 +366,11 @@ export default function Post({
     try {
       const { token } = getAuth();
       const data = await gql<{
-        togglePostLike: { id: string; likeCount: number; viewerHasLiked: boolean };
+        togglePostLike: {
+          id: string;
+          likeCount: number;
+          viewerHasLiked: boolean;
+        };
       }>(
         `mutation TogglePostLike($postId: ID!) {
           togglePostLike(postId: $postId) { id likeCount viewerHasLiked }
@@ -194,12 +424,8 @@ export default function Post({
               <Text style={styles.authorName} numberOfLines={1}>
                 {authorFullName}
               </Text>
-              {post.author?.isBot ? (
-                <Cpu size={14} color="#2196F3" variant="Bold" />
-              ) : (
-                hasPaidPlan && (
-                  <Verify size={14} color="#E1761F" variant="Bold" />
-                )
+              {hasPaidPlan && (
+                <Verify size={14} color="#E1761F" variant="Bold" />
               )}
             </View>
             <Text style={styles.authorSub}>
@@ -229,9 +455,18 @@ export default function Post({
             }).start()
           }
           onPress={() => {
-            optionsRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
-              onOptionsClick?.(post, { pageX, pageY, width, height });
-            });
+            optionsRef.current?.measure(
+              (
+                _x: number,
+                _y: number,
+                width: number,
+                height: number,
+                pageX: number,
+                pageY: number,
+              ) => {
+                onOptionsClick?.(post, { pageX, pageY, width, height });
+              },
+            );
           }}
           activeOpacity={1}
           hitSlop={8}
@@ -321,18 +556,26 @@ export default function Post({
           )}
 
           <TouchableOpacity
-            style={[styles.pill, isArchived && styles.pillSaved]}
-            onPress={() => {}}
+            style={[styles.pill, localIsArchived && styles.pillSaved]}
+            onPress={() => {
+              if (!isAuthenticated) {
+                router.push("/(auth)/login" as never);
+                return;
+              }
+              setShowArchiveSheet(true);
+            }}
             disabled={isArchiveBusy}
             activeOpacity={0.8}
           >
             <Archive
               size={16}
-              color={isArchived ? "#E1761F" : "#959595"}
-              variant={isArchived ? "Bold" : "Linear"}
+              color={localIsArchived ? "#E1761F" : "#959595"}
+              variant={localIsArchived ? "Bold" : "Linear"}
             />
-            <Text style={[styles.pillText, isArchived && styles.pillTextSaved]}>
-              {isArchived ? "Saved" : "Save"}
+            <Text
+              style={[styles.pillText, localIsArchived && styles.pillTextSaved]}
+            >
+              {localIsArchived ? "Saved" : "Save"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -346,6 +589,14 @@ export default function Post({
           <Text style={styles.pillText}>Share</Text>
         </TouchableOpacity>
       </View>
+
+      <ArchiveSheet
+        visible={showArchiveSheet}
+        postId={post.id}
+        onClose={() => setShowArchiveSheet(false)}
+        onSaved={() => setLocalIsArchived(true)}
+        onUnsaved={() => setLocalIsArchived(false)}
+      />
     </View>
   );
 }
