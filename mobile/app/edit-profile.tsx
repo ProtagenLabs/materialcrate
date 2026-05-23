@@ -37,7 +37,8 @@ import ActionButton from "@/components/ActionButton";
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const MIN_USERNAME_LENGTH = 3;
 const SECTION_COUNT = 5;
-const DEFAULT_PROFILE_BACKGROUND = "bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200";
+const DEFAULT_PROFILE_BACKGROUND =
+  "bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200";
 
 function isDefaultBackground(v?: string | null) {
   return !v || v === DEFAULT_PROFILE_BACKGROUND;
@@ -130,7 +131,9 @@ type PendingPicture = {
 };
 
 function normalizeVisibility(value: unknown): ProfileFieldVisibility {
-  return String(value || "").trim().toLowerCase() === "everyone"
+  return String(value || "")
+    .trim()
+    .toLowerCase() === "everyone"
     ? "everyone"
     : "only_you";
 }
@@ -153,7 +156,9 @@ export default function EditProfileScreen() {
     programVisibility: "everyone",
     subscriptionPlan: "free",
   });
-  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(null);
+  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(
+    null,
+  );
   const [fetchedUsername, setFetchedUsername] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -162,18 +167,23 @@ export default function EditProfileScreen() {
 
   // Username availability
   const [usernameMessage, setUsernameMessage] = useState("");
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<
+    boolean | null
+  >(null);
   const [isLiveChecking, setIsLiveChecking] = useState(false);
   const [isSubmitChecking, setIsSubmitChecking] = useState(false);
   const lastCheckedUsernameRef = useRef("");
 
   // Profile picture
-  const [pendingPicture, setPendingPicture] = useState<PendingPicture | null>(null);
+  const [pendingPicture, setPendingPicture] = useState<PendingPicture | null>(
+    null,
+  );
   const [isPhotoSheetOpen, setIsPhotoSheetOpen] = useState(false);
   const [isRemovingPicture, setIsRemovingPicture] = useState(false);
 
   // Profile background
-  const [pendingBackground, setPendingBackground] = useState<PendingPicture | null>(null);
+  const [pendingBackground, setPendingBackground] =
+    useState<PendingPicture | null>(null);
 
   // Alert banner
   const [alertVisible, setAlertVisible] = useState(false);
@@ -196,8 +206,16 @@ export default function EditProfileScreen() {
       60,
       sectionAnims.map(({ opacity, translateY }) =>
         Animated.parallel([
-          Animated.timing(opacity, { toValue: 1, duration: 320, useNativeDriver: true }),
-          Animated.timing(translateY, { toValue: 0, duration: 320, useNativeDriver: true }),
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 320,
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateY, {
+            toValue: 0,
+            duration: 320,
+            useNativeDriver: true,
+          }),
         ]),
       ),
     ).start();
@@ -206,22 +224,33 @@ export default function EditProfileScreen() {
   // ---------------------------------------------------------------------------
   // Alert helper
   // ---------------------------------------------------------------------------
-  const showAlert = useCallback((message: string, isErr: boolean) => {
-    if (isErr) setError(message);
-    else setSuccessMessage(message);
-    setAlertIsError(isErr);
-    setAlertVisible(true);
-    alertAnim.setValue(0);
-    Animated.timing(alertAnim, { toValue: 1, duration: 260, useNativeDriver: true }).start();
-    const t = setTimeout(() => {
-      Animated.timing(alertAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => {
-        setAlertVisible(false);
-        if (isErr) setError("");
-        else setSuccessMessage("");
-      });
-    }, 3500);
-    return () => clearTimeout(t);
-  }, [alertAnim]);
+  const showAlert = useCallback(
+    (message: string, isErr: boolean) => {
+      if (isErr) setError(message);
+      else setSuccessMessage(message);
+      setAlertIsError(isErr);
+      setAlertVisible(true);
+      alertAnim.setValue(0);
+      Animated.timing(alertAnim, {
+        toValue: 1,
+        duration: 260,
+        useNativeDriver: true,
+      }).start();
+      const t = setTimeout(() => {
+        Animated.timing(alertAnim, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: true,
+        }).start(() => {
+          setAlertVisible(false);
+          if (isErr) setError("");
+          else setSuccessMessage("");
+        });
+      }, 3500);
+      return () => clearTimeout(t);
+    },
+    [alertAnim],
+  );
 
   // ---------------------------------------------------------------------------
   // Load profile
@@ -231,7 +260,11 @@ export default function EditProfileScreen() {
     let cancelled = false;
     setIsLoading(true);
 
-    gql<{ me: UserProfile & { profilePicture?: string } }>(ME_QUERY, {}, token ?? undefined)
+    gql<{ me: UserProfile & { profilePicture?: string } }>(
+      ME_QUERY,
+      {},
+      token ?? undefined,
+    )
       .then((d) => {
         if (cancelled) return;
         const me = d.me;
@@ -252,13 +285,18 @@ export default function EditProfileScreen() {
       })
       .catch((err) => {
         if (cancelled) return;
-        showAlert(err instanceof Error ? err.message : "Failed to load profile", true);
+        showAlert(
+          err instanceof Error ? err.message : "Failed to load profile",
+          true,
+        );
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -274,7 +312,9 @@ export default function EditProfileScreen() {
     }
 
     if (!USERNAME_REGEX.test(trimmed)) {
-      setUsernameMessage("Username may only contain letters, numbers, and underscores.");
+      setUsernameMessage(
+        "Username may only contain letters, numbers, and underscores.",
+      );
       setIsLiveChecking(false);
       return;
     }
@@ -306,10 +346,13 @@ export default function EditProfileScreen() {
           if (cancelled) return;
           lastCheckedUsernameRef.current = trimmed;
           setIsUsernameAvailable(d.usernameAvailable);
-          setUsernameMessage(d.usernameAvailable ? "" : "Username is already taken.");
+          setUsernameMessage(
+            d.usernameAvailable ? "" : "Username is already taken.",
+          );
         })
         .catch(() => {
-          if (!cancelled) setUsernameMessage("Could not check username availability.");
+          if (!cancelled)
+            setUsernameMessage("Could not check username availability.");
         })
         .finally(() => {
           if (!cancelled) setIsLiveChecking(false);
@@ -335,14 +378,16 @@ export default function EditProfileScreen() {
       profile.profileBackground !== initialProfile.profileBackground
     : false;
 
-  const hasPendingChanges = hasTextChanges || Boolean(pendingPicture) || Boolean(pendingBackground);
+  const hasPendingChanges =
+    hasTextChanges || Boolean(pendingPicture) || Boolean(pendingBackground);
   const isPaid = hasPaidSubscription(profile.subscriptionPlan);
 
   const validationError = (() => {
     const u = profile.username.trim();
     if (!u || u.length < MIN_USERNAME_LENGTH) return "Username too short";
     if (!USERNAME_REGEX.test(u)) return "Invalid username";
-    if (isUsernameAvailable === false && u !== fetchedUsername) return "Username taken";
+    if (isUsernameAvailable === false && u !== fetchedUsername)
+      return "Username taken";
     const dn = profile.displayName.trim();
     if (dn.length < 2) return "Display name too short";
     return "";
@@ -372,8 +417,14 @@ export default function EditProfileScreen() {
       let readFile = new FSFile(asset.uri);
 
       if (!asset.uri.startsWith("file://")) {
-        const safeName = (asset.name ?? "photo.jpg").replace(/[^a-zA-Z0-9._-]/g, "_");
-        const dest = new FSFile(Paths.cache, `mc_pfp_${Date.now()}_${safeName}`);
+        const safeName = (asset.name ?? "photo.jpg").replace(
+          /[^a-zA-Z0-9._-]/g,
+          "_",
+        );
+        const dest = new FSFile(
+          Paths.cache,
+          `mc_pfp_${Date.now()}_${safeName}`,
+        );
         readFile.copy(dest);
         readFile = dest;
       }
@@ -429,7 +480,10 @@ export default function EditProfileScreen() {
       let readFile = new FSFile(asset.uri);
 
       if (!asset.uri.startsWith("file://")) {
-        const safeName = (asset.name ?? "bg.jpg").replace(/[^a-zA-Z0-9._-]/g, "_");
+        const safeName = (asset.name ?? "bg.jpg").replace(
+          /[^a-zA-Z0-9._-]/g,
+          "_",
+        );
         const dest = new FSFile(Paths.cache, `mc_bg_${Date.now()}_${safeName}`);
         readFile.copy(dest);
         readFile = dest;
@@ -449,7 +503,10 @@ export default function EditProfileScreen() {
 
   const handleResetBackground = () => {
     setPendingBackground(null);
-    setProfile((c) => ({ ...c, profileBackground: DEFAULT_PROFILE_BACKGROUND }));
+    setProfile((c) => ({
+      ...c,
+      profileBackground: DEFAULT_PROFILE_BACKGROUND,
+    }));
   };
 
   // ---------------------------------------------------------------------------
@@ -505,24 +562,28 @@ export default function EditProfileScreen() {
         variables.profileBackgroundFileBase64 = pendingBackground.base64;
         variables.profileBackgroundFileName = pendingBackground.name;
         variables.profileBackgroundMimeType = pendingBackground.mimeType;
-      } else if (initialProfile && profile.profileBackground !== initialProfile.profileBackground) {
+      } else if (
+        initialProfile &&
+        profile.profileBackground !== initialProfile.profileBackground
+      ) {
         variables.profileBackground = profile.profileBackground;
       }
 
-      const d = await gql<{ completeProfile: UserProfile & { profilePicture?: string } }>(
-        COMPLETE_PROFILE_MUTATION,
-        variables,
-        token ?? undefined,
-      );
+      const d = await gql<{
+        completeProfile: UserProfile & { profilePicture?: string };
+      }>(COMPLETE_PROFILE_MUTATION, variables, token ?? undefined);
 
       const updated = d.completeProfile;
       const next: UserProfile = {
         username: updated.username ?? trimmedUsername,
         displayName: updated.displayName ?? profile.displayName,
         profilePicture: updated.profilePicture ?? profile.profilePicture,
-        profileBackground: updated.profileBackground ?? profile.profileBackground,
+        profileBackground:
+          updated.profileBackground ?? profile.profileBackground,
         institution: updated.institution ?? profile.institution,
-        institutionVisibility: normalizeVisibility(updated.institutionVisibility),
+        institutionVisibility: normalizeVisibility(
+          updated.institutionVisibility,
+        ),
         program: updated.program ?? profile.program,
         programVisibility: normalizeVisibility(updated.programVisibility),
         subscriptionPlan: profile.subscriptionPlan,
@@ -534,7 +595,10 @@ export default function EditProfileScreen() {
       setPendingBackground(null);
       showAlert("Profile updated successfully.", false);
     } catch (err) {
-      showAlert(err instanceof Error ? err.message : "Failed to save profile.", true);
+      showAlert(
+        err instanceof Error ? err.message : "Failed to save profile.",
+        true,
+      );
     } finally {
       setIsSaving(false);
     }
@@ -567,11 +631,23 @@ export default function EditProfileScreen() {
           style={[
             styles.alertBanner,
             alertIsError ? styles.alertError : styles.alertSuccess,
-            { opacity: alertAnim, transform: [{ translateY: alertAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] },
+            {
+              opacity: alertAnim,
+              transform: [
+                {
+                  translateY: alertAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                },
+              ],
+            },
           ]}
           pointerEvents="none"
         >
-          <Text style={styles.alertText}>{alertIsError ? error : successMessage}</Text>
+          <Text style={styles.alertText}>
+            {alertIsError ? error : successMessage}
+          </Text>
         </Animated.View>
       )}
 
@@ -619,9 +695,12 @@ export default function EditProfileScreen() {
             1,
             <View style={styles.bannerCard}>
               {/* Banner */}
-              {pendingBackground?.uri || !isDefaultBackground(profile.profileBackground) ? (
+              {pendingBackground?.uri ||
+              !isDefaultBackground(profile.profileBackground) ? (
                 <ImageBackground
-                  source={{ uri: pendingBackground?.uri ?? profile.profileBackground }}
+                  source={{
+                    uri: pendingBackground?.uri ?? profile.profileBackground,
+                  }}
                   style={styles.banner}
                   resizeMode="cover"
                 >
@@ -658,7 +737,9 @@ export default function EditProfileScreen() {
                   ) : (
                     <View style={styles.avatarFallback}>
                       <Text style={styles.avatarInitial}>
-                        {profile.displayName.charAt(0) || profile.username.charAt(0) || "?"}
+                        {profile.displayName.charAt(0) ||
+                          profile.username.charAt(0) ||
+                          "?"}
                       </Text>
                     </View>
                   )}
@@ -678,22 +759,38 @@ export default function EditProfileScreen() {
                       : "Upgrade to Pro or Premium to upload a custom background."}
                   </Text>
                 </View>
-                <View style={[styles.planPill, isPaid ? styles.planPillPaid : styles.planPillFree]}>
-                  <Text style={[styles.planPillText, isPaid ? styles.planPillTextPaid : styles.planPillTextFree]}>
+                <View
+                  style={[
+                    styles.planPill,
+                    isPaid ? styles.planPillPaid : styles.planPillFree,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.planPillText,
+                      isPaid
+                        ? styles.planPillTextPaid
+                        : styles.planPillTextFree,
+                    ]}
+                  >
                     {isPaid ? "Pro" : "Free"}
                   </Text>
                 </View>
               </View>
 
-              {isPaid && (pendingBackground || !isDefaultBackground(profile.profileBackground)) && (
-                <TouchableOpacity
-                  style={styles.resetBgBtn}
-                  onPress={handleResetBackground}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.resetBgText}>Use default background</Text>
-                </TouchableOpacity>
-              )}
+              {isPaid &&
+                (pendingBackground ||
+                  !isDefaultBackground(profile.profileBackground)) && (
+                  <TouchableOpacity
+                    style={styles.resetBgBtn}
+                    onPress={handleResetBackground}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.resetBgText}>
+                      Use default background
+                    </Text>
+                  </TouchableOpacity>
+                )}
             </View>,
           )}
 
@@ -721,15 +818,18 @@ export default function EditProfileScreen() {
                     placeholderTextColor="#9CA3AF"
                     editable={!isLoading && !isSaving}
                   />
-                  {isLiveChecking && profile.username.trim() !== fetchedUsername ? (
+                  {isLiveChecking &&
+                  profile.username.trim() !== fetchedUsername ? (
                     <View style={styles.inputBadge}>
                       <Text style={styles.checkingDot}>•••</Text>
                     </View>
-                  ) : isUsernameAvailable === true && profile.username.trim() !== fetchedUsername ? (
+                  ) : isUsernameAvailable === true &&
+                    profile.username.trim() !== fetchedUsername ? (
                     <View style={[styles.inputBadge, styles.inputBadgeGreen]}>
                       <Text style={styles.inputBadgeText}>✓</Text>
                     </View>
-                  ) : isUsernameAvailable === false && profile.username.trim() !== fetchedUsername ? (
+                  ) : isUsernameAvailable === false &&
+                    profile.username.trim() !== fetchedUsername ? (
                     <View style={[styles.inputBadge, styles.inputBadgeRed]}>
                       <Text style={styles.inputBadgeText}>✕</Text>
                     </View>
@@ -746,7 +846,9 @@ export default function EditProfileScreen() {
                 <TextInput
                   style={styles.input}
                   value={profile.displayName}
-                  onChangeText={(v) => setProfile((c) => ({ ...c, displayName: v }))}
+                  onChangeText={(v) =>
+                    setProfile((c) => ({ ...c, displayName: v }))
+                  }
                   maxLength={30}
                   placeholder="Your name"
                   placeholderTextColor="#9CA3AF"
@@ -764,7 +866,9 @@ export default function EditProfileScreen() {
                   <TextInput
                     style={[styles.input, styles.inputFlex]}
                     value={profile.institution}
-                    onChangeText={(v) => setProfile((c) => ({ ...c, institution: v }))}
+                    onChangeText={(v) =>
+                      setProfile((c) => ({ ...c, institution: v }))
+                    }
                     maxLength={50}
                     placeholder="e.g. MIT"
                     placeholderTextColor="#9CA3AF"
@@ -776,7 +880,9 @@ export default function EditProfileScreen() {
                       setProfile((c) => ({
                         ...c,
                         institutionVisibility:
-                          c.institutionVisibility === "everyone" ? "only_you" : "everyone",
+                          c.institutionVisibility === "everyone"
+                            ? "only_you"
+                            : "everyone",
                       }))
                     }
                     activeOpacity={0.7}
@@ -805,7 +911,9 @@ export default function EditProfileScreen() {
                   <TextInput
                     style={[styles.input, styles.inputFlex]}
                     value={profile.program}
-                    onChangeText={(v) => setProfile((c) => ({ ...c, program: v }))}
+                    onChangeText={(v) =>
+                      setProfile((c) => ({ ...c, program: v }))
+                    }
                     maxLength={50}
                     placeholder="e.g. Computer Science"
                     placeholderTextColor="#9CA3AF"
@@ -817,7 +925,9 @@ export default function EditProfileScreen() {
                       setProfile((c) => ({
                         ...c,
                         programVisibility:
-                          c.programVisibility === "everyone" ? "only_you" : "everyone",
+                          c.programVisibility === "everyone"
+                            ? "only_you"
+                            : "everyone",
                       }))
                     }
                     activeOpacity={0.7}
@@ -837,20 +947,6 @@ export default function EditProfileScreen() {
               </View>
             </View>,
           )}
-
-          {/* Save button (bottom) */}
-          {animatedSection(
-            3,
-            <View style={styles.saveRow}>
-              <ActionButton
-                onPress={() => void handleSave()}
-                disabled={isSaveDisabled}
-                loading={isSaving || isSubmitChecking}
-              >
-                Save Changes
-              </ActionButton>
-            </View>,
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -861,8 +957,14 @@ export default function EditProfileScreen() {
         animationType="slide"
         onRequestClose={() => setIsPhotoSheetOpen(false)}
       >
-        <Pressable style={styles.sheetBackdrop} onPress={() => setIsPhotoSheetOpen(false)}>
-          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]} onPress={() => {}}>
+        <Pressable
+          style={styles.sheetBackdrop}
+          onPress={() => setIsPhotoSheetOpen(false)}
+        >
+          <Pressable
+            style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
+            onPress={() => {}}
+          >
             <View style={styles.sheetHandle} />
             <TouchableOpacity
               style={[styles.sheetRow, styles.sheetRowDivider]}
@@ -880,7 +982,9 @@ export default function EditProfileScreen() {
                 activeOpacity={0.7}
               >
                 <Trash size={20} color="#D12F2F" variant="Bold" />
-                <Text style={[styles.sheetRowLabel, styles.sheetRowLabelRed]}>Remove photo</Text>
+                <Text style={[styles.sheetRowLabel, styles.sheetRowLabelRed]}>
+                  Remove photo
+                </Text>
               </TouchableOpacity>
             )}
           </Pressable>
@@ -974,7 +1078,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   avatarWrapper: { position: "relative", alignSelf: "flex-start" },
-  avatar: { width: 80, height: 80, borderRadius: 20, backgroundColor: "#E5E7EB", borderWidth: 3, borderColor: "#ffffff" },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: "#E5E7EB",
+    borderWidth: 3,
+    borderColor: "#ffffff",
+  },
   avatarFallback: {
     width: 80,
     height: 80,
@@ -1031,11 +1142,21 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     gap: 0,
   },
-  cardTitle: { fontSize: 15, fontWeight: "600", color: "#111111", marginBottom: 16 },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111111",
+    marginBottom: 16,
+  },
 
   // Fields
   fieldGroup: { marginBottom: 16 },
-  fieldLabel: { fontSize: 13, fontWeight: "500", color: "#6B7280", marginBottom: 6 },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6B7280",
+    marginBottom: 6,
+  },
   fieldOptional: { fontSize: 12, fontWeight: "400", color: "#9CA3AF" },
   fieldError: { fontSize: 12, color: "#D12F2F", marginTop: 4 },
   fieldHint: { fontSize: 11, color: "#9CA3AF", marginTop: 4 },
@@ -1077,9 +1198,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "#FCDCB0",
   },
-
-  // Save row
-  saveRow: { paddingTop: 4 },
 
   // Photo sheet
   sheetBackdrop: {

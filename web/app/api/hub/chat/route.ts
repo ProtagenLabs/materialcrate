@@ -323,9 +323,14 @@ const persistHubChat = async ({
   return (body?.data?.upsertHubChat ?? null) as HubChatRecord | null;
 };
 
-export async function GET() {
+export async function GET(req: Request) {
   const cookieStore = await cookies();
-  const token = cookieStore.get("mc_session")?.value;
+  const cookieToken = cookieStore.get("mc_session")?.value;
+  const authHeader = req.headers.get("Authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : undefined;
+  const token = cookieToken ?? bearerToken;
 
   if (!token) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -700,6 +705,7 @@ export async function POST(req: Request) {
     let chat: HubChatRecord | null = null;
     let usage: unknown = undefined;
 
+    let saveError = "";
     try {
       chat = await persistHubChat({
         token,
@@ -708,8 +714,8 @@ export async function POST(req: Request) {
         documentTitle,
         messages: [...priorHistory, userMessage, assistantMessage],
       });
-    } catch {
-      // Non-blocking
+    } catch (e) {
+      saveError = e instanceof Error ? e.message : "Failed to save chat history.";
     }
 
     if (tokensUsed > 0) {
@@ -730,7 +736,7 @@ export async function POST(req: Request) {
       reply: fullReply,
       model,
       documentTitle,
-      warning: warning || undefined,
+      warning: warning || saveError || undefined,
       chat,
       tokensUsed: tokensUsed || undefined,
       usage,

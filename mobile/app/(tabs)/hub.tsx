@@ -13,7 +13,10 @@ import {
   Platform,
   KeyboardAvoidingView,
   FlatList,
+  Dimensions,
 } from "react-native";
+
+const LIST_MAX_HEIGHT = Dimensions.get("window").height * 0.5;
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -103,14 +106,6 @@ const ARCHIVE_QUERY = `
   }
 `;
 
-const HUB_CHATS_QUERY = `
-  query MyHubChats {
-    myHubChats {
-      id postId savedPostId documentTitle createdAt updatedAt
-      messages { id role text createdAt }
-    }
-  }
-`;
 
 const AI_USAGE_QUERY = `
   query MyAiUsage {
@@ -384,6 +379,7 @@ export default function HubScreen() {
   const [chatMetaByDocumentId, setChatMetaByDocumentId] = useState<
     Record<string, ChatMeta>
   >({});
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [isLoadingArchive, setIsLoadingArchive] = useState(true);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isResolvingDocument, setIsResolvingDocument] = useState(false);
@@ -393,6 +389,7 @@ export default function HubScreen() {
   const [streamingText, setStreamingText] = useState("");
   const [isClearingChat, setIsClearingChat] = useState(false);
   const [error, setError] = useState("");
+  const [historyLoadError, setHistoryLoadError] = useState("");
   const [aiUsage, setAiUsage] = useState<AiUsage | null>(null);
   const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
 
@@ -427,33 +424,52 @@ export default function HubScreen() {
     };
   }, []);
 
-  // Load chat history
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      const { token } = getAuth();
-      setIsLoadingHistory(true);
-      try {
-        const data = await gql<{ myHubChats: HubChatRecord[] }>(
-          HUB_CHATS_QUERY,
-          {},
-          token ?? undefined,
-        );
-        if (!cancelled) {
-          setHistory(mapChatRowsToMessages(data.myHubChats ?? []));
-          setChatMetaByDocumentId(mapChatRowsToMeta(data.myHubChats ?? []));
-        }
-      } catch {
-        // non-blocking
-      } finally {
-        if (!cancelled) setIsLoadingHistory(false);
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
+  // Fetch history from the web route so it hits the same backend as chat saves.
+  const loadHistory = useCallback(async () => {
+    const { token } = getAuth();
+    setIsLoadingHistory(true);
+    setHistoryLoadError("");
+    try {
+      const res = await fetch(`${WEB_URL}/api/hub/chat`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const json = (await res.json()) as {
+        chats?: HubChatRecord[];
+        error?: string;
+      };
+      if (!res.ok) throw new Error(json.error || "Failed to load history.");
+      const chats = json.chats ?? [];
+      setHistoryEntries(
+        chats
+          .filter((c) => c.id && c.postId)
+          .map((c) => {
+            const msgs = Array.isArray(c.messages) ? c.messages : [];
+            const latestUser = [...msgs].reverse().find((m) => m.role === "user");
+            const latest = msgs[msgs.length - 1];
+            return {
+              id: c.id,
+              documentId: c.postId,
+              documentTitle: c.documentTitle,
+              previewText: latestUser?.text || latest?.text || "Open conversation",
+              updatedAt: latest?.createdAt || c.updatedAt,
+            };
+          })
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+      );
+      setHistory(mapChatRowsToMessages(chats));
+      setChatMetaByDocumentId(mapChatRowsToMeta(chats));
+    } catch (e) {
+      setHistoryLoadError(
+        e instanceof Error ? e.message : "Failed to load history.",
+      );
+    } finally {
+      setIsLoadingHistory(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
 
   // Load AI usage
   useEffect(() => {
@@ -569,35 +585,6 @@ export default function HubScreen() {
     [history, selectedDocument],
   );
 
-  const historyEntries = useMemo<HistoryEntry[]>(
-    () =>
-      Object.entries(chatMetaByDocumentId)
-        .map(([documentId, meta]) => {
-          const msgs = history.filter(
-            (m) =>
-              m.chatId === meta.id ||
-              (!m.chatId && m.documentId === documentId),
-          );
-          const latestUser = msgs
-            .slice()
-            .reverse()
-            .find((m) => m.role === "user");
-          const latest = msgs[msgs.length - 1];
-          return {
-            id: meta.id,
-            documentId,
-            documentTitle: meta.documentTitle,
-            previewText:
-              latestUser?.text || latest?.text || "Open conversation",
-            updatedAt: latest?.createdAt || meta.updatedAt,
-          };
-        })
-        .sort(
-          (a, b) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-        ),
-    [chatMetaByDocumentId, history],
-  );
 
   const syncChatFromServer = useCallback((chat: HubChatRecord) => {
     if (!chat?.id || !chat?.postId) return;
@@ -617,6 +604,25 @@ export default function HubScreen() {
       return [...rest, ...next].sort(
         (a, b) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+    });
+    setHistoryEntries((prev) => {
+      const msgs = Array.isArray(chat.messages) ? chat.messages : [];
+      const latestUser = [...msgs].reverse().find((m) => m.role === "user");
+      const latest = msgs[msgs.length - 1];
+      const entry: HistoryEntry = {
+        id: chat.id,
+        documentId: chat.postId,
+        documentTitle: chat.documentTitle,
+        previewText: latestUser?.text || latest?.text || "Open conversation",
+        updatedAt: latest?.createdAt || chat.updatedAt,
+      };
+      const rest = prev.filter(
+        (e) => e.id !== chat.id && e.documentId !== chat.postId,
+      );
+      return [entry, ...rest].sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       );
     });
   }, []);
@@ -658,6 +664,9 @@ export default function HubScreen() {
                 delete next[selectedDocument.post.id];
                 return next;
               });
+              setHistoryEntries((prev) =>
+                prev.filter((e) => e.id !== selectedChatId),
+              );
               setPrompt("");
             } catch (e) {
               setError(
@@ -925,7 +934,7 @@ export default function HubScreen() {
           )}
           <TouchableOpacity
             style={styles.headerBtn}
-            onPress={() => setIsHistoryOpen(true)}
+            onPress={() => { setIsHistoryOpen(true); void loadHistory(); }}
             activeOpacity={0.7}
             hitSlop={8}
           >
@@ -1163,11 +1172,12 @@ export default function HubScreen() {
         animationType="slide"
         onRequestClose={() => setIsPickerOpen(false)}
       >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setIsPickerOpen(false)}
-        />
-        <View style={styles.modalSheet}>
+        <View style={styles.modalWrapper}>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setIsPickerOpen(false)}
+          />
+          <View style={[styles.modalSheet, styles.modalSheet]}>
           <View style={styles.modalHandle} />
           <View style={styles.modalHeader}>
             <View style={styles.flex}>
@@ -1238,6 +1248,7 @@ export default function HubScreen() {
             }
           />
         </View>
+        </View>
       </Modal>
 
       {/* History Modal */}
@@ -1247,11 +1258,12 @@ export default function HubScreen() {
         animationType="slide"
         onRequestClose={() => setIsHistoryOpen(false)}
       >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setIsHistoryOpen(false)}
-        />
-        <View style={styles.modalSheet}>
+        <View style={styles.modalWrapper}>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setIsHistoryOpen(false)}
+          />
+          <View style={[styles.modalSheet, styles.modalSheet]}>
           <View style={styles.modalHandle} />
           <View style={styles.modalHeader}>
             <View style={styles.flex}>
@@ -1266,14 +1278,23 @@ export default function HubScreen() {
               <CloseCircle size={24} color="#8a8a8a" variant="Linear" />
             </TouchableOpacity>
           </View>
-          {historyEntries.length > 0 ? (
-            <FlatList
-              data={historyEntries}
-              keyExtractor={(item) => item.id}
+          {isLoadingHistory ? (
+            <View style={styles.pickerEmpty}>
+              <ActivityIndicator size="small" color="#E1761F" />
+            </View>
+          ) : historyLoadError ? (
+            <View style={styles.pickerEmpty}>
+              <Text style={styles.pickerEmptyText}>{historyLoadError}</Text>
+            </View>
+          ) : historyEntries.length > 0 ? (
+            <ScrollView
               style={styles.pickerList}
               contentContainerStyle={styles.pickerListContent}
-              renderItem={({ item }) => (
+              showsVerticalScrollIndicator={false}
+            >
+              {historyEntries.map((item) => (
                 <TouchableOpacity
+                  key={item.id}
                   style={styles.historyItem}
                   onPress={() => void handleUseHistoryEntry(item)}
                   activeOpacity={0.7}
@@ -1288,8 +1309,8 @@ export default function HubScreen() {
                     {formatHistoryTime(item.updatedAt)}
                   </Text>
                 </TouchableOpacity>
-              )}
-            />
+              ))}
+            </ScrollView>
           ) : (
             <View style={styles.pickerEmpty}>
               <Text style={styles.pickerEmptyText}>
@@ -1299,6 +1320,7 @@ export default function HubScreen() {
               </Text>
             </View>
           )}
+        </View>
         </View>
       </Modal>
 
@@ -1659,6 +1681,12 @@ const styles = StyleSheet.create({
   sendBtnDisabled: { backgroundColor: "#C9C9C9" },
 
   // Modals
+  modalWrapper: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  modalSheetFlex: { flex: 1 },
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.3)",
@@ -1700,7 +1728,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   modalTitle: { fontSize: 16, fontWeight: "600", color: "#111111" },
-  pickerList: { flex: 1 },
+  pickerList: { maxHeight: LIST_MAX_HEIGHT },
   pickerListContent: { gap: 8, paddingBottom: 8 },
   pickerItem: {
     flexDirection: "row",
