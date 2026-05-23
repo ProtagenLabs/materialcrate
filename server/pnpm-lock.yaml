@@ -14,6 +14,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.990.0
         version: 3.990.0
+      '@napi-rs/canvas':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@prisma/client':
         specifier: ^6.3.1
         version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
@@ -50,6 +53,9 @@ importers:
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
+      pdfjs-dist:
+        specifier: ^3.11.174
+        version: 3.11.174
       resend:
         specifier: ^6.10.0
         version: 6.10.0
@@ -60,9 +66,6 @@ importers:
         specifier: ^4.8.3
         version: 4.8.3
     devDependencies:
-      '@napi-rs/canvas':
-        specifier: ^1.0.0
-        version: 1.0.0
       '@types/bcrypt':
         specifier: ^6.0.0
         version: 6.0.0
@@ -81,9 +84,6 @@ importers:
       nodemon:
         specifier: ^3.1.11
         version: 3.1.11
-      pdfjs-dist:
-        specifier: ^3.11.174
-        version: 3.11.174
       prisma:
         specifier: ^6.3.1
         version: 6.19.2(typescript@5.9.3)
