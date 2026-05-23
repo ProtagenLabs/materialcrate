@@ -6,6 +6,7 @@ export default function TabLayout() {
     <Tabs tabBar={() => <Navbar />} screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="index" />
       <Tabs.Screen name="search" />
+      <Tabs.Screen name="hub" />
       <Tabs.Screen name="saved" />
       <Tabs.Screen name="user" />
     </Tabs>

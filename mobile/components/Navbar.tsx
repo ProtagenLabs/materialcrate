@@ -49,6 +49,8 @@ export default function Navbar() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  if (pathname === "/hub") return null;
+
   return (
     <View
       style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) }]}

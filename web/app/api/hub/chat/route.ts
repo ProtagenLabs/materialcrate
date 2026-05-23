@@ -362,7 +362,10 @@ export async function POST(req: Request) {
   }
 
   const cookieStore = await cookies();
-  const token = cookieStore.get("mc_session")?.value;
+  const cookieToken = cookieStore.get("mc_session")?.value;
+  const authHeader = req.headers.get("Authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
+  const token = cookieToken ?? bearerToken;
 
   if (!token) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -675,8 +678,11 @@ export async function POST(req: Request) {
         throw new Error("AI returned an empty response");
       }
     } catch (err) {
+      const rawMsg = err instanceof Error ? err.message : "";
       warning =
-        err instanceof Error ? err.message : "Failed to generate AI response";
+        rawMsg.toLowerCase() === "fetch failed"
+          ? "Could not reach the AI service. Please check your connection and try again."
+          : rawMsg || "Failed to generate AI response";
       if (!fullReply) {
         const errorText = `I couldn’t respond right now. ${warning}`;
         fullReply = errorText;
