@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,8 +19,9 @@ import {
   Cpu,
   Send2,
   Eye,
+  DocumentText,
 } from "iconsax-react-nativejs";
-import { gql } from "@/lib/api";
+import { gql, WEB_URL } from "@/lib/api";
 import { useAuth, getAuth } from "@/lib/auth-store";
 
 export type PostOptionsAnchor = {
@@ -111,6 +112,12 @@ export default function Post({
     Boolean(post.viewerHasLiked),
   );
   const [isLiking, setIsLiking] = useState(false);
+  const [thumbError, setThumbError] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+
+  // Reset image errors when FlatList recycles this component for a different post
+  useEffect(() => { setThumbError(false); }, [post.id]);
+  useEffect(() => { setAvatarError(false); }, [post.author?.profilePicture]);
 
   const authorFullName = post.author?.displayName?.trim() || "Unknown user";
   const authorUsername = post.author?.username
@@ -172,10 +179,11 @@ export default function Post({
           }}
         >
           <View style={styles.avatar}>
-            {post.author?.profilePicture ? (
+            {post.author?.profilePicture && !avatarError ? (
               <Image
                 source={{ uri: post.author.profilePicture }}
                 style={styles.avatarImage}
+                onError={() => setAvatarError(true)}
               />
             ) : (
               <User size={18} color="#AAAAAA" variant="Bold" />
@@ -245,14 +253,20 @@ export default function Post({
         onPress={() => onFileClick?.(post)}
       >
         <View style={styles.thumbnail}>
-          {post.thumbnailUrl ? (
+          {post.thumbnailUrl && !thumbError ? (
             <Image
-              source={{ uri: post.thumbnailUrl }}
+              key={post.id}
+              source={{
+                uri: `${WEB_URL}/api/posts/thumbnail?postId=${encodeURIComponent(post.id)}`,
+              }}
               style={styles.thumbnailImage}
               resizeMode="cover"
+              onError={() => setThumbError(true)}
             />
           ) : (
-            <View style={styles.thumbnailPlaceholder} />
+            <View style={styles.thumbnailFallback}>
+              <DocumentText size={36} color="#C4BAB0" variant="Bulk" />
+            </View>
           )}
         </View>
         <View style={styles.docMeta}>
@@ -421,9 +435,10 @@ const styles = StyleSheet.create({
     width: 112,
     height: 160,
   },
-  thumbnailPlaceholder: {
+  thumbnailFallback: {
     flex: 1,
-    backgroundColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
   },
   docMeta: {
     flex: 1,

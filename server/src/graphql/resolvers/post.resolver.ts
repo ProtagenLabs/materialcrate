@@ -1388,6 +1388,30 @@ export const PostResolver = {
         }
       }
 
+      // Server-side PDF thumbnail fallback — runs when no client-provided thumbnail.
+      if (!thumbnailUrl && isPdf) {
+        try {
+          const { pdfToThumbnailBuffer } = await import(
+            "../../services/pdf-thumbnail.js"
+          );
+          const thumbBuffer = await pdfToThumbnailBuffer(fileBuffer);
+          if (thumbBuffer) {
+            const thumbKey = `thumbnails/${Date.now()}-${randomUUID()}.jpg`;
+            await s3.send(
+              new PutObjectCommand({
+                Bucket: publicBucket,
+                Key: thumbKey,
+                Body: thumbBuffer,
+                ContentType: "image/jpeg",
+              }),
+            );
+            thumbnailUrl = buildCloudFrontUrl(thumbKey);
+          }
+        } catch (err) {
+          console.error("[post] pdf thumbnail generation failed:", err);
+        }
+      }
+
       // Convert Word documents to HTML for in-browser rendering.
       // Stored as a private S3 object; URL saved alongside the original file.
       let renderedHtmlUrl: string | null = null;

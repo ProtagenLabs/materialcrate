@@ -15,9 +15,14 @@ const THUMBNAIL_URL_QUERY = `
   }
 `;
 
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
+const isDev = process.env.NODE_ENV === "development";
+
 const isAllowedThumbnailUrl = (value: string) => {
   try {
     const parsed = new URL(value);
+    // In dev allow local S3 / MinIO (http://localhost:9000 etc.)
+    if (isDev && LOCAL_HOSTNAMES.has(parsed.hostname)) return true;
     return (
       parsed.protocol === "https:" &&
       ALLOWED_HOST_SUFFIXES.some((s) => parsed.hostname.endsWith(s))
