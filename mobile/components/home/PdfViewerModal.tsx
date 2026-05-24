@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FAFAF8",
-    paddingTop: 6,
+    paddingTop: 16,
   },
   header: {
     flexDirection: "row",
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 16,
+    paddingBottom: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#E5E7EB",
     backgroundColor: "#FAFAF8",

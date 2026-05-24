@@ -7,6 +7,7 @@ export default function TabLayout() {
       <Tabs.Screen name="index" />
       <Tabs.Screen name="search" />
       <Tabs.Screen name="hub" />
+      <Tabs.Screen name="chat" />
       <Tabs.Screen name="saved" />
       <Tabs.Screen name="user" />
     </Tabs>

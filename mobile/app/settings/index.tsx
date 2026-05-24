@@ -85,17 +85,6 @@ export default function SettingsIndex() {
 
   const sections: Section[] = [
     {
-      title: "Profile",
-      items: [
-        {
-          label: "Edit Profile",
-          sublabel: "Name, username, photo, bio",
-          href: "/settings/profile",
-          icon: <Profile size={18} color="#111111" variant="Linear" />,
-        },
-      ],
-    },
-    {
       title: "Account",
       items: [
         {
@@ -152,14 +141,21 @@ export default function SettingsIndex() {
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={8}
+          activeOpacity={0.7}
+        >
           <ArrowLeft2 size={22} color="#111111" variant="Linear" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={{ width: 22 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
         {/* Profile card */}
         {me && (
           <TouchableOpacity
@@ -168,10 +164,15 @@ export default function SettingsIndex() {
             activeOpacity={0.7}
           >
             {me.profilePicture ? (
-              <Image source={{ uri: me.profilePicture }} style={styles.avatar} />
+              <Image
+                source={{ uri: me.profilePicture }}
+                style={styles.avatar}
+              />
             ) : (
               <View style={styles.avatarFallback}>
-                <Text style={styles.avatarInitial}>{me.displayName.charAt(0)}</Text>
+                <Text style={styles.avatarInitial}>
+                  {me.displayName.charAt(0)}
+                </Text>
               </View>
             )}
             <View style={styles.profileCardText}>
@@ -185,7 +186,9 @@ export default function SettingsIndex() {
         {/* Sections */}
         {sections.map((section) => (
           <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionLabel}>{section.title.toUpperCase()}</Text>
+            <Text style={styles.sectionLabel}>
+              {section.title.toUpperCase()}
+            </Text>
             <View style={styles.sectionCard}>
               {section.items.map((item, idx) => (
                 <TouchableOpacity
@@ -199,7 +202,12 @@ export default function SettingsIndex() {
                 >
                   <View style={styles.rowIcon}>{item.icon}</View>
                   <View style={styles.rowText}>
-                    <Text style={[styles.rowLabel, item.danger && styles.rowLabelDanger]}>
+                    <Text
+                      style={[
+                        styles.rowLabel,
+                        item.danger && styles.rowLabelDanger,
+                      ]}
+                    >
                       {item.label}
                     </Text>
                     {item.sublabel ? (
@@ -216,12 +224,18 @@ export default function SettingsIndex() {
         {/* Sign out */}
         <View style={styles.section}>
           <View style={styles.sectionCard}>
-            <TouchableOpacity style={styles.row} onPress={handleSignOut} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={handleSignOut}
+              activeOpacity={0.7}
+            >
               <View style={styles.rowIcon}>
                 <Logout size={18} color="#DC2626" variant="Linear" />
               </View>
               <View style={styles.rowText}>
-                <Text style={[styles.rowLabel, styles.rowLabelDanger]}>Sign out</Text>
+                <Text style={[styles.rowLabel, styles.rowLabelDanger]}>
+                  Sign out
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -309,5 +323,10 @@ const styles = StyleSheet.create({
   rowLabelDanger: { color: "#DC2626" },
   rowSublabel: { fontSize: 12, color: "#9CA3AF", marginTop: 1 },
 
-  version: { textAlign: "center", fontSize: 12, color: "#D1D5DB", marginTop: 8 },
+  version: {
+    textAlign: "center",
+    fontSize: 12,
+    color: "#D1D5DB",
+    marginTop: 8,
+  },
 });
