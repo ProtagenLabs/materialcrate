@@ -13,9 +13,17 @@ import PdfViewerModal from "@/components/home/PdfViewerModal";
 import PostOptionsSheet from "@/components/home/PostOptionsSheet";
 import HomeFAB from "@/components/home/HomeFAB";
 import { gql } from "@/lib/api";
-import { getAuth } from "@/lib/auth-store";
+import { getAuth, useAuth } from "@/lib/auth-store";
 
 const PAGE_SIZE = 20;
+
+const ME_QUERY = `
+  query Me {
+    me {
+      tokenBalance
+    }
+  }
+`;
 
 const POSTS_QUERY = `
   query Posts($limit: Int!, $offset: Int!) {
@@ -47,6 +55,8 @@ const POSTS_QUERY = `
 `;
 
 export default function HomeScreen() {
+  const { isAuthenticated } = useAuth();
+  const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,6 +119,14 @@ export default function HomeScreen() {
     void fetchPosts(0);
   }, [fetchPosts]);
 
+  useEffect(() => {
+    if (!isAuthenticated) { setTokenBalance(null); return; }
+    const { token } = getAuth();
+    gql<{ me: { tokenBalance: number } }>(ME_QUERY, {}, token ?? undefined)
+      .then((d) => setTokenBalance(d.me.tokenBalance))
+      .catch(() => null);
+  }, [isAuthenticated]);
+
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     hasMoreRef.current = true;
@@ -123,7 +141,10 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <HomeHeader />
+      <HomeHeader
+        tokenBalance={isAuthenticated ? tokenBalance : null}
+        showLogin={!isAuthenticated}
+      />
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
