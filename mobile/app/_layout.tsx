@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { loadStoredAuth } from '@/lib/auth-store';
 import { ServerStatusProvider, useServerStatus } from '@/lib/server-status';
 import ServerDownScreen from '@/components/ServerDownScreen';
+import AppSplashScreen from '@/components/AppSplashScreen';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -17,14 +18,7 @@ SplashScreen.preventAutoHideAsync();
 function AppContent() {
   const { status } = useServerStatus();
 
-  // Keep the native splash up until we know the server status
-  useEffect(() => {
-    if (status !== 'checking') {
-      SplashScreen.hideAsync();
-    }
-  }, [status]);
-
-  if (status === 'checking') return null;
+  if (status === 'checking') return <AppSplashScreen />;
   if (status === 'offline') return <ServerDownScreen />;
 
   return (
@@ -41,15 +35,21 @@ function AppContent() {
   );
 }
 
+const MIN_SPLASH_MS = 3000;
+
 export default function RootLayout() {
   const [authReady, setAuthReady] = useState(false);
+  const [minDelayDone, setMinDelayDone] = useState(false);
 
   useEffect(() => {
+    // Hide the native splash after first render so our custom screen takes over seamlessly
+    void SplashScreen.hideAsync();
     loadStoredAuth().finally(() => setAuthReady(true));
+    const t = setTimeout(() => setMinDelayDone(true), MIN_SPLASH_MS);
+    return () => clearTimeout(t);
   }, []);
 
-  // Keep splash visible until auth is loaded; server check runs after
-  if (!authReady) return null;
+  if (!authReady || !minDelayDone) return <AppSplashScreen />;
 
   return (
     <SafeAreaProvider>

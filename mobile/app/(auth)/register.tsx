@@ -5,12 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
+import Logo from "@/assets/images/logo.svg";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
@@ -315,10 +315,7 @@ export default function RegisterScreen() {
         <View style={styles.card}>
           {step !== 7 && (
             <View style={styles.header}>
-              <Image
-                source={require("@/assets/images/logo.png")}
-                style={styles.logo}
-              />
+              <Logo width={50} height={50} />
               <Text style={styles.title}>{TITLES[step]}</Text>
             </View>
           )}
@@ -619,7 +616,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   header: { alignItems: "center", gap: 16, marginTop: 8, marginBottom: 28 },
-  logo: { width: 50, height: 50, borderRadius: 12 },
   title: {
     fontSize: 28,
     fontWeight: "600",

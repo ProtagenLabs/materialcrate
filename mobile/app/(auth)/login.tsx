@@ -5,13 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Alert,
 } from "react-native";
+import Logo from "@/assets/images/logo.svg";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
@@ -199,10 +199,7 @@ export default function LoginScreen() {
 
         <View style={styles.card}>
           <View style={styles.header}>
-            <Image
-              source={require("@/assets/images/logo.png")}
-              style={styles.logo}
-            />
+            <Logo width={50} height={50} />
             <Text style={styles.title}>
               {step === 1 ? "Welcome Back" : "Enter your password"}
             </Text>
@@ -336,7 +333,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   header: { alignItems: "center", gap: 16, marginTop: 8, marginBottom: 28 },
-  logo: { width: 50, height: 50, borderRadius: 12 },
   title: {
     fontSize: 28,
     fontWeight: "600",
