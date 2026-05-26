@@ -35,6 +35,29 @@ export class NetworkError extends Error {
   }
 }
 
+export class RateLimitError extends Error {
+  retryAfterSeconds: number | null;
+  constructor(retryAfterSeconds: number | null) {
+    const time = retryAfterSeconds ? formatRetryTime(retryAfterSeconds) : null;
+    super(time ? `Too many attempts. Try again in ${time}.` : "Too many attempts. Please try again later.");
+    this.name = "RateLimitError";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+function formatRetryTime(seconds: number): string {
+  if (seconds < 60) return `${seconds} second${seconds !== 1 ? "s" : ""}`;
+  const minutes = Math.ceil(seconds / 60);
+  return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
+}
+
+export function parseRetryAfter(headers: Headers): number | null {
+  const value = headers.get("Retry-After");
+  if (!value) return null;
+  const seconds = parseInt(value, 10);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+}
+
 type NetworkErrorHandler = () => void;
 let _networkErrorHandler: NetworkErrorHandler | null = null;
 
@@ -64,6 +87,8 @@ export async function gql<T = unknown>(
     _networkErrorHandler?.();
     throw new NetworkError();
   }
+
+  if (res.status === 429) throw new RateLimitError(parseRetryAfter(res.headers));
 
   const json = await res.json();
   if (json.errors?.length) throw new Error(json.errors[0].message);

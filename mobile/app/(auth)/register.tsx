@@ -258,8 +258,8 @@ export default function RegisterScreen() {
       setCode(["", "", "", ""]);
       codeRefs.current[0]?.focus();
       setVerifyStatus("A new verification code was sent.");
-    } catch {
-      setError("Failed to resend verification code");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend verification code");
     } finally {
       setLoading(false);
     }

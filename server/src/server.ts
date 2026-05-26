@@ -9,6 +9,13 @@ import { context } from "./auth/context.js";
 import { typeDefs, resolvers } from "./graphql/index.js";
 import { registerPostActivityRealtime } from "./realtime/postActivity.js";
 import { handleGumroadWebhook } from "./billing/gumroad.js";
+import {
+  globalLimiter,
+  graphqlLimiter,
+  operationLimiter,
+  googleMobileLimiter,
+  webhookLimiter,
+} from "./middleware/rateLimiters.js";
 
 const GRAPHQL_BODY_LIMIT = process.env.GRAPHQL_BODY_LIMIT?.trim() || "35mb";
 
@@ -67,6 +74,11 @@ export const createHttpServer = () => {
       const app = express();
       app.disable("x-powered-by");
 
+      // Trust the first proxy hop so req.ip reflects the real client IP behind
+      // Railway/Render load balancers rather than the load balancer's own address.
+      // Without this, all users share one rate-limit counter.
+      app.set("trust proxy", 1);
+
       // Serve email assets (logo, wordmark) for use in transactional emails
       const emailAssetsDir = resolve(
         dirname(fileURLToPath(import.meta.url)),
@@ -85,8 +97,12 @@ export const createHttpServer = () => {
         res.status(200).json({ ok: true });
       });
 
+      // Health routes respond before reaching this — all other traffic is rate-limited
+      app.use(globalLimiter);
+
       app.post(
         "/auth/google/mobile",
+        googleMobileLimiter,
         express.json({ limit: "16kb" }),
         async (req, res) => {
           const { code, redirectUri, codeVerifier } = (req.body ?? {}) as Record<string, string>;
@@ -174,6 +190,7 @@ export const createHttpServer = () => {
 
       app.post(
         "/billing/gumroad/webhook",
+        webhookLimiter,
         express.urlencoded({ extended: false, limit: "16kb" }),
         async (req, res) => {
           try {
@@ -193,6 +210,13 @@ export const createHttpServer = () => {
           }
         },
       );
+
+      // GraphQL rate limiters run before Apollo's own body parser.
+      // express.json() here pre-populates req.body so operationLimiter can read
+      // the operation name; Apollo's body-parser skips re-parsing when req.body is set.
+      app.use("/graphql", graphqlLimiter);
+      app.use("/graphql", express.json({ limit: GRAPHQL_BODY_LIMIT }));
+      app.use("/graphql", operationLimiter);
 
       const httpServer = http.createServer(app);
       registerPostActivityRealtime(httpServer);

@@ -16,7 +16,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
-import { WEB_URL, GRAPHQL_URL } from "@/lib/api";
+import { WEB_URL, GRAPHQL_URL, parseRetryAfter, RateLimitError } from "@/lib/api";
 import { setAuth } from "@/lib/auth-store";
 
 const BRAND = "#E1761F";
@@ -136,6 +136,12 @@ export default function LoginScreen() {
           variables: { email, password },
         }),
       });
+
+      if (res.status === 429) {
+        setError(new RateLimitError(parseRetryAfter(res.headers)).message);
+        return;
+      }
+
       const json = await res.json();
 
       if (json.errors?.length) {
