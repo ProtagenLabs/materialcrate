@@ -5,6 +5,8 @@ import { existsSync } from "node:fs";
 import express from "express";
 import jwt from "jsonwebtoken";
 import { ApolloServer } from "apollo-server-express";
+import depthLimit from "graphql-depth-limit";
+import { getComplexity, simpleEstimator } from "graphql-query-complexity";
 import { context } from "./auth/context.js";
 import { typeDefs, resolvers } from "./graphql/index.js";
 import { registerPostActivityRealtime } from "./realtime/postActivity.js";
@@ -60,10 +62,41 @@ const GOOGLE_MOBILE_SOCIAL_AUTH = `
   }
 `;
 
+const IS_PROD = process.env.NODE_ENV === "production";
+const MAX_COMPLEXITY = 150;
+
+const complexityPlugin = {
+  async requestDidStart() {
+    return {
+      async didResolveOperation({ request, document, schema }: {
+        request: { operationName?: string | null; variables?: Record<string, unknown> };
+        document: import("graphql").DocumentNode;
+        schema: import("graphql").GraphQLSchema;
+      }) {
+        const complexity = getComplexity({
+          schema,
+          operationName: request.operationName ?? undefined,
+          query: document,
+          variables: request.variables ?? {},
+          estimators: [simpleEstimator({ defaultComplexity: 1 })],
+        });
+        if (complexity > MAX_COMPLEXITY) {
+          throw new Error(
+            `Query complexity ${complexity} exceeds maximum of ${MAX_COMPLEXITY}.`,
+          );
+        }
+      },
+    };
+  },
+};
+
 export const server = new ApolloServer({
   typeDefs,
   resolvers,
   context,
+  introspection: !IS_PROD,
+  validationRules: [depthLimit(10)],
+  plugins: [complexityPlugin],
 });
 
 let httpServerPromise: Promise<http.Server> | null = null;
