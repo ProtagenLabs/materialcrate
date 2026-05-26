@@ -13,20 +13,24 @@ const EMAIL_OPERATIONS = new Set([
   "verifyemailcode",
 ]);
 
-// Baseline protection for all routes (health checks bypass this by responding before it runs)
+// Baseline protection for all routes (health checks bypass this by responding before it runs).
+// Limit is per-IP; Next.js API routes forward the real client IP so this is per-user in practice.
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 200,
+  limit: 2000,
   skip: skipInDev,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later." },
 });
 
-// Prevents hammering the GraphQL endpoint regardless of operation
+// Prevents hammering the GraphQL endpoint regardless of operation.
+// Limit is per-IP. In production the Next.js API routes forward the real
+// client IP via X-Forwarded-For (trust proxy: 1), so each user gets their
+// own counter. Keep this high enough to not catch server-side proxy calls.
 export const graphqlLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 100,
+  limit: 1000,
   skip: skipInDev,
   standardHeaders: true,
   legacyHeaders: false,

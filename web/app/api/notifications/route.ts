@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-
-const GRAPHQL_ENDPOINT =
-  process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
+import { runGql, getClientIp } from "../../lib/gql";
 
 const NOTIFICATIONS_QUERY = `
   query Notifications($limit: Int!, $unreadOnly: Boolean!) {
@@ -93,28 +91,6 @@ const getAuthToken = async () => {
   return cookieStore.get("mc_session")?.value ?? null;
 };
 
-const runGraphQL = async ({
-  query,
-  variables,
-  token,
-}: {
-  query: string;
-  variables?: Record<string, unknown>;
-  token: string;
-}) => {
-  const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  const graphqlBody = await graphqlResponse.json().catch(() => ({}));
-  return { graphqlResponse, graphqlBody };
-};
-
 export async function GET(request: NextRequest) {
   const token = await getAuthToken();
   if (!token) {
@@ -128,25 +104,25 @@ export async function GET(request: NextRequest) {
     ? Math.min(Math.max(limitInput, 1), 100)
     : 50;
 
-  const { graphqlResponse, graphqlBody } = await runGraphQL({
+  const result = await runGql({
     query: NOTIFICATIONS_QUERY,
     variables: { limit, unreadOnly },
     token,
+    forwardedFor: getClientIp(request),
   });
 
-  if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
+  if (!result.ok) {
     return NextResponse.json(
       {
-        error:
-          graphqlBody?.errors?.[0]?.message || "Failed to fetch notifications",
-        details: graphqlBody?.errors ?? null,
+        error: result.errors?.[0]?.message || "Failed to fetch notifications",
+        details: result.errors ?? null,
       },
       { status: 400 },
     );
   }
 
-  const notifications = Array.isArray(graphqlBody?.data?.notifications)
-    ? graphqlBody.data.notifications
+  const notifications = Array.isArray(result.data?.notifications)
+    ? result.data!.notifications
     : [];
 
   return NextResponse.json({ notifications });
@@ -192,27 +168,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const { graphqlResponse, graphqlBody } = await runGraphQL({
+  const result = await runGql({
     query: CREATE_NOTIFICATION_MUTATION,
-    variables: {
-      type,
-      title,
-      description,
-      icon,
-      profilePicture,
-      userId,
-      postId,
-      commentId,
-    },
+    variables: { type, title, description, icon, profilePicture, userId, postId, commentId },
     token,
+    forwardedFor: getClientIp(request),
   });
 
-  if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
+  if (!result.ok) {
     return NextResponse.json(
       {
-        error:
-          graphqlBody?.errors?.[0]?.message || "Failed to create notification",
-        details: graphqlBody?.errors ?? null,
+        error: result.errors?.[0]?.message || "Failed to create notification",
+        details: result.errors ?? null,
       },
       { status: 400 },
     );
@@ -220,7 +187,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    notification: graphqlBody?.data?.createNotification ?? null,
+    notification: result.data?.createNotification ?? null,
   });
 }
 
@@ -253,41 +220,39 @@ export async function PATCH(request: Request) {
   }
 
   if (markAll) {
-    const { graphqlResponse, graphqlBody } = await runGraphQL({
+    const result = await runGql({
       query: MARK_ALL_NOTIFICATIONS_READ_MUTATION,
       token,
+      forwardedFor: getClientIp(request),
     });
 
-    if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
+    if (!result.ok) {
       return NextResponse.json(
         {
-          error:
-            graphqlBody?.errors?.[0]?.message ||
-            "Failed to mark all notifications as read",
-          details: graphqlBody?.errors ?? null,
+          error: result.errors?.[0]?.message || "Failed to mark all notifications as read",
+          details: result.errors ?? null,
         },
         { status: 400 },
       );
     }
 
     return NextResponse.json({
-      ok: Boolean(graphqlBody?.data?.markAllNotificationsRead),
+      ok: Boolean(result.data?.markAllNotificationsRead),
     });
   }
 
-  const { graphqlResponse, graphqlBody } = await runGraphQL({
+  const result = await runGql({
     query: MARK_NOTIFICATION_READ_MUTATION,
     variables: { notificationId },
     token,
+    forwardedFor: getClientIp(request),
   });
 
-  if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
+  if (!result.ok) {
     return NextResponse.json(
       {
-        error:
-          graphqlBody?.errors?.[0]?.message ||
-          "Failed to mark notification read",
-        details: graphqlBody?.errors ?? null,
+        error: result.errors?.[0]?.message || "Failed to mark notification read",
+        details: result.errors ?? null,
       },
       { status: 400 },
     );
@@ -295,6 +260,6 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    notification: graphqlBody?.data?.markNotificationRead ?? null,
+    notification: result.data?.markNotificationRead ?? null,
   });
 }

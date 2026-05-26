@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-
-const GRAPHQL_ENDPOINT =
-  process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
+import { runGql, getClientIp } from "../../lib/gql";
 
 const CONVERSATIONS_QUERY = `
   query Conversations($limit: Int, $cursor: String) {
@@ -54,27 +52,6 @@ const getAuthToken = async () => {
   return cookieStore.get("mc_session")?.value ?? null;
 };
 
-const runGraphQL = async ({
-  query,
-  variables,
-  token,
-}: {
-  query: string;
-  variables?: Record<string, unknown>;
-  token: string;
-}) => {
-  const res = await fetch(GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const body = await res.json().catch(() => ({}));
-  return { res, body };
-};
-
 export async function GET(request: Request) {
   const token = await getAuthToken();
   if (!token) {
@@ -85,20 +62,21 @@ export async function GET(request: Request) {
   const cursor = searchParams.get("cursor") ?? undefined;
   const limit = 15;
 
-  const { res, body } = await runGraphQL({
+  const result = await runGql({
     query: CONVERSATIONS_QUERY,
     variables: { limit, cursor },
     token,
+    forwardedFor: getClientIp(request),
   });
 
-  if (!res.ok || body?.errors?.length) {
+  if (!result.ok) {
     return NextResponse.json(
-      { error: body?.errors?.[0]?.message || "Failed to fetch conversations" },
+      { error: result.errors?.[0]?.message || "Failed to fetch conversations" },
       { status: 400 },
     );
   }
 
-  const items = (body?.data?.conversations?.items ?? []).map((item: {
+  const items = ((result.data?.conversations as any)?.items ?? []).map((item: {
     id: string;
     participant: { id: string; name: string; username: string; avatar: string | null; isOnline: boolean };
     lastMessage: string | null;
@@ -124,7 +102,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     conversations: items,
-    nextCursor: body?.data?.conversations?.nextCursor ?? null,
+    nextCursor: (result.data?.conversations as any)?.nextCursor ?? null,
   });
 }
 
@@ -146,23 +124,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "userId is required" }, { status: 400 });
   }
 
-  const { res, body: gqlBody } = await runGraphQL({
+  const result = await runGql({
     query: START_CONVERSATION_MUTATION,
     variables: { userId },
     token,
+    forwardedFor: getClientIp(request),
   });
 
-  if (!res.ok || gqlBody?.errors?.length) {
+  if (!result.ok) {
     return NextResponse.json(
-      {
-        error:
-          gqlBody?.errors?.[0]?.message || "Failed to start conversation",
-      },
+      { error: result.errors?.[0]?.message || "Failed to start conversation" },
       { status: 400 },
     );
   }
 
-  const conv = gqlBody?.data?.startConversation ?? null;
+  const conv = (result.data?.startConversation as any) ?? null;
   return NextResponse.json({
     conversation: conv ? {
       id: conv.id,
