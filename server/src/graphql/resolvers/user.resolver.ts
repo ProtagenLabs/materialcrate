@@ -32,13 +32,35 @@ import {
 } from "../../services/notifications.js";
 import { emitFollowActivity } from "../../realtime/postActivity.js";
 
-const createToken = (userId: string, email: string) => {
+function parseDeviceName(ua: string | undefined): string {
+  if (!ua) return "Unknown device";
+  if (/android/i.test(ua)) return "Android";
+  if (/iphone/i.test(ua)) return "iPhone";
+  if (/ipad/i.test(ua)) return "iPad";
+  if (/macintosh|mac os x/i.test(ua)) return "Mac";
+  if (/windows nt/i.test(ua)) return "Windows";
+  if (/linux/i.test(ua)) return "Linux";
+  return "Unknown device";
+}
+
+const createToken = async (
+  userId: string,
+  email: string,
+  deviceName: string,
+  ipAddress: string | null,
+): Promise<string> => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error("JWT_SECRET is not configured");
   }
 
-  return jwt.sign({ sub: userId, email }, secret, { expiresIn: "7d" });
+  const jti = randomUUID();
+
+  await (prisma as any).session.create({
+    data: { userId, jti, deviceName, ipAddress },
+  });
+
+  return jwt.sign({ sub: userId, email, jti }, secret, { expiresIn: "7d" });
 };
 
 const DICEBEAR_STYLES = [
@@ -214,12 +236,15 @@ const getDeletedAccountRestoreState = (user: any) => {
 
 const buildAuthPayload = async (
   user: any,
+  ctx: any,
   options?: {
     restoreRequired?: boolean;
     restoreDeadline?: Date | null;
   },
 ) => {
-  const token = createToken(user.id, user.email);
+  const deviceName = parseDeviceName(ctx?.userAgent);
+  const ip: string | null = ctx?.ip ?? null;
+  const token = await createToken(user.id, user.email, deviceName, ip);
   return {
     token,
     user,
@@ -680,10 +705,31 @@ export const UserResolver = {
         createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
       }));
     },
+
+    mySessions: async (_: unknown, _args: unknown, ctx: any) => {
+      const userId = ctx.user?.sub;
+      if (!userId) throw new Error("Not authenticated");
+
+      const sessions = await (prisma as any).session.findMany({
+        where: { userId, revokedAt: null },
+        orderBy: { lastSeenAt: "desc" },
+      });
+
+      const currentJti: string | undefined = ctx.sessionJti;
+
+      return sessions.map((s: any) => ({
+        id: s.id,
+        deviceName: s.deviceName,
+        ipAddress: s.ipAddress ?? null,
+        lastSeenAt: s.lastSeenAt instanceof Date ? s.lastSeenAt.toISOString() : String(s.lastSeenAt),
+        createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
+        current: s.jti === currentJti,
+      }));
+    },
   },
 
   Mutation: {
-    signup: async (_: unknown, args: any) => {
+    signup: async (_: unknown, args: any, ctx: any) => {
       const { email, password, username, displayName, institution, program } =
         args;
       const normalizedEmail = normalizeEmailAddress(email);
@@ -782,7 +828,9 @@ export const UserResolver = {
 
       checkAchievements(user.id, "signup").catch(() => null);
 
-      const token = createToken(user.id, user.email);
+      const deviceName = parseDeviceName(ctx?.userAgent);
+      const ip: string | null = ctx?.ip ?? null;
+      const token = await createToken(user.id, user.email, deviceName, ip);
       return {
         token,
         user,
@@ -839,7 +887,7 @@ export const UserResolver = {
           throw new Error("Account has been permanently deleted");
         }
 
-        return buildAuthPayload(user, {
+        return buildAuthPayload(user, ctx, {
           restoreRequired: true,
           restoreDeadline,
         });
@@ -865,9 +913,9 @@ export const UserResolver = {
         },
       );
 
-      return buildAuthPayload(user);
+      return buildAuthPayload(user, ctx);
     },
-    socialAuth: async (_: unknown, args: any) => {
+    socialAuth: async (_: unknown, args: any, ctx: any) => {
       const provider = normalizeSocialProvider(args.provider);
       const providerUserId = String(args.providerUserId || "").trim();
       const email = normalizeEmailAddress(args.email);
@@ -901,7 +949,7 @@ export const UserResolver = {
             throw new Error("Account has been permanently deleted");
           }
 
-          return buildAuthPayload(existingSeoAccount.user, {
+          return buildAuthPayload(existingSeoAccount.user, ctx, {
             restoreRequired: true,
             restoreDeadline,
           });
@@ -921,7 +969,7 @@ export const UserResolver = {
         });
 
         await ensureWorkspaceForUserId(refreshedUser.id, refreshedUser.id);
-        return buildAuthPayload(refreshedUser);
+        return buildAuthPayload(refreshedUser, ctx);
       }
 
       const existingUserByEmail = await findUserByEmailInsensitive(email);
@@ -934,7 +982,7 @@ export const UserResolver = {
             throw new Error("Account has been permanently deleted");
           }
 
-          return buildAuthPayload(existingUserByEmail, {
+          return buildAuthPayload(existingUserByEmail, ctx, {
             restoreRequired: true,
             restoreDeadline,
           });
@@ -974,7 +1022,7 @@ export const UserResolver = {
         });
 
         await ensureWorkspaceForUserId(updatedUser.id, updatedUser.id);
-        return buildAuthPayload(updatedUser);
+        return buildAuthPayload(updatedUser, ctx);
       }
 
       const emailLocalPart = email.split("@")[0] || "user";
@@ -1005,7 +1053,7 @@ export const UserResolver = {
         },
       });
 
-      return buildAuthPayload(createdUser);
+      return buildAuthPayload(createdUser, ctx);
     },
 
     verifyEmailCode: async (
@@ -2582,6 +2630,43 @@ export const UserResolver = {
             )
             .catch(() => null);
         }
+      }
+
+      return true;
+    },
+
+    logout: async (_: unknown, _args: unknown, ctx: any) => {
+      const jti: string | undefined = ctx.sessionJti;
+      if (!jti) return true;
+
+      await (prisma as any).session
+        .update({
+          where: { jti },
+          data: { revokedAt: new Date() },
+        })
+        .catch(() => null);
+
+      return true;
+    },
+
+    revokeSession: async (_: unknown, { sessionId }: { sessionId: string }, ctx: any) => {
+      const userId = ctx.user?.sub;
+      if (!userId) throw new Error("Not authenticated");
+
+      const session = await (prisma as any).session.findUnique({
+        where: { id: sessionId },
+        select: { userId: true, revokedAt: true },
+      });
+
+      if (!session || session.userId !== userId) {
+        throw new Error("Session not found");
+      }
+
+      if (!session.revokedAt) {
+        await (prisma as any).session.update({
+          where: { id: sessionId },
+          data: { revokedAt: new Date() },
+        });
       }
 
       return true;

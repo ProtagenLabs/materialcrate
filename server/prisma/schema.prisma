@@ -8,6 +8,22 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Session {
+  id         String    @id @default(cuid())
+  userId     String
+  jti        String    @unique
+  deviceName String    @default("Unknown device")
+  ipAddress  String?
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([jti])
+}
+
 model User {
   id            String   @id @default(cuid())
   username      String
@@ -90,6 +106,7 @@ model User {
   conversationsAsA  Conversation[] @relation("ConversationParticipantA")
   conversationsAsB  Conversation[] @relation("ConversationParticipantB")
   sentChatMessages  ChatMessage[]  @relation("ChatMessageSender")
+  sessions               Session[]
   documentRequests       DocumentRequest[]              @relation("UserRequests")
   requestFulfillments    DocumentRequestFulfillment[]   @relation("UserFulfillments")
   fulfillmentLikes       DocumentRequestFulfillmentLike[] @relation("UserFulfillmentLikes")

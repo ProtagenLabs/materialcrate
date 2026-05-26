@@ -72,6 +72,15 @@ type TokenCashoutRequest {
   createdAt: String!
 }
 
+type Session {
+  id: ID!
+  deviceName: String!
+  ipAddress: String
+  lastSeenAt: String!
+  createdAt: String!
+  current: Boolean!
+}
+
 type AuthPayload {
   token: String!
   user: User!
@@ -99,6 +108,7 @@ type Query {
   pendingFollowRequestForActor(actorId: ID!): ID
   myTokenTransactions(limit: Int = 20, offset: Int = 0): [TokenTransaction!]!
   myTokenCashoutRequests: [TokenCashoutRequest!]!
+  mySessions: [Session!]!
 }
 
 type Mutation {
@@ -175,4 +185,6 @@ type Mutation {
   removeProfilePicture: Boolean!
   redeemTokensForSubscription(plan: String!): Boolean!
   requestTokenCashout(tokensAmount: Int!, payoutMethod: String!, payoutDetails: String!): Boolean!
+  logout: Boolean!
+  revokeSession(sessionId: ID!): Boolean!
 }
