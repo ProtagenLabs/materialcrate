@@ -2137,21 +2137,51 @@ export const UserResolver = {
             "",
           );
           const sanitizedBaseName = sanitizeFileName(fileNameWithoutExtension);
-          const extension =
-            normalizedBackgroundMime === "image/jpeg"
-              ? "jpg"
-              : normalizedBackgroundMime === "image/png"
-                ? "png"
-                : normalizedBackgroundMime === "image/webp"
-                  ? "webp"
-                  : "gif";
-          const key = `profileBackgrounds/${Date.now()}-${randomUUID()}-${sanitizedBaseName || "profile-background"}.${extension}`;
+
+          const isGif = normalizedBackgroundMime === "image/gif";
+          let finalBackgroundBuffer: Buffer;
+          let finalContentType: string;
+          let finalExtension: string;
+
+          if (isGif) {
+            // Validate GIF magic bytes (GIF87a or GIF89a) then store raw to preserve animation
+            const validGif =
+              backgroundBuffer.length >= 6 &&
+              backgroundBuffer[0] === 0x47 && // G
+              backgroundBuffer[1] === 0x49 && // I
+              backgroundBuffer[2] === 0x46 && // F
+              backgroundBuffer[3] === 0x38 && // 8
+              (backgroundBuffer[4] === 0x37 || backgroundBuffer[4] === 0x39) && // 7 or 9
+              backgroundBuffer[5] === 0x61;   // a
+            if (!validGif) throw new Error("Invalid GIF file");
+            finalBackgroundBuffer = backgroundBuffer;
+            finalContentType = "image/gif";
+            finalExtension = "gif";
+          } else {
+            // Re-encode through Sharp to strip hidden payloads and normalize
+            const sharpPipeline = sharp(backgroundBuffer).rotate();
+            if (normalizedBackgroundMime === "image/png") {
+              finalBackgroundBuffer = await sharpPipeline.png().toBuffer();
+              finalContentType = "image/png";
+              finalExtension = "png";
+            } else if (normalizedBackgroundMime === "image/webp") {
+              finalBackgroundBuffer = await sharpPipeline.webp({ quality: 85 }).toBuffer();
+              finalContentType = "image/webp";
+              finalExtension = "webp";
+            } else {
+              finalBackgroundBuffer = await sharpPipeline.jpeg({ quality: 85 }).toBuffer();
+              finalContentType = "image/jpeg";
+              finalExtension = "jpg";
+            }
+          }
+
+          const key = `profileBackgrounds/${Date.now()}-${randomUUID()}-${sanitizedBaseName || "profile-background"}.${finalExtension}`;
           await s3.send(
             new PutObjectCommand({
               Bucket: publicBucket,
               Key: key,
-              Body: backgroundBuffer,
-              ContentType: normalizedBackgroundMime,
+              Body: finalBackgroundBuffer,
+              ContentType: finalContentType,
             }),
           );
 

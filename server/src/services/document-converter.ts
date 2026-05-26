@@ -1,4 +1,5 @@
 import { createRequire } from "module";
+import sanitizeHtmlLib from "sanitize-html";
 
 const _require = createRequire(import.meta.url);
 
@@ -36,22 +37,47 @@ function getMammoth(): MammothMod {
 }
 
 function sanitizeHtml(html: string): string {
-  return (
-    html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(
-        /<\/?(iframe|object|embed|applet|form|input|button|textarea|select|meta|link|base|xml)[^>]*>/gi,
-        "",
-      )
-      .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, "")
-      .replace(
-        /(href|src|action)\s*=\s*["']?\s*(javascript|vbscript):[^"'\s>]*/gi,
-        '$1="#"',
-      )
-      .replace(/style\s*=\s*"[^"]*\bexpression\s*\([^"]*"/gi, "")
-      .replace(/style\s*=\s*'[^']*\bexpression\s*\([^']*'/gi, "")
-      .replace(/<a\s/gi, '<a target="_blank" rel="noopener noreferrer" ')
-  );
+  return sanitizeHtmlLib(html, {
+    allowedTags: [
+      "p", "div", "span", "br", "hr",
+      "h1", "h2", "h3", "h4", "h5", "h6",
+      "strong", "em", "b", "i", "u", "s", "strike", "sub", "sup", "code", "pre",
+      "ul", "ol", "li",
+      "table", "thead", "tbody", "tfoot", "tr", "th", "td", "colgroup", "col",
+      "a", "img",
+    ],
+    allowedAttributes: {
+      "*": ["class", "style"],
+      "a": ["href", "target", "rel"],
+      "img": ["src", "alt", "width", "height"],
+      "td": ["colspan", "rowspan"],
+      "th": ["colspan", "rowspan"],
+      "col": ["span"],
+    },
+    allowedSchemes: ["https", "http"],
+    allowedSchemesByTag: {
+      img: ["https", "http", "data"],
+    },
+    allowedStyles: {
+      "*": {
+        "color": [/.*/],
+        "background-color": [/.*/],
+        "font-size": [/.*/],
+        "font-weight": [/.*/],
+        "font-style": [/.*/],
+        "text-align": [/.*/],
+        "text-decoration": [/.*/],
+        "margin": [/.*/],
+        "padding": [/.*/],
+      },
+    },
+    transformTags: {
+      "a": sanitizeHtmlLib.simpleTransform("a", {
+        target: "_blank",
+        rel: "noopener noreferrer",
+      }),
+    },
+  });
 }
 
 export interface WordConversionResult {

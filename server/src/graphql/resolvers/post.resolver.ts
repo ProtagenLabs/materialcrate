@@ -1322,7 +1322,15 @@ export const PostResolver = {
         throw new Error("Uploaded file is empty");
       }
 
-      if (!isPdf) {
+      if (isPdf) {
+        const validPdf =
+          fileBuffer.length >= 4 &&
+          fileBuffer[0] === 0x25 && // %
+          fileBuffer[1] === 0x50 && // P
+          fileBuffer[2] === 0x44 && // D
+          fileBuffer[3] === 0x46;   // F
+        if (!validPdf) throw new Error("Invalid PDF file");
+      } else {
         const { isValidWordBuffer } = await import(
           "../../services/document-converter.js"
         );
@@ -1364,24 +1372,33 @@ export const PostResolver = {
               thumbnailBuffer[9] === 0x45 &&
               thumbnailBuffer[10] === 0x42 &&
               thumbnailBuffer[11] === 0x50;
-            const thumbnailExt = isWebp ? ".webp" : ".jpg";
-            const thumbnailContentType = isWebp ? "image/webp" : "image/jpeg";
-            const thumbnailBaseName =
-              fileName.replace(/\.(pdf|docx?|doc)$/i, "") || "document";
-            const thumbnailKey = `thumbnails/${Date.now()}-${randomUUID()}-${sanitizeFileName(
-              thumbnailBaseName,
-            )}${thumbnailExt}`;
+            const isJpeg =
+              !isWebp &&
+              thumbnailBuffer.length >= 3 &&
+              thumbnailBuffer[0] === 0xff &&
+              thumbnailBuffer[1] === 0xd8 &&
+              thumbnailBuffer[2] === 0xff;
 
-            await s3.send(
-              new PutObjectCommand({
-                Bucket: publicBucket,
-                Key: thumbnailKey,
-                Body: thumbnailBuffer,
-                ContentType: thumbnailContentType,
-              }),
-            );
+            if (isWebp || isJpeg) {
+              const thumbnailExt = isWebp ? ".webp" : ".jpg";
+              const thumbnailContentType = isWebp ? "image/webp" : "image/jpeg";
+              const thumbnailBaseName =
+                fileName.replace(/\.(pdf|docx?|doc)$/i, "") || "document";
+              const thumbnailKey = `thumbnails/${Date.now()}-${randomUUID()}-${sanitizeFileName(
+                thumbnailBaseName,
+              )}${thumbnailExt}`;
 
-            thumbnailUrl = buildCloudFrontUrl(thumbnailKey);
+              await s3.send(
+                new PutObjectCommand({
+                  Bucket: publicBucket,
+                  Key: thumbnailKey,
+                  Body: thumbnailBuffer,
+                  ContentType: thumbnailContentType,
+                }),
+              );
+
+              thumbnailUrl = buildCloudFrontUrl(thumbnailKey);
+            }
           }
         } catch {
           thumbnailUrl = null;
