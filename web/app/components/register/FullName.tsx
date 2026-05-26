@@ -6,6 +6,7 @@ interface FullNameProps {
   setDisplayName: React.Dispatch<React.SetStateAction<string>>;
   fixedAction?: boolean;
   submitLabel?: string;
+  error?: string | null;
 }
 
 export default function FullName({
@@ -13,6 +14,7 @@ export default function FullName({
   setDisplayName,
   fixedAction = false,
   submitLabel = "NEXT",
+  error,
 }: FullNameProps) {
   const isNextDisabled = displayName.trim().length < 2;
 
@@ -33,6 +35,7 @@ export default function FullName({
             minLength={2}
             maxLength={30}
           />
+          {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}
         </div>
       </div>
       <ActionButton

@@ -513,10 +513,10 @@ export default function Page() {
 
   return (
     <>
-      <Alert type="success" message={success} />
-      <Alert type="error" message={error} />
       <div className="min-h-dvh bg-page">
       <div className="mx-auto max-w-2xl px-4 pt-20 pb-10 sm:px-6">
+        <Alert type="success" message={success} className="mb-4" />
+        <Alert type="error" message={error} className="mb-4" />
         <Header
           title="Account Information"
           isLoading={

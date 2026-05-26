@@ -9,8 +9,6 @@ import Password from "@/app/components/register/Password";
 import Verification from "@/app/components/register/Verification";
 import Username from "@/app/components/register/Username";
 import FullName from "@/app/components/register/FullName";
-import Alert from "@/app/components/Alert";
-
 export default function Page() {
   const searchParams = useSearchParams();
   const isSocialSignup = searchParams.get("social") === "1";
@@ -187,6 +185,10 @@ export default function Page() {
     }
   };
 
+  const deadlineNotice = isVerifyOnly && verificationDeadlineParam
+    ? `Your account will be permanently deleted on ${new Date(verificationDeadlineParam).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} if you don't verify your email.`
+    : null;
+
   return (
     <form
       className="min-h-dvh bg-surface-high px-4 py-4 sm:px-6 sm:py-6"
@@ -194,13 +196,6 @@ export default function Page() {
         step < 4 ? handleNext : step === 4 ? handleSubmit : handleNoopSubmit
       }
     >
-      {isVerifyOnly && verificationDeadlineParam && (
-        <Alert
-          type="error"
-          message={`Your account will be permanently deleted on ${new Date(verificationDeadlineParam).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} if you don't verify your email.`}
-        />
-      )}
-      <Alert type="error" message={error} />
       <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-130 flex-col rounded-[28px] bg-surface px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6">
         <div className="flex min-h-10 items-center">
           {((!isSocialSignup && !isVerifyOnly && step !== 1 && step !== 7) ||
@@ -235,6 +230,9 @@ export default function Page() {
                     ? "Enter your display name"
                     : null}
           </h1>
+          {deadlineNotice && (
+            <p className="text-sm text-amber-700">{deadlineNotice}</p>
+          )}
         </div>
 
         <div className="mt-6 flex flex-1 flex-col justify-center transition-all duration-200 ease-out">
@@ -256,10 +254,11 @@ export default function Page() {
                 setDisplayName={setDisplayName}
                 submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
                 fixedAction
+                error={error}
               />
             ) : null
           ) : step === 1 ? (
-            <Email email={email} setEmail={setEmail} />
+            <Email email={email} setEmail={setEmail} error={error} />
           ) : step === 2 ? (
             <Password
               password={password}
@@ -279,6 +278,7 @@ export default function Page() {
               setDisplayName={setDisplayName}
               submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
               fixedAction
+              error={error}
             />
           ) : (
             <Verification email={email} fixedAction />

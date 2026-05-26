@@ -614,8 +614,6 @@ export default function Page() {
 
   return (
     <div className="relative min-h-screen bg-page">
-      {successMessage && <Alert type="success" message={successMessage} />}
-      {error && <Alert type="error" message={error} />}
       <Header
         title="Profile"
         isLoading={isLoadingAuth || isLoading || isSubmitChecking}
@@ -636,6 +634,8 @@ export default function Page() {
           className="relative z-0 mx-auto flex max-w-2xl flex-col items-center gap-6 px-4 pb-8 pt-24 sm:px-6"
           onSubmit={handleSave}
         >
+          {successMessage && <Alert type="success" message={successMessage} className="w-full" />}
+          {error && <Alert type="error" message={error} className="w-full" />}
           <div className="w-full rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
             <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
               Profile

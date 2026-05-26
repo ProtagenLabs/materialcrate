@@ -6,9 +6,10 @@ import ActionButton from "../ActionButton";
 interface EmailTypes {
   email: string;
   setEmail: React.Dispatch<React.SetStateAction<string>>;
+  error?: string | null;
 }
 
-export default function Email({ email, setEmail }: EmailTypes) {
+export default function Email({ email, setEmail, error }: EmailTypes) {
   const pathname = usePathname();
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const mode = pathname === "/register" ? "register" : "login";
@@ -46,6 +47,7 @@ export default function Email({ email, setEmail }: EmailTypes) {
             className="mt-3 w-full rounded-2xl border border-edge-mid bg-surface-high px-4 py-3.5 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-surface focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
             required
           />
+          {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}
           <p className="mt-2 text-sm font-medium text-ink">
             {pathname === "/register"
               ? "Already have an account? "

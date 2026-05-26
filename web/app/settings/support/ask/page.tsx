@@ -69,9 +69,6 @@ export default function Page() {
 
   return (
     <div className="relative min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F2EEE7_100%)]">
-      {successMessage && <Alert type="success" message={successMessage} />}
-      {error && <Alert type="error" message={error} />}
-
       <Header title="Ask for Help" isLoading={isSubmitting} />
 
       <form
@@ -79,6 +76,8 @@ export default function Page() {
         className="mx-auto flex max-w-2xl flex-col gap-5 px-4 pb-10 pt-20 sm:px-6"
         onSubmit={handleSubmit}
       >
+        {successMessage && <Alert type="success" message={successMessage} />}
+        {error && <Alert type="error" message={error} />}
         <div className="w-full rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
           <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
             Support

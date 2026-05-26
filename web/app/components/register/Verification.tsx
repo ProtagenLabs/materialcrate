@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ActionButton from "../ActionButton";
-import Alert from "../Alert";
 
 interface VerificationProps {
   email: string;
@@ -201,10 +200,8 @@ export default function Verification({
           </p>
         </div>
 
-        <Alert
-          message={status ? status : error}
-          type={status ? "success" : "error"}
-        />
+        {status && <p className="mt-4 text-center text-sm text-green-600">{status}</p>}
+        {error && <p className="mt-4 text-center text-sm text-red-500">{error}</p>}
       </div>
 
       <div className="mx-auto mt-8 w-full max-w-md">

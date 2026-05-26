@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import {
-  ArrowLeft,
   CloseCircle,
   DocumentText1,
   InfoCircle,
@@ -17,6 +16,7 @@ import {
 } from "iconsax-reactjs";
 import { useAuth } from "../../lib/auth-client";
 import Alert from "../../components/Alert";
+import Header from "../../components/Header";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,40 +104,34 @@ const VERDICT_CONFIG: Record<
 > = {
   DUPLICATE: {
     label: "Duplicate",
-    color: "text-red-700 dark:text-red-400",
-    bg: "bg-red-50 dark:bg-red-900/30",
+    color: "text-red-500",
+    bg: "bg-surface-high",
     Icon: CloseCircle,
   },
   SUSPICIOUS: {
     label: "Suspicious",
-    color: "text-amber-700 dark:text-amber-400",
-    bg: "bg-amber-50 dark:bg-amber-900/30",
+    color: "text-amber-500",
+    bg: "bg-surface-high",
     Icon: Warning2,
   },
   POSSIBLE: {
     label: "Possible",
-    color: "text-yellow-700 dark:text-yellow-400",
-    bg: "bg-yellow-50 dark:bg-yellow-900/30",
+    color: "text-yellow-600",
+    bg: "bg-surface-high",
     Icon: InfoCircle,
   },
   CLEAN: {
     label: "Clean",
-    color: "text-green-700 dark:text-green-400",
-    bg: "bg-green-50 dark:bg-green-900/30",
+    color: "text-green-600",
+    bg: "bg-surface-high",
     Icon: TickCircle,
   },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  PENDING_REVIEW: {
-    label: "Pending Review",
-    color: "text-amber-600 dark:text-amber-400",
-  },
-  REVIEWING: {
-    label: "Under Review",
-    color: "text-blue-600 dark:text-blue-400",
-  },
-  RESOLVED: { label: "Resolved", color: "text-green-600 dark:text-green-400" },
+  PENDING_REVIEW: { label: "Pending Review", color: "text-amber-600" },
+  REVIEWING: { label: "Under Review", color: "text-ink-2" },
+  RESOLVED: { label: "Resolved", color: "text-green-600" },
   DISMISSED: { label: "Dismissed", color: "text-ink-3" },
 };
 
@@ -534,8 +528,8 @@ function ModeratorPanel({
   };
 
   return (
-    <div className="rounded-[22px] border border-amber-200 bg-amber-50/60 p-5 dark:border-amber-800 dark:bg-amber-900/10">
-      <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">
+    <div className="rounded-[22px] border border-edge bg-surface p-5">
+      <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-ink-3">
         Moderator Controls
       </p>
       {error && <Alert message={error} type="error" />}
@@ -543,7 +537,7 @@ function ModeratorPanel({
         {actions.map((a) => (
           <label
             key={a.value}
-            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${action === a.value ? "border-amber-400 bg-amber-100 dark:border-amber-600 dark:bg-amber-900/30" : "border-edge bg-surface hover:bg-surface-high"}`}
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${action === a.value ? "border-[#E1761F] bg-[#E1761F]/5" : "border-edge bg-surface hover:bg-surface-high"}`}
           >
             <input
               type="radio"
@@ -551,7 +545,7 @@ function ModeratorPanel({
               value={a.value}
               checked={action === a.value}
               onChange={() => setAction(a.value)}
-              className="mt-0.5 accent-amber-600"
+              className="mt-0.5 accent-[#E1761F]"
             />
             <div>
               <p className="text-sm font-semibold text-ink">{a.label}</p>
@@ -565,13 +559,13 @@ function ModeratorPanel({
         onChange={(e) => setNote(e.target.value)}
         placeholder="Moderator note (optional)"
         rows={3}
-        className="mt-3 w-full resize-none rounded-xl border border-edge bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-amber-400"
+        className="mt-3 w-full resize-none rounded-xl border border-edge bg-surface-high px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-[#E1761F]/20"
       />
       <button
         type="button"
         disabled={!action || isSubmitting}
         onClick={() => void handleSubmit()}
-        className="mt-3 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-40 active:opacity-80"
+        className="mt-3 w-full rounded-xl bg-[#131212] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#2a2a2a] disabled:opacity-40 active:opacity-80"
       >
         {isSubmitting ? "Submitting…" : "Apply Action"}
       </button>
@@ -683,12 +677,7 @@ export default function Page() {
   if (isLoading || isLoadingAuth) {
     return (
       <div className="min-h-dvh bg-page">
-        <div className="flex h-14 items-center gap-3 border-b border-edge bg-surface px-4">
-          <button type="button" onClick={() => router.back()} className="p-1">
-            <ArrowLeft size={20} className="text-ink" />
-          </button>
-          <p className="font-semibold text-ink">Case Details</p>
-        </div>
+        <Header title="Case Details" isLoading />
         <div className="flex items-center justify-center pt-24">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-edge border-t-ink-2" />
         </div>
@@ -699,13 +688,8 @@ export default function Page() {
   if (error && !caseData) {
     return (
       <div className="min-h-dvh bg-page">
-        <div className="flex h-14 items-center gap-3 border-b border-edge bg-surface px-4">
-          <button type="button" onClick={() => router.back()} className="p-1">
-            <ArrowLeft size={20} className="text-ink" />
-          </button>
-          <p className="font-semibold text-ink">Case Details</p>
-        </div>
-        <div className="mx-auto max-w-xl px-4 pt-10">
+        <Header title="Case Details" />
+        <div className="mx-auto max-w-xl px-4 pt-20">
           <Alert message={error} type="error" />
         </div>
       </div>
@@ -738,44 +722,22 @@ export default function Page() {
 
   return (
     <div className="min-h-dvh bg-page">
-      {/* Header */}
-      <div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-edge bg-surface/90 px-4 backdrop-blur">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface-high active:opacity-60"
-        >
-          <ArrowLeft size={20} className="text-ink" />
-        </button>
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <p className="truncate font-semibold text-ink">Content Review</p>
-          <span className="hidden shrink-0 font-mono text-xs text-ink-3 sm:block">
-            #{c.id.slice(0, 8)}
-          </span>
-        </div>
-        <VerdictBadge verdict={c.verdict} />
-      </div>
+      <Header title="Content Review" rightSlot={<VerdictBadge verdict={c.verdict} />} />
 
       {error && (
-        <div className="px-4 pt-4">
+        <div className="mx-auto max-w-3xl px-4 pt-20">
           <Alert message={error} type="error" />
         </div>
       )}
 
-      <main className="mx-auto max-w-3xl space-y-6 px-4 pb-28 pt-6">
+      <main className="mx-auto max-w-3xl space-y-6 px-4 pb-28 pt-20">
         {/* Role banner */}
         {isOriginalAuthor && (
-          <div className="flex items-start gap-3 rounded-[18px] border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/15">
-            <ShieldTick
-              size={18}
-              className="mt-0.5 shrink-0 text-green-600 dark:text-green-400"
-              variant="Bulk"
-            />
+          <div className="flex items-start gap-3 rounded-[18px] border border-edge bg-surface p-4">
+            <ShieldTick size={18} className="mt-0.5 shrink-0 text-green-500" variant="Bulk" />
             <div>
-              <p className="text-sm font-semibold text-green-800 dark:text-green-300">
-                You are the original author
-              </p>
-              <p className="text-xs text-green-700 dark:text-green-400">
+              <p className="text-sm font-semibold text-ink">You are the original author</p>
+              <p className="text-xs text-ink-2">
                 {c.revenueRedirectEnabled
                   ? "Revenue from the suspected copy is being automatically redirected to you."
                   : "Monitor this case for moderation updates."}
@@ -784,19 +746,12 @@ export default function Page() {
           </div>
         )}
         {isSuspectedCopier && (
-          <div className="flex items-start gap-3 rounded-[18px] border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/15">
-            <Warning2
-              size={18}
-              className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
-              variant="Bulk"
-            />
+          <div className="flex items-start gap-3 rounded-[18px] border border-edge bg-surface p-4">
+            <Warning2 size={18} className="mt-0.5 shrink-0 text-amber-500" variant="Bulk" />
             <div>
-              <p className="text-sm font-semibold text-black dark:text-white">
-                Your upload is under review
-              </p>
-              <p className="text-xs text-black dark:text-white">
-                Your document was flagged for similarity with an existing
-                document. You may appeal below if you believe this is incorrect.
+              <p className="text-sm font-semibold text-ink">Your upload is under review</p>
+              <p className="text-xs text-ink-2">
+                Your document was flagged for similarity with an existing document. You may appeal below if you believe this is incorrect.
               </p>
             </div>
           </div>
@@ -834,15 +789,10 @@ export default function Page() {
             </div>
           </div>
           {c.revenueRedirect?.active && (
-            <div className="mt-4 flex items-center gap-2 rounded-xl bg-green-50 px-3 py-2 dark:bg-green-900/20">
-              <TickCircle
-                size={14}
-                className="text-green-600 dark:text-green-400"
-                variant="Bold"
-              />
-              <p className="text-xs font-medium text-green-700 dark:text-green-400">
-                Revenue is being redirected to the original author (
-                {c.revenueRedirect.redirectPercentage}%)
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-edge bg-surface-high px-3 py-2">
+              <TickCircle size={14} className="shrink-0 text-green-500" variant="Bold" />
+              <p className="text-xs text-ink-2">
+                Revenue is being redirected to the original author ({c.revenueRedirect.redirectPercentage}%)
               </p>
             </div>
           )}
@@ -865,12 +815,12 @@ export default function Page() {
             <PostCard
               post={c.originalPost}
               label="Original"
-              accent="text-green-600 dark:text-green-400"
+              accent="text-green-500"
             />
             <PostCard
               post={c.suspectedPost}
               label="Suspected Copy"
-              accent="text-red-600 dark:text-red-400"
+              accent="text-red-400"
             />
           </div>
         </section>
@@ -977,11 +927,9 @@ export default function Page() {
           )}
 
           {appealSuccess && (
-            <div className="flex items-center gap-2 rounded-[18px] border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/15">
-              <TickCircle size={16} className="text-green-600" variant="Bold" />
-              <p className="text-sm font-medium text-green-800 dark:text-green-300">
-                Appeal submitted. Our team will review it shortly.
-              </p>
+            <div className="flex items-center gap-2 rounded-[18px] border border-edge bg-surface p-4">
+              <TickCircle size={16} className="shrink-0 text-green-500" variant="Bold" />
+              <p className="text-sm text-ink-2">Appeal submitted. Our team will review it shortly.</p>
             </div>
           )}
 

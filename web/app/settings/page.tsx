@@ -174,9 +174,9 @@ export default function Settings() {
 
   return (
     <div className="min-h-dvh bg-page">
-      {error && <Alert message={error} type="error" />}
       <Header title="Settings" isLoading={isLoggingOut} />
       <div className="mx-auto max-w-2xl px-4 pb-8 pt-20 sm:px-6">
+        {error && <Alert message={error} type="error" className="mb-4" />}
         <div className="w-full space-y-3">
           {settingPages.map((section) => (
             <div

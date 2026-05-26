@@ -9,6 +9,7 @@ interface PasswordProps {
   setPassword: React.Dispatch<React.SetStateAction<string>>;
   submitLabel?: string;
   fixedAction?: boolean;
+  error?: string | null;
 }
 
 type RuleProps = {
@@ -30,6 +31,7 @@ export default function Password({
   setPassword,
   submitLabel = "NEXT",
   fixedAction = false,
+  error,
 }: PasswordProps) {
   const pathname = usePathname();
   const isRegister = pathname === "/register";
@@ -54,6 +56,7 @@ export default function Password({
               className="mt-2 w-full rounded-2xl border border-edge-mid bg-surface-high px-4 py-3.5 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-surface focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
               required
             />
+            {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}
           </div>
           {isRegister && (
             <div className="space-y-1 text-[11px] font-medium text-ink">

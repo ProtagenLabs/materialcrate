@@ -12,7 +12,6 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Email from "@/app/components/register/Email";
 import Password from "@/app/components/register/Password";
-import Alert from "@/app/components/Alert";
 import { useSystemPopup } from "@/app/components/SystemPopup";
 import { refreshAuth } from "@/app/lib/auth-client";
 
@@ -184,18 +183,12 @@ function LoginContent() {
     void handleRestorePrompt(restoreDeadline);
   }, [handleRestorePrompt, searchParams]);
 
+  const deletedNotice = searchParams.get("deleted") === "1"
+    ? `Account deleted. Log back in by ${formatRestoreDeadline(searchParams.get("restoreDeadline"))} to restore it.`
+    : null;
+
   return (
     <div className="min-h-dvh bg-surface-high px-4 py-4 sm:px-6 sm:py-6">
-      {searchParams.get("deleted") === "1" ? (
-        <Alert
-          type="info"
-          message={`Account deleted. Log back in by ${formatRestoreDeadline(
-            searchParams.get("restoreDeadline"),
-          )} to restore it.`}
-        />
-      ) : null}
-      {error && <Alert type="error" message={error} />}
-
       <form
         className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-130 flex-col rounded-[28px] bg-surface px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6"
         onSubmit={step < 2 ? handleNext : handleSubmit}
@@ -219,22 +212,26 @@ function LoginContent() {
             alt="MaterialCrate Logo"
             width={50}
             height={50}
-            className="h-auto w-[46px] sm:w-[50px]"
+            className="h-auto w-11.5 sm:w-12.5"
           />
           <h1 className="font-serif text-3xl leading-tight text-center sm:text-4xl">
             {step === 1 ? "Welcome Back" : "Enter your password"}
           </h1>
+          {deletedNotice && (
+            <p className="text-sm text-amber-700">{deletedNotice}</p>
+          )}
         </div>
 
         <div className="mt-6 flex flex-1 flex-col justify-center transition-all duration-200 ease-out">
           {step === 1 ? (
-            <Email email={email} setEmail={setEmail} />
+            <Email email={email} setEmail={setEmail} error={error} />
           ) : (
             <Password
               password={password}
               setPassword={setPassword}
               submitLabel={loading ? "SIGNING IN..." : "SIGN IN"}
               fixedAction
+              error={error}
             />
           )}
           {loading && step === 1 ? (

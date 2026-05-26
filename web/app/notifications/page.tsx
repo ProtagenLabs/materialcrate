@@ -488,9 +488,9 @@ export default function Page() {
   return (
     <div className="min-h-dvh bg-page">
       <Header title="Notifications" isLoading={isLoading} />
-      {error && <Alert message={error} type="error" />}
 
       <main className="mx-auto max-w-2xl space-y-5 px-4 pb-28 pt-20 sm:px-6">
+        {error && <Alert message={error} type="error" />}
         {notificationGroups.map((group) => (
           <section key={group.label}>
             <div className="mb-2 flex items-center justify-between">

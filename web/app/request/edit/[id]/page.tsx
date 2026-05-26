@@ -150,12 +150,12 @@ export default function EditRequestPage({
   return (
     <div className="min-h-screen bg-page">
       <Header title="Edit Request" />
-      <Alert message={alertMessage || null} type={alertType} />
 
       <form
         onSubmit={handleSubmit}
         className="mx-auto max-w-xl px-4 pt-20 pb-32 lg:pt-22 lg:pb-12"
       >
+        <Alert message={alertMessage || null} type={alertType} className="mb-4" />
         <div className="space-y-4 lg:bg-surface lg:rounded-2xl lg:border lg:border-edge lg:shadow-sm lg:p-6">
           <div>
             <label

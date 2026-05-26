@@ -188,13 +188,13 @@ export default function Page() {
 
   return (
     <div className="min-h-dvh bg-page">
-      <Alert message={success} type="success" />
-      <Alert message={error} type="error" />
       <Header
         title="Email Notifications"
         isLoading={isLoading || isSavingKey !== null}
       />
       <div className="mx-auto max-w-2xl px-4 pb-10 pt-20 sm:px-6">
+      <Alert message={success} type="success" className="mb-4" />
+      <Alert message={error} type="error" className="mb-4" />
       <div className="mb-4 rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
           Notifications

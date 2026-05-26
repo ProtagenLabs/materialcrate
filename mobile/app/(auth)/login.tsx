@@ -211,12 +211,6 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-
           {step === 1 && (
             <View style={styles.content}>
               <TouchableOpacity
@@ -244,6 +238,7 @@ export default function LoginScreen() {
                 autoComplete="email"
                 placeholderTextColor="#aaa"
               />
+              {error ? <Text style={styles.fieldError}>{error}</Text> : null}
 
               <Text style={styles.switchText}>
                 {"Don't have an account? "}
@@ -286,6 +281,7 @@ export default function LoginScreen() {
                 secureTextEntry
                 placeholderTextColor="#aaa"
               />
+              {error ? <Text style={styles.fieldError}>{error}</Text> : null}
 
               <TouchableOpacity
                 style={[
@@ -345,13 +341,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#111",
   },
-  errorBox: {
-    backgroundColor: "#FEE2E2",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorText: { color: "#B91C1C", fontSize: 14 },
+  fieldError: { color: "#ef4444", fontSize: 12, marginTop: 6 },
   content: { flex: 1 },
   socialBtn: {
     flexDirection: "row",

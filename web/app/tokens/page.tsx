@@ -388,10 +388,10 @@ export default function TokensPage() {
 
   return (
     <div className="min-h-dvh bg-page">
-      <Alert message={alert.message || null} type={alert.type} />
       <Header title="Tokens & Rewards" />
 
       <div className="mx-auto max-w-2xl space-y-5 px-4 pb-12 pt-20 sm:px-6">
+        <Alert message={alert.message || null} type={alert.type} className="mb-0" />
         <div className="overflow-hidden rounded-[20px] bg-linear-to-br from-[#E1761F] to-[#B35A12] p-6 text-white shadow-md">
           <div className="flex items-center gap-2 mb-1 opacity-80">
             <Coin1 size={16} color="white" variant="Bold" />
