@@ -27,8 +27,19 @@ type AdminCredentialsResult {
   name: String
 }
 
+type AdminUserItem {
+  id: ID!
+  email: String!
+  role: String!
+  name: String
+  createdAt: String!
+}
+
 extend type Mutation {
   adminVerifyCredentials(email: String!, password: String!): AdminCredentialsResult!
+  adminCreateAdmin(email: String!, password: String!, role: String!, name: String): AdminUserItem!
+  adminUpdateAdmin(id: ID!, role: String, name: String): AdminUserItem!
+  adminRemoveAdmin(id: ID!): Boolean!
   adminReviewCashoutRequest(id: ID!, status: String!, adminNote: String): Boolean!
 
   adminCreateBot(
@@ -95,4 +106,5 @@ extend type Query {
   adminListBots: [User!]!
   adminListCashoutRequests(status: String, limit: Int = 50, offset: Int = 0): [AdminCashoutRequest!]!
   adminStats: AdminStats!
+  adminListAdmins: [AdminUserItem!]!
 }

@@ -140,7 +140,7 @@ export async function POST(req: Request) {
 
   reset(ip);
 
-  const token = createAdminToken(result.role ?? "moderator");
+  const token = createAdminToken(result.role ?? "moderator", email);
   const response = NextResponse.json({ ok: true });
   response.cookies.set(ADMIN_COOKIE_NAME, token, {
     httpOnly: true,

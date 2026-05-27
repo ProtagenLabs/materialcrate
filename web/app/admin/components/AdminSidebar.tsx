@@ -3,10 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HiHome } from "react-icons/hi2";
+import { HiHome, HiUsers } from "react-icons/hi2";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Home", icon: HiHome },
+  { href: "/admin/team", label: "Team", icon: HiUsers },
 ];
 
 export default function AdminSidebar() {
@@ -30,7 +31,7 @@ export default function AdminSidebar() {
       {/* Nav */}
       <nav className="flex-1 space-y-0.5 px-3 py-4">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
           return (
             <Link
               key={href}

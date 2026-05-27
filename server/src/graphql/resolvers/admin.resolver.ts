@@ -204,6 +204,15 @@ export const AdminResolver = {
       };
     },
 
+    adminListAdmins: async (_: unknown, __: unknown, ctx: AdminContext) => {
+      requireAdmin(ctx);
+      const users = await (prisma as any).adminUser.findMany({
+        orderBy: { createdAt: "asc" },
+        select: { id: true, email: true, role: true, name: true, createdAt: true },
+      });
+      return users.map((u: any) => ({ ...u, createdAt: toIso(u.createdAt) ?? "" }));
+    },
+
     adminListBots: async (_: unknown, __: unknown, ctx: AdminContext) => {
       requireAdmin(ctx);
       return prisma.user.findMany({
@@ -259,6 +268,79 @@ export const AdminResolver = {
     },
   },
   Mutation: {
+    adminCreateAdmin: async (
+      _: unknown,
+      { email, password, role, name }: { email: string; password: string; role: string; name?: string },
+      ctx: AdminContext,
+    ) => {
+      requireAdmin(ctx);
+
+      const VALID_ROLES = ["super_admin", "admin", "moderator", "viewer"];
+      if (!VALID_ROLES.includes(role)) throw new Error("Invalid role");
+      if (!password || password.length < 8) throw new Error("Password must be at least 8 characters");
+
+      const normalized = email.trim().toLowerCase();
+      const exists = await (prisma as any).adminUser.findUnique({ where: { email: normalized } });
+      if (exists) throw new Error("An admin with that email already exists");
+
+      const passwordHash = await bcrypt.hash(password, 12);
+      const user = await (prisma as any).adminUser.create({
+        data: { email: normalized, passwordHash, role, name: name?.trim() ?? null },
+      });
+      return { ...user, createdAt: toIso(user.createdAt) ?? "" };
+    },
+
+    adminUpdateAdmin: async (
+      _: unknown,
+      { id, role, name }: { id: string; role?: string; name?: string },
+      ctx: AdminContext,
+    ) => {
+      requireAdmin(ctx);
+
+      if (role) {
+        const VALID_ROLES = ["super_admin", "admin", "moderator", "viewer"];
+        if (!VALID_ROLES.includes(role)) throw new Error("Invalid role");
+
+        // Prevent demoting the last super_admin
+        if (role !== "super_admin") {
+          const target = await (prisma as any).adminUser.findUnique({ where: { id }, select: { role: true } });
+          if (target?.role === "super_admin") {
+            const count = await (prisma as any).adminUser.count({ where: { role: "super_admin" } });
+            if (count <= 1) throw new Error("Cannot demote the only super_admin");
+          }
+        }
+      }
+
+      const user = await (prisma as any).adminUser.update({
+        where: { id },
+        data: {
+          ...(role ? { role } : {}),
+          ...(name !== undefined ? { name: name?.trim() || null } : {}),
+        },
+      });
+      return { ...user, createdAt: toIso(user.createdAt) ?? "" };
+    },
+
+    adminRemoveAdmin: async (
+      _: unknown,
+      { id }: { id: string },
+      ctx: AdminContext,
+    ) => {
+      requireAdmin(ctx);
+
+      const target = await (prisma as any).adminUser.findUnique({ where: { id }, select: { role: true } });
+      if (!target) throw new Error("Admin not found");
+
+      // Prevent deleting the last super_admin
+      if (target.role === "super_admin") {
+        const count = await (prisma as any).adminUser.count({ where: { role: "super_admin" } });
+        if (count <= 1) throw new Error("Cannot remove the only super_admin");
+      }
+
+      await (prisma as any).adminUser.delete({ where: { id } });
+      return true;
+    },
+
     adminVerifyCredentials: async (
       _: unknown,
       { email, password }: { email: string; password: string },
