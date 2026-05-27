@@ -71,19 +71,23 @@ const VERIFY_MUTATION = `
 
 // ─── Route ─────────────────────────────────────────────────────────────────
 
+const IS_DEV = process.env.NODE_ENV !== "production";
+
 export async function POST(req: Request) {
   const ip = getIp(req);
 
-  const { locked, retryAfter } = isLocked(ip);
-  if (locked) {
-    const mins = Math.ceil(retryAfter / 60);
-    return NextResponse.json(
-      {
-        error: `Too many failed attempts. Try again in ${mins} minute${mins === 1 ? "" : "s"}.`,
-        retryAfter,
-      },
-      { status: 429 },
-    );
+  if (!IS_DEV) {
+    const { locked, retryAfter } = isLocked(ip);
+    if (locked) {
+      const mins = Math.ceil(retryAfter / 60);
+      return NextResponse.json(
+        {
+          error: `Too many failed attempts. Try again in ${mins} minute${mins === 1 ? "" : "s"}.`,
+          retryAfter,
+        },
+        { status: 429 },
+      );
+    }
   }
 
   let body: { email?: string; password?: string };
@@ -115,13 +119,16 @@ export async function POST(req: Request) {
       }),
     });
     const gqlBody = await gqlRes.json().catch(() => ({}));
+    if (gqlBody?.errors?.length) {
+      return NextResponse.json({ error: gqlBody.errors[0].message }, { status: 500 });
+    }
     result = gqlBody?.data?.adminVerifyCredentials ?? { valid: false, role: null, name: null };
   } catch {
     return NextResponse.json({ error: "Auth service unavailable" }, { status: 503 });
   }
 
   if (!result.valid) {
-    const { attemptsRemaining, retryAfter: lockRetry } = recordFailure(ip);
+    const { attemptsRemaining, retryAfter: lockRetry } = IS_DEV ? { attemptsRemaining: 99, retryAfter: 0 } : recordFailure(ip);
     if (lockRetry > 0) {
       const mins = Math.ceil(lockRetry / 60);
       return NextResponse.json(
