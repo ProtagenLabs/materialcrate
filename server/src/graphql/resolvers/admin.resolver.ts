@@ -54,6 +54,156 @@ const toIso = (v: unknown): string | null => {
 
 export const AdminResolver = {
   Query: {
+    adminStats: async (_: unknown, __: unknown, ctx: AdminContext) => {
+      requireAdmin(ctx);
+
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const [
+        totalUsers,
+        newUsersToday,
+        uploadsToday,
+        pendingReviews,
+        pendingPayouts,
+        revenueAgg,
+        uploadsByDay,
+        revenueByMonth,
+        recentPosts,
+        recentUsers,
+        recentReports,
+        recentPayouts,
+        latestReports,
+        trendingDocs,
+      ] = await Promise.all([
+        prisma.user.count({ where: { deleted: false, isBot: false } }),
+        prisma.user.count({ where: { deleted: false, isBot: false, createdAt: { gte: startOfToday } } }),
+        prisma.post.count({ where: { deleted: false, createdAt: { gte: startOfToday } } }),
+        (prisma as any).report.count({ where: { resolved: false } }),
+        (prisma as any).tokenCashoutRequest.count({ where: { status: "pending" } }),
+        (prisma as any).tokenCashoutRequest.aggregate({
+          where: { status: { in: ["approved", "paid"] }, createdAt: { gte: startOfMonth } },
+          _sum: { cashAmount: true },
+        }),
+        Promise.all(
+          Array.from({ length: 7 }, (_, i) => {
+            const day = new Date(startOfToday);
+            day.setDate(day.getDate() - (6 - i));
+            const nextDay = new Date(day);
+            nextDay.setDate(nextDay.getDate() + 1);
+            return prisma.post.count({ where: { deleted: false, createdAt: { gte: day, lt: nextDay } } });
+          }),
+        ),
+        Promise.all(
+          Array.from({ length: 12 }, async (_, i) => {
+            const mStart = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
+            const mEnd = new Date(now.getFullYear(), now.getMonth() - (11 - i) + 1, 1);
+            const agg = await (prisma as any).tokenCashoutRequest.aggregate({
+              where: { status: { in: ["approved", "paid"] }, createdAt: { gte: mStart, lt: mEnd } },
+              _sum: { cashAmount: true },
+            });
+            return (agg._sum.cashAmount as number) ?? 0;
+          }),
+        ),
+        prisma.post.findMany({
+          where: { deleted: false },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: { author: { select: { username: true } } },
+        }),
+        prisma.user.findMany({
+          where: { deleted: false, isBot: false },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: { username: true, createdAt: true },
+        }),
+        (prisma as any).report.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: { user: { select: { username: true } } },
+        }),
+        (prisma as any).tokenCashoutRequest.findMany({
+          where: { status: "pending" },
+          orderBy: { createdAt: "desc" },
+          take: 3,
+          include: { user: { select: { username: true } } },
+        }),
+        (prisma as any).report.findMany({
+          where: { resolved: false },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: { user: { select: { username: true } } },
+        }),
+        prisma.post.findMany({
+          where: { deleted: false },
+          orderBy: { viewCount: "desc" },
+          take: 3,
+          select: { id: true, title: true, categories: true, viewCount: true },
+        }),
+      ]);
+
+      const activityItems = [
+        ...recentPosts.map((p) => ({
+          type: "upload",
+          user: p.author?.username ?? "unknown",
+          action: "uploaded",
+          target: p.title,
+          time: p.createdAt.toISOString(),
+        })),
+        ...recentUsers.map((u) => ({
+          type: "signup",
+          user: u.username,
+          action: "joined MaterialCrate",
+          target: "",
+          time: u.createdAt.toISOString(),
+        })),
+        ...recentReports.map((r: any) => ({
+          type: "report",
+          user: r.user?.username ?? "unknown",
+          action: "reported",
+          target: r.title,
+          time: r.createdAt.toISOString(),
+        })),
+        ...recentPayouts.map((p: any) => ({
+          type: "payout",
+          user: p.user?.username ?? "unknown",
+          action: "requested payout of",
+          target: `$${(p.cashAmount as number).toFixed(2)}`,
+          time: p.createdAt.toISOString(),
+        })),
+      ]
+        .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+        .slice(0, 6);
+
+      return {
+        totalUsers,
+        newUsersToday,
+        uploadsToday,
+        pendingReviews,
+        pendingPayouts,
+        revenueThisMonth: (revenueAgg._sum.cashAmount as number) ?? 0,
+        uploadBars: uploadsByDay,
+        revenueChart: revenueByMonth,
+        recentActivity: activityItems,
+        latestReports: (latestReports as any[]).map((r) => ({
+          id: r.id,
+          category: r.category,
+          title: r.title,
+          resolved: r.resolved,
+          createdAt: r.createdAt.toISOString(),
+          username: r.user?.username ?? "unknown",
+        })),
+        trendingDocs: trendingDocs.map((d, i) => ({
+          id: d.id,
+          rank: i + 1,
+          title: d.title,
+          category: d.categories[0] ?? "General",
+          viewCount: d.viewCount,
+        })),
+      };
+    },
+
     adminListBots: async (_: unknown, __: unknown, ctx: AdminContext) => {
       requireAdmin(ctx);
       return prisma.user.findMany({
@@ -109,6 +259,30 @@ export const AdminResolver = {
     },
   },
   Mutation: {
+    adminVerifyCredentials: async (
+      _: unknown,
+      { email, password }: { email: string; password: string },
+      ctx: AdminContext,
+    ) => {
+      requireAdmin(ctx);
+
+      const user = await (prisma as any).adminUser.findUnique({
+        where: { email: email.trim().toLowerCase() },
+        select: { passwordHash: true, role: true, name: true },
+      });
+
+      if (!user) {
+        return { valid: false, role: null, name: null };
+      }
+
+      const valid = await bcrypt.compare(password, user.passwordHash);
+      if (!valid) {
+        return { valid: false, role: null, name: null };
+      }
+
+      return { valid: true, role: user.role, name: user.name ?? null };
+    },
+
     adminReviewCashoutRequest: async (
       _: unknown,
       {

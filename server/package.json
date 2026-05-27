@@ -16,7 +16,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "seed:ocw": "tsx prisma/seed-ocw.ts",
-    "seed:ocw:reset": "tsx prisma/seed-ocw.ts --reset"
+    "seed:ocw:reset": "tsx prisma/seed-ocw.ts --reset",
+    "create:admin": "tsx scripts/create-admin.ts"
   },
   "keywords": [],
   "author": "",

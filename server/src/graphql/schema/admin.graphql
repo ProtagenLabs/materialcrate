@@ -21,7 +21,14 @@ type AdminCashoutUser {
   tokensEarned: Int!
 }
 
+type AdminCredentialsResult {
+  valid: Boolean!
+  role: String
+  name: String
+}
+
 extend type Mutation {
+  adminVerifyCredentials(email: String!, password: String!): AdminCredentialsResult!
   adminReviewCashoutRequest(id: ID!, status: String!, adminNote: String): Boolean!
 
   adminCreateBot(
@@ -45,7 +52,47 @@ extend type Mutation {
   ): Post!
 }
 
+type AdminActivityItem {
+  type: String!
+  user: String!
+  action: String!
+  target: String!
+  time: String!
+}
+
+type AdminReportItem {
+  id: ID!
+  category: String!
+  title: String!
+  resolved: Boolean!
+  createdAt: String!
+  username: String!
+}
+
+type AdminTrendingDoc {
+  id: ID!
+  rank: Int!
+  title: String!
+  category: String!
+  viewCount: Int!
+}
+
+type AdminStats {
+  totalUsers: Int!
+  newUsersToday: Int!
+  uploadsToday: Int!
+  pendingReviews: Int!
+  pendingPayouts: Int!
+  revenueThisMonth: Float!
+  uploadBars: [Int!]!
+  revenueChart: [Float!]!
+  recentActivity: [AdminActivityItem!]!
+  latestReports: [AdminReportItem!]!
+  trendingDocs: [AdminTrendingDoc!]!
+}
+
 extend type Query {
   adminListBots: [User!]!
   adminListCashoutRequests(status: String, limit: Int = 50, offset: Int = 0): [AdminCashoutRequest!]!
+  adminStats: AdminStats!
 }

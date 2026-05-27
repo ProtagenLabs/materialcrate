@@ -1,28 +1,17 @@
 import crypto from "crypto";
 
-export const ADMIN_EMAIL = "itsjumah.tj@gmail.com";
-const ADMIN_PASSWORD_HASH =
-  "01db28934d840035b74f770a24babe081a42e2dc450ee6106b1b59388d6495c2:b81d138284bba135e2a72fc42e436a789ea4746c0bd47fbd98cb9f29e4d812c864716131b6872d53215298600a0cc2acb594e49b665183d667cb0fcc241363c7";
-
 export const ADMIN_COOKIE_NAME = "mc_admin_session";
 export const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 24; // 1 day
 
 const TOKEN_SECRET = crypto
   .createHash("sha256")
-  .update("mc-admin-token-" + ADMIN_EMAIL)
+  .update("mc-admin-token-secret-v2")
   .digest();
 
-export function verifyAdminPassword(password: string): boolean {
-  const [salt, hash] = ADMIN_PASSWORD_HASH.split(":");
-  if (!salt || !hash) return false;
-  const keyBuffer = Buffer.from(hash, "hex");
-  const derivedKey = crypto.scryptSync(password, salt, 64);
-  return crypto.timingSafeEqual(keyBuffer, derivedKey);
-}
-
-export function createAdminToken(): string {
+export function createAdminToken(role: string): string {
   const payload = {
     role: "admin",
+    adminRole: role,
     iat: Date.now(),
     exp: Date.now() + ADMIN_COOKIE_MAX_AGE * 1000,
   };

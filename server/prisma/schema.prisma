@@ -767,3 +767,15 @@ model DocumentRequestFulfillmentLike {
   @@id([userId, fulfillmentId])
   @@index([fulfillmentId])
 }
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("moderator") // "super_admin" | "admin" | "moderator" | "viewer"
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+}
