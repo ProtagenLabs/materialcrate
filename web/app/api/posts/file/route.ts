@@ -7,13 +7,6 @@ const ALLOWED_HOST_SUFFIX = ".amazonaws.com";
 const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 const PROTECTED_PDF_REQUEST_HEADER = "x-materialcrate-pdf-request";
-const BLOCKED_FETCH_DESTINATIONS = new Set([
-  "document",
-  "embed",
-  "frame",
-  "iframe",
-  "object",
-]);
 const FILE_URL_QUERY = `
   query PostFileUrl($id: ID!) {
     post(id: $id) {
@@ -50,10 +43,6 @@ export async function GET(req: Request) {
     .get(PROTECTED_PDF_REQUEST_HEADER)
     ?.trim()
     .toLowerCase();
-  const fetchDestination = requestHeaders
-    .get("sec-fetch-dest")
-    ?.trim()
-    .toLowerCase();
 
   if (!postId) {
     return NextResponse.json({ error: "Post id is required" }, { status: 400 });
@@ -61,16 +50,6 @@ export async function GET(req: Request) {
 
   const isViewerRequest = requestIntent === "viewer";
   const isDownloadRequest = requestIntent === "download";
-
-  if (
-    (!isViewerRequest && !isDownloadRequest) ||
-    (fetchDestination && BLOCKED_FETCH_DESTINATIONS.has(fetchDestination))
-  ) {
-    return NextResponse.json(
-      { error: "Direct file access is not allowed" },
-      { status: 403 },
-    );
-  }
 
   const cookieStore = await cookies();
   const token = cookieStore.get("mc_session")?.value;

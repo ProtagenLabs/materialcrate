@@ -15,7 +15,11 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "seed:ocw": "tsx prisma/seed-ocw.ts",
-    "seed:ocw:reset": "tsx prisma/seed-ocw.ts --reset"
+    "seed:ocw:reset": "tsx prisma/seed-ocw.ts --reset",
+    "seed:openstax": "tsx prisma/seed-openstax.ts",
+    "seed:openstax:reset": "tsx prisma/seed-openstax.ts --reset",
+    "seed:archive": "tsx prisma/seed-archive.ts",
+    "seed:archive:reset": "tsx prisma/seed-archive.ts --reset"
   },
   "keywords": [],
   "author": "ProtagenLabs",

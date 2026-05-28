@@ -4,7 +4,8 @@
       "Bash(xargs grep:*)",
       "Bash(pnpm add:*)",
       "Bash(npx prisma:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(curl -s \"https://archive.org/advancedsearch.php?q=subject:mathematics+AND+mediatype:texts&output=json&rows=3&page=1&fl[]=identifier,title,creator,subject,description,year,language,format\")"
     ]
   }
 }
