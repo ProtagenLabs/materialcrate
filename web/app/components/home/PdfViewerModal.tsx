@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CloseCircle } from "iconsax-reactjs";
+import { useRouter } from "next/navigation";
+import { CloseCircle, Cpu } from "iconsax-reactjs";
 import { trackFeedInteraction } from "@/app/lib/feed-tracking";
 import type { HomePost } from "./Post";
 
@@ -45,8 +46,7 @@ const AD_SANDBOX_SCRIPT = `<script>
 <\/script>`;
 
 function buildAdHtml(zone: AdZone, cacheBust: string): string {
-  const base =
-    `<!DOCTYPE html><html><head><style>body{margin:0;padding:0;}</style></head><body>${AD_SANDBOX_SCRIPT}`;
+  const base = `<!DOCTYPE html><html><head><style>body{margin:0;padding:0;}</style></head><body>${AD_SANDBOX_SCRIPT}`;
   const close = `</body></html>`;
 
   if (zone.type === "native") {
@@ -66,11 +66,7 @@ function buildAdHtml(zone: AdZone, cacheBust: string): string {
     );
   }
   // socialbar
-  return (
-    base +
-    `<script src="${zone.src}?r=${cacheBust}"><\/script>` +
-    close
-  );
+  return base + `<script src="${zone.src}?r=${cacheBust}"><\/script>` + close;
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -99,6 +95,7 @@ export default function PdfViewerModal({
   isOpen,
   onClose,
 }: PdfViewerModalProps) {
+  const router = useRouter();
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [pdfState, setPdfState] = useState<PdfState>(INITIAL_STATE);
   const proxiedFileUrl = post?.id
@@ -189,7 +186,12 @@ export default function PdfViewerModal({
     let observer: IntersectionObserver | null = null;
 
     const renderPdf = async () => {
-      setPdfState({ isLoading: true, isRendering: false, error: "", pageCount: 0 });
+      setPdfState({
+        isLoading: true,
+        isRendering: false,
+        error: "",
+        pageCount: 0,
+      });
 
       try {
         const pdfjs = await import("pdfjs-dist");
@@ -207,7 +209,10 @@ export default function PdfViewerModal({
         loadingTask = task;
 
         const pdf = await task.promise;
-        if (isCancelled) { task.destroy(); return; }
+        if (isCancelled) {
+          task.destroy();
+          return;
+        }
 
         canvasContainer.innerHTML = "";
 
@@ -253,11 +258,13 @@ export default function PdfViewerModal({
             adWrapper.appendChild(sponsored);
             const iframe = document.createElement("iframe");
             const minHeight = zone.type === "banner" ? zone.height : 120;
-            iframe.style.cssText =
-              `width:100%;height:${minHeight}px;border:none;display:block;overflow:hidden;`;
+            iframe.style.cssText = `width:100%;height:${minHeight}px;border:none;display:block;overflow:hidden;`;
             iframe.sandbox.add(
-              "allow-scripts", "allow-same-origin", "allow-popups",
-              "allow-popups-to-escape-sandbox", "allow-forms",
+              "allow-scripts",
+              "allow-same-origin",
+              "allow-popups",
+              "allow-popups-to-escape-sandbox",
+              "allow-forms",
             );
             adWrapper.appendChild(iframe);
             canvasContainer.appendChild(adWrapper);
@@ -279,7 +286,12 @@ export default function PdfViewerModal({
           }
         }
 
-        setPdfState({ isLoading: false, isRendering: false, error: "", pageCount: pdf.numPages });
+        setPdfState({
+          isLoading: false,
+          isRendering: false,
+          error: "",
+          pageCount: pdf.numPages,
+        });
 
         // ── Per-page paint / wipe ─────────────────────────────────────────
         const rendering = new Set<number>();
@@ -294,26 +306,33 @@ export default function PdfViewerModal({
             const finalVP =
               vp.width > MAX_DIM || vp.height > MAX_DIM
                 ? page.getViewport({
-                    scale: RENDER_SCALE * Math.min(MAX_DIM / vp.width, MAX_DIM / vp.height),
+                    scale:
+                      RENDER_SCALE *
+                      Math.min(MAX_DIM / vp.width, MAX_DIM / vp.height),
                   })
                 : vp;
 
             const canvas = document.createElement("canvas");
             const ctx = canvas.getContext("2d");
-            if (!ctx) { page.cleanup(); return; }
+            if (!ctx) {
+              page.cleanup();
+              return;
+            }
 
             canvas.width = finalVP.width;
             canvas.height = finalVP.height;
             canvas.className = "h-auto w-full pointer-events-none";
 
-            await page.render({ canvas, canvasContext: ctx, viewport: finalVP }).promise;
+            await page.render({ canvas, canvasContext: ctx, viewport: finalVP })
+              .promise;
             // Free pdfjs's internal decode buffer — canvas pixels stay on GPU.
             page.cleanup();
 
             if (isCancelled) return;
 
             el.style.aspectRatio = "";
-            el.className = "relative overflow-hidden rounded bg-surface shadow-sm select-none";
+            el.className =
+              "relative overflow-hidden rounded bg-surface shadow-sm select-none";
             el.appendChild(canvas);
             rendered.add(num);
           } catch {
@@ -354,7 +373,11 @@ export default function PdfViewerModal({
               }
             }
           },
-          { root: canvasContainer.parentElement, rootMargin: "400px 0px", threshold: 0 },
+          {
+            root: canvasContainer.parentElement,
+            rootMargin: "400px 0px",
+            threshold: 0,
+          },
         );
 
         for (const wrapper of pageWrappers) {
@@ -402,7 +425,17 @@ export default function PdfViewerModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" aria-label="Close button" onClick={onClose}>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                router.push(`/hub?postId=${encodeURIComponent(post.id)}`);
+              }}
+              className="rounded-3xl bg-[#E1761F] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-[#C96018] active:scale-95 shrink-0 cursor-pointer"
+            >
+              Open in Hub
+            </button>
+            <button type="button" aria-label="Close" onClick={onClose}>
               <CloseCircle size={28} color="var(--ink)" variant="Bold" />
             </button>
           </div>
