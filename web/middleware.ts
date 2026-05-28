@@ -5,11 +5,13 @@ const ADMIN_COOKIE = "mc_admin_session";
 // Must match the secret string used in web/app/lib/admin-auth.ts
 const TOKEN_SECRET_INPUT = "mc-admin-token-secret-v2";
 
-function b64urlToBytes(b64url: string): Uint8Array {
+function b64urlToBytes(b64url: string): Uint8Array<ArrayBuffer> {
   const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
   const padded = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), "=");
   const binary = atob(padded);
-  return new Uint8Array([...binary].map((c) => c.charCodeAt(0)));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }
 
 async function verifyAdminToken(token: string): Promise<boolean> {

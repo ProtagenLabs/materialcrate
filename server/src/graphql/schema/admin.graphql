@@ -95,6 +95,7 @@ type AdminStats {
   pendingReviews: Int!
   pendingPayouts: Int!
   revenueThisMonth: Float!
+  storageBytes: Float!
   uploadBars: [Int!]!
   revenueChart: [Float!]!
   recentActivity: [AdminActivityItem!]!

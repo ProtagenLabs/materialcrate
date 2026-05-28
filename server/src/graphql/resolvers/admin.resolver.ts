@@ -1,8 +1,49 @@
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { CloudWatchClient, GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
 import { prisma } from "../../config/prisma.js";
 import { s3 } from "../../config/s3.js";
+
+// S3 storage metrics are always published to us-east-1 in CloudWatch
+const cw = new CloudWatchClient({ region: "us-east-1" });
+
+async function getBucketBytes(bucket: string): Promise<number> {
+  if (!bucket) return 0;
+  const now = new Date();
+  const res = await cw.send(
+    new GetMetricStatisticsCommand({
+      Namespace: "AWS/S3",
+      MetricName: "BucketSizeBytes",
+      Dimensions: [
+        { Name: "BucketName", Value: bucket },
+        { Name: "StorageType", Value: "StandardStorage" },
+      ],
+      StartTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+      EndTime: now,
+      Period: 86400,
+      Statistics: ["Average"],
+    }),
+  );
+  const points = (res.Datapoints ?? []).sort(
+    (a, b) => (b.Timestamp?.getTime() ?? 0) - (a.Timestamp?.getTime() ?? 0),
+  );
+  const bytes = points[0]?.Average ?? 0;
+  if (bytes > 0) return bytes;
+
+  // CloudWatch publishes once per day — fall back to listing objects directly
+  console.warn(`[storage] no CloudWatch datapoints for "${bucket}", falling back to ListObjectsV2`);
+  let total = 0;
+  let token: string | undefined;
+  do {
+    const page = await s3.send(
+      new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token }),
+    );
+    for (const obj of page.Contents ?? []) total += obj.Size ?? 0;
+    token = page.NextContinuationToken;
+  } while (token);
+  return total;
+}
 
 type AdminContext = {
   isAdmin?: boolean;
@@ -76,6 +117,8 @@ export const AdminResolver = {
         recentPayouts,
         latestReports,
         trendingDocs,
+        privateBucketBytes,
+        publicBucketBytes,
       ] = await Promise.all([
         prisma.user.count({ where: { deleted: false, isBot: false } }),
         prisma.user.count({ where: { deleted: false, isBot: false, createdAt: { gte: startOfToday } } }),
@@ -141,6 +184,8 @@ export const AdminResolver = {
           take: 3,
           select: { id: true, title: true, categories: true, viewCount: true },
         }),
+        getBucketBytes(process.env.AWS_S3_PRIVATE_BUCKET ?? "").catch((e) => { console.error("[storage] private bucket error:", e.message); return 0; }),
+        getBucketBytes(process.env.AWS_S3_PUBLIC_BUCKET ?? "").catch((e) => { console.error("[storage] public bucket error:", e.message); return 0; }),
       ]);
 
       const activityItems = [
@@ -183,6 +228,7 @@ export const AdminResolver = {
         pendingReviews,
         pendingPayouts,
         revenueThisMonth: (revenueAgg._sum.cashAmount as number) ?? 0,
+        storageBytes: privateBucketBytes + publicBucketBytes,
         uploadBars: uploadsByDay,
         revenueChart: revenueByMonth,
         recentActivity: activityItems,

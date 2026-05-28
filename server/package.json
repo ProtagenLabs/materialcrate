@@ -1,5 +1,5 @@
 {
-  "name": "materialcrate-backend",
+  "name": "materialcrate-api",
   "version": "0.2.4",
   "description": "",
   "main": "index.js",
@@ -9,18 +9,15 @@
     "dev": "nodemon --exec tsx src/index.ts",
     "build": "tsc && cp -r src/email/assets dist/email/assets",
     "start": "node dist/index.js",
-    "render:build": "prisma generate && tsc && cp -r src/email/assets dist/email/assets",
-    "render:migrate": "prisma migrate deploy",
     "railway:build": "prisma generate && tsc && cp -r src/email/assets dist/email/assets",
     "railway:start": "prisma migrate deploy && node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "seed:ocw": "tsx prisma/seed-ocw.ts",
-    "seed:ocw:reset": "tsx prisma/seed-ocw.ts --reset",
-    "create:admin": "tsx scripts/create-admin.ts"
+    "seed:ocw:reset": "tsx prisma/seed-ocw.ts --reset"
   },
   "keywords": [],
-  "author": "",
+  "author": "ProtagenLabs",
   "license": "ISC",
   "packageManager": "pnpm@10.21.0",
   "pnpm": {
@@ -31,6 +28,7 @@
     ]
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.1055.0",
     "@aws-sdk/client-s3": "^3.990.0",
     "@aws-sdk/s3-request-presigner": "^3.990.0",
     "@napi-rs/canvas": "^1.0.0",

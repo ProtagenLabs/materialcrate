@@ -50,6 +50,7 @@ type AdminStats = {
   pendingReviews: number;
   pendingPayouts: number;
   revenueThisMonth: number;
+  storageBytes: number;
   uploadBars: number[];
   revenueChart: number[];
   recentActivity: ActivityItem[];
@@ -223,14 +224,14 @@ export default function AdminDashboardPage() {
     },
     {
       label: "Storage Used",
-      value: "68.4 GB",
+      value: stats ? `${(stats.storageBytes / 1e9).toFixed(1)} GB` : null,
       sub: null,
-      change: "82% full",
+      change: "updated daily",
       up: false,
       icon: HiCircleStack,
       color: "#64748B",
       iconBg: "#F1F5F9",
-      storagePercent: 82,
+      storageBytes: stats?.storageBytes ?? null,
     },
   ];
 
@@ -278,7 +279,7 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-3 gap-4">
             {STAT_CARDS.map((stat) => {
               const Icon = stat.icon;
-              const isStorage = "storagePercent" in stat;
+              const isStorage = "storageBytes" in stat;
               return (
                 <div
                   key={stat.label}
@@ -321,14 +322,9 @@ export default function AdminDashboardPage() {
                     {isStorage ? (
                       <div className="space-y-1.5">
                         <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                          <div
-                            className="h-full rounded-full bg-slate-400 transition-all"
-                            style={{ width: `${stat.storagePercent}%` }}
-                          />
+                          <div className="h-full w-full rounded-full bg-slate-200" />
                         </div>
-                        <p className="text-[10px] text-[#aaa]">
-                          {stat.storagePercent}% of 120 GB
-                        </p>
+                        <p className="text-[10px] text-[#aaa]">updated daily via AWS</p>
                       </div>
                     ) : (
                       <svg viewBox="0 0 120 48" className="h-8 w-full" preserveAspectRatio="none">
