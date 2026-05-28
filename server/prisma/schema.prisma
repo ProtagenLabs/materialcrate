@@ -110,12 +110,14 @@ model User {
   documentRequests       DocumentRequest[]              @relation("UserRequests")
   requestFulfillments    DocumentRequestFulfillment[]   @relation("UserFulfillments")
   fulfillmentLikes       DocumentRequestFulfillmentLike[] @relation("UserFulfillmentLikes")
+  lastSeen      DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([username])
   @@index([email])
   @@index([pendingEmail])
+  @@index([lastSeen])
 }
 
 model TokenTransaction {

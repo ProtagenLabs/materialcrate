@@ -8,6 +8,7 @@ import ConditionalNavbar from "./components/ConditionalNavbar";
 import DesktopSidebarOffset from "./components/DesktopSidebarOffset";
 import { SystemPopupProvider } from "./components/SystemPopup";
 import BrowserNotificationBridge from "./components/BrowserNotificationBridge";
+import PresenceHeartbeat from "./components/PresenceHeartbeat";
 import ScrollRestoration from "./components/ScrollRestoration";
 import ThemeSync from "./components/ThemeSync";
 import { ServerStatusProvider } from "./lib/server-status";
@@ -75,6 +76,7 @@ export default function RootLayout({
             <ScrollRestoration />
           </Suspense>
           <BrowserNotificationBridge />
+          <PresenceHeartbeat />
           <ThemeSync />
           <AuthSplashGate>
             <ConditionalNavbar />

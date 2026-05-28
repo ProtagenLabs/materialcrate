@@ -13,6 +13,9 @@ import {
   HiArrowTrendingDown,
   HiArrowRight,
   HiFire,
+  HiSignal,
+  HiCalendarDays,
+  HiChartBar,
 } from "react-icons/hi2";
 import AdminSidebar from "./components/AdminSidebar";
 
@@ -41,6 +44,12 @@ type TrendingDoc = {
   title: string;
   category: string;
   viewCount: number;
+};
+
+type PresenceStats = {
+  activeUsers: number;
+  dailyActiveUsers: number;
+  monthlyActiveUsers: number;
 };
 
 type AdminStats = {
@@ -126,6 +135,7 @@ function Skeleton({ className }: { className?: string }) {
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [presenceStats, setPresenceStats] = useState<PresenceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -140,17 +150,24 @@ export default function AdminDashboardPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/stats");
-      if (res.status === 401) {
+      const [statsRes, presenceRes] = await Promise.all([
+        fetch("/api/admin/stats"),
+        fetch("/api/presence/stats"),
+      ]);
+      if (statsRes.status === 401) {
         router.push("/admin/login");
         return;
       }
-      const body = await res.json();
-      if (!res.ok || !body.stats) {
+      const body = await statsRes.json();
+      if (!statsRes.ok || !body.stats) {
         setError(body.error || "Failed to load stats");
         return;
       }
       setStats(body.stats);
+      if (presenceRes.ok) {
+        const pBody = await presenceRes.json();
+        if (pBody.stats) setPresenceStats(pBody.stats);
+      }
     } catch {
       setError("Failed to load stats");
     } finally {
@@ -158,7 +175,19 @@ export default function AdminDashboardPage() {
     }
   }, [router]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void load();
+    // Auto-refresh presence stats every 60 seconds
+    const interval = setInterval(() => {
+      fetch("/api/presence/stats")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { stats?: PresenceStats } | null) => {
+          if (data?.stats) setPresenceStats(data.stats);
+        })
+        .catch(() => {});
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   // Derived values
   const uploadBars = stats?.uploadBars ?? Array(7).fill(0);
@@ -232,6 +261,33 @@ export default function AdminDashboardPage() {
       color: "#64748B",
       iconBg: "#F1F5F9",
       storageBytes: stats?.storageBytes ?? null,
+    },
+  ];
+
+  const PRESENCE_CARDS = [
+    {
+      label: "Online Now",
+      value: presenceStats ? String(presenceStats.activeUsers) : null,
+      change: "active ≤ 2 min",
+      icon: HiSignal,
+      color: "#10B981",
+      iconBg: "#ECFDF5",
+    },
+    {
+      label: "Daily Active",
+      value: presenceStats ? presenceStats.dailyActiveUsers.toLocaleString() : null,
+      change: "last 24 hours",
+      icon: HiCalendarDays,
+      color: "#6366F1",
+      iconBg: "#EEF2FF",
+    },
+    {
+      label: "Monthly Active",
+      value: presenceStats ? presenceStats.monthlyActiveUsers.toLocaleString() : null,
+      change: "last 30 days",
+      icon: HiChartBar,
+      color: "#F59E0B",
+      iconBg: "#FFFBEB",
     },
   ];
 
@@ -339,6 +395,37 @@ export default function AdminDashboardPage() {
                       </svg>
                     )}
                   </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Presence cards ───────────────────────────────────────── */}
+          <div className="grid grid-cols-3 gap-4">
+            {PRESENCE_CARDS.map((card) => {
+              const Icon = card.icon;
+              return (
+                <div
+                  key={card.label}
+                  className="flex flex-col rounded-2xl border border-black/[0.07] bg-white p-5 shadow-sm"
+                >
+                  <div className="mb-4 flex items-start justify-between">
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-xl"
+                      style={{ backgroundColor: card.iconBg }}
+                    >
+                      <Icon className="h-5 w-5" style={{ color: card.color }} />
+                    </div>
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-600">
+                      {card.change}
+                    </span>
+                  </div>
+                  {loading && !card.value ? (
+                    <Skeleton className="mb-1 h-8 w-24" />
+                  ) : (
+                    <p className="text-2xl font-bold text-[#111]">{card.value ?? "—"}</p>
+                  )}
+                  <p className="mt-0.5 text-xs text-[#888]">{card.label}</p>
                 </div>
               );
             })}

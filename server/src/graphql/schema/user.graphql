@@ -1,3 +1,14 @@
+type PresenceStats {
+  activeUsers: Int!
+  dailyActiveUsers: Int!
+  monthlyActiveUsers: Int!
+}
+
+type UserPresenceInfo {
+  online: Boolean!
+  lastSeen: String
+}
+
 type User {
   id: ID!
   username: String!
@@ -46,6 +57,8 @@ type User {
   program: String
   programVisibility: String!
   isBot: Boolean!
+  lastSeen: String
+  isOnline: Boolean!
   tokenBalance: Int!
   tokensEarned: Int!
   tokensRedeemed: Int!
@@ -111,6 +124,8 @@ type Query {
   mySessions: [Session!]!
   suggestedCategories(limit: Int): [String!]!
   suggestedUsers(limit: Int): [User!]!
+  presenceStats: PresenceStats!
+  userPresence(userId: ID!): UserPresenceInfo!
 }
 
 type Mutation {
@@ -187,6 +202,7 @@ type Mutation {
   removeProfilePicture: Boolean!
   redeemTokensForSubscription(plan: String!): Boolean!
   requestTokenCashout(tokensAmount: Int!, payoutMethod: String!, payoutDetails: String!): Boolean!
+  pingPresence: Boolean!
   logout: Boolean!
   revokeSession(sessionId: ID!): Boolean!
 }

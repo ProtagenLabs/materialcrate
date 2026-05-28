@@ -727,6 +727,46 @@ export const UserResolver = {
       }));
     },
 
+    presenceStats: async (_: unknown, _args: unknown, ctx: any) => {
+      // Requires admin secret or authenticated user (admin dashboard uses admin secret header)
+      const isAdmin = Boolean(ctx.isAdmin);
+      const isAuth = Boolean(ctx.user?.sub);
+      if (!isAdmin && !isAuth) throw new GraphQLError("Not authorized", { extensions: { code: "FORBIDDEN" } });
+
+      const now = new Date();
+      const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000);
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const db = prisma as any;
+      const [activeUsers, dailyActiveUsers, monthlyActiveUsers] = await Promise.all([
+        db.user.count({ where: { lastSeen: { gte: twoMinutesAgo }, deleted: false, disabled: false } }),
+        db.user.count({ where: { lastSeen: { gte: oneDayAgo }, deleted: false, disabled: false } }),
+        db.user.count({ where: { lastSeen: { gte: thirtyDaysAgo }, deleted: false, disabled: false } }),
+      ]);
+
+      return { activeUsers, dailyActiveUsers, monthlyActiveUsers };
+    },
+
+    userPresence: async (_: unknown, { userId }: { userId: string }) => {
+      const user = await (prisma as any).user.findUnique({
+        where: { id: userId },
+        select: { lastSeen: true, visibilityOnlineStatus: true, deleted: true, disabled: true },
+      }) as { lastSeen: Date | null; visibilityOnlineStatus: boolean; deleted: boolean; disabled: boolean } | null;
+
+      if (!user || user.deleted || user.disabled) return { online: false, lastSeen: null };
+      if (!user.visibilityOnlineStatus) return { online: false, lastSeen: null };
+
+      const isOnline = user.lastSeen
+        ? Date.now() - user.lastSeen.getTime() < 2 * 60 * 1000
+        : false;
+
+      return {
+        online: isOnline,
+        lastSeen: user.lastSeen instanceof Date ? user.lastSeen.toISOString() : null,
+      };
+    },
+
     suggestedCategories: async (_: unknown, { limit = 12 }: { limit?: number }, ctx: any) => {
       const viewerId: string | undefined = ctx.user?.sub;
       const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 30);
@@ -2777,6 +2817,16 @@ export const UserResolver = {
       return true;
     },
 
+    pingPresence: async (_: unknown, _args: unknown, ctx: any) => {
+      const userId: string | undefined = ctx.user?.sub;
+      if (!userId) throw new GraphQLError("Not authenticated", { extensions: { code: "UNAUTHENTICATED" } });
+      await (prisma as any).user.update({
+        where: { id: userId },
+        data: { lastSeen: new Date() },
+      });
+      return true;
+    },
+
     logout: async (_: unknown, _args: unknown, ctx: any) => {
       const jti: string | undefined = ctx.sessionJti;
       if (!jti) return true;
@@ -2941,6 +2991,16 @@ export const UserResolver = {
       return (prisma as any).user.findMany({
         where: { id: { in: ids }, deleted: false, disabled: false },
       });
+    },
+    lastSeen: (user: any) => {
+      if (!user.visibilityOnlineStatus) return null;
+      if (!user.lastSeen) return null;
+      return user.lastSeen instanceof Date ? user.lastSeen.toISOString() : String(user.lastSeen);
+    },
+    isOnline: (user: any) => {
+      if (!user.visibilityOnlineStatus || !user.lastSeen) return false;
+      const ts = user.lastSeen instanceof Date ? user.lastSeen.getTime() : new Date(user.lastSeen).getTime();
+      return Date.now() - ts < 2 * 60 * 1000;
     },
     followersCount: async (user: { id: string }) => {
       return (prisma as any).follow.count({
