@@ -17,8 +17,8 @@ export default function AdminSidebar() {
     <aside className="flex h-screen w-56 shrink-0 flex-col bg-[#0d0d0d]">
       {/* Brand */}
       <div className="flex items-center gap-3 border-b border-white/[0.07] px-5 py-5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E1761F]">
-          <Image src="/logo.svg" alt="MaterialCrate" width={20} height={20} />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center">
+          <Image src="/logo.svg" alt="MaterialCrate" width={24} height={24} />
         </div>
         <div>
           <p className="text-sm font-semibold leading-none text-white">
@@ -31,7 +31,10 @@ export default function AdminSidebar() {
       {/* Nav */}
       <nav className="flex-1 space-y-0.5 px-3 py-4">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+          const active =
+            href === "/admin"
+              ? pathname === "/admin"
+              : pathname.startsWith(href);
           return (
             <Link
               key={href}

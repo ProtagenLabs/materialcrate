@@ -21,7 +21,6 @@ const STATS_QUERY = `
       pendingReviews
       pendingPayouts
       revenueThisMonth
-      storageBytes
       uploadBars
       revenueChart
       recentActivity {

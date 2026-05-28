@@ -50,7 +50,7 @@ type AdminStats = {
   pendingReviews: number;
   pendingPayouts: number;
   revenueThisMonth: number;
-  storageBytes: number;
+  storageBytes?: number;
   uploadBars: number[];
   revenueChart: number[];
   recentActivity: ActivityItem[];
@@ -224,7 +224,7 @@ export default function AdminDashboardPage() {
     },
     {
       label: "Storage Used",
-      value: stats ? `${(stats.storageBytes / 1e9).toFixed(1)} GB` : null,
+      value: stats?.storageBytes != null ? `${(stats.storageBytes / 1e9).toFixed(1)} GB` : null,
       sub: null,
       change: "updated daily",
       up: false,

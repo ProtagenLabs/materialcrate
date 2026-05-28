@@ -30,11 +30,24 @@ type Me = { email: string; role: string };
 const ROLES = ["super_admin", "admin", "moderator", "viewer"] as const;
 type Role = (typeof ROLES)[number];
 
-const ROLE_META: Record<Role, { label: string; bg: string; text: string; dot: string }> = {
-  super_admin: { label: "Super Admin", bg: "#F5F3FF", text: "#6D28D9", dot: "#8B5CF6" },
-  admin:       { label: "Admin",       bg: "#EFF6FF", text: "#1D4ED8", dot: "#3B82F6" },
-  moderator:   { label: "Moderator",   bg: "#FFFBEB", text: "#92400E", dot: "#F59E0B" },
-  viewer:      { label: "Viewer",      bg: "#F8FAFC", text: "#475569", dot: "#94A3B8" },
+const ROLE_META: Record<
+  Role,
+  { label: string; bg: string; text: string; dot: string }
+> = {
+  super_admin: {
+    label: "Super Admin",
+    bg: "#F5F3FF",
+    text: "#6D28D9",
+    dot: "#8B5CF6",
+  },
+  admin: { label: "Admin", bg: "#EFF6FF", text: "#1D4ED8", dot: "#3B82F6" },
+  moderator: {
+    label: "Moderator",
+    bg: "#FFFBEB",
+    text: "#92400E",
+    dot: "#F59E0B",
+  },
+  viewer: { label: "Viewer", bg: "#F8FAFC", text: "#475569", dot: "#94A3B8" },
 };
 
 function roleMeta(role: string) {
@@ -97,7 +110,9 @@ function AddMemberModal({ onClose, onCreated }: AddModalProps) {
   const [error, setError] = useState("");
   const emailRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { emailRef.current?.focus(); }, []);
+  useEffect(() => {
+    emailRef.current?.focus();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -110,7 +125,10 @@ function AddMemberModal({ onClose, onCreated }: AddModalProps) {
         body: JSON.stringify({ email, password, role, name: name || null }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) { setError(body.error ?? "Failed to create member"); return; }
+      if (!res.ok) {
+        setError(body.error ?? "Failed to create member");
+        return;
+      }
       onCreated(body.admin);
     } catch {
       setError("Something went wrong");
@@ -122,9 +140,10 @@ function AddMemberModal({ onClose, onCreated }: AddModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border border-black/[0.07] bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-black/[0.06] px-6 py-4">
+        <div className="flex items-center justify-between border-b border-black/6 px-6 py-4">
           <h2 className="text-sm font-semibold text-[#111]">Add team member</h2>
           <button
+            aria-label="Close"
             type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-[#aaa] transition-colors hover:bg-[#f3f4f6] hover:text-[#555] active:bg-[#e9eaec]"
@@ -142,7 +161,9 @@ function AddMemberModal({ onClose, onCreated }: AddModalProps) {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#555]">Name <span className="text-[#aaa]">(optional)</span></label>
+            <label className="text-xs font-medium text-[#555]">
+              Name <span className="text-[#aaa]">(optional)</span>
+            </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -152,7 +173,9 @@ function AddMemberModal({ onClose, onCreated }: AddModalProps) {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#555]">Email <span className="text-red-400">*</span></label>
+            <label className="text-xs font-medium text-[#555]">
+              Email <span className="text-red-400">*</span>
+            </label>
             <input
               ref={emailRef}
               type="email"
@@ -165,7 +188,9 @@ function AddMemberModal({ onClose, onCreated }: AddModalProps) {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#555]">Password <span className="text-red-400">*</span></label>
+            <label className="text-xs font-medium text-[#555]">
+              Password <span className="text-red-400">*</span>
+            </label>
             <div className="relative">
               <input
                 type={showPw ? "text" : "password"}
@@ -181,13 +206,19 @@ function AddMemberModal({ onClose, onCreated }: AddModalProps) {
                 onClick={() => setShowPw((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#bbb] hover:text-[#888]"
               >
-                {showPw ? <HiEyeSlash className="h-4 w-4" /> : <HiEye className="h-4 w-4" />}
+                {showPw ? (
+                  <HiEyeSlash className="h-4 w-4" />
+                ) : (
+                  <HiEye className="h-4 w-4" />
+                )}
               </button>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#555]">Role <span className="text-red-400">*</span></label>
+            <label className="text-xs font-medium text-[#555]">
+              Role <span className="text-red-400">*</span>
+            </label>
             <div className="grid grid-cols-2 gap-2">
               {ROLES.map((r) => {
                 const m = roleMeta(r);
@@ -201,11 +232,21 @@ function AddMemberModal({ onClose, onCreated }: AddModalProps) {
                         ? "border-transparent shadow-sm"
                         : "border-black/8 text-[#555] hover:border-black/15"
                     }`}
-                    style={role === r ? { backgroundColor: m.bg, color: m.text, borderColor: m.dot + "40" } : {}}
+                    style={
+                      role === r
+                        ? {
+                            backgroundColor: m.bg,
+                            color: m.text,
+                            borderColor: m.dot + "40",
+                          }
+                        : {}
+                    }
                   >
                     <span
                       className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: role === r ? m.dot : "#d1d5db" }}
+                      style={{
+                        backgroundColor: role === r ? m.dot : "#d1d5db",
+                      }}
                     />
                     {m.label}
                   </button>
@@ -273,7 +314,7 @@ function MemberRow({ user, isMe, onRoleChange, onRemove }: MemberRowProps) {
   const m = roleMeta(user.role);
 
   return (
-    <div className="group flex items-center gap-4 rounded-2xl border border-black/[0.06] bg-white px-5 py-4 transition-shadow hover:shadow-sm">
+    <div className="group flex items-center gap-4 rounded-2xl border border-black/6 bg-white px-5 py-4 transition-shadow hover:shadow-sm">
       {/* Avatar */}
       <div
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
@@ -317,15 +358,19 @@ function MemberRow({ user, isMe, onRoleChange, onRemove }: MemberRowProps) {
           className="appearance-none rounded-xl border border-black/8 bg-[#f9fafb] px-3 py-1.5 pr-7 text-xs font-medium text-[#555] transition-colors hover:border-black/15 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
         >
           {ROLES.map((r) => (
-            <option key={r} value={r}>{roleMeta(r).label}</option>
+            <option key={r} value={r}>
+              {roleMeta(r).label}
+            </option>
           ))}
         </select>
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#bbb]">▾</span>
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#bbb]">
+          ▾
+        </span>
       </div>
 
       {/* Remove */}
-      {!isMe && (
-        confirmDelete ? (
+      {!isMe &&
+        (confirmDelete ? (
           <button
             type="button"
             onClick={handleDelete}
@@ -337,14 +382,14 @@ function MemberRow({ user, isMe, onRoleChange, onRemove }: MemberRowProps) {
           </button>
         ) : (
           <button
+            aria-label={`Remove ${user.name ?? user.email}`}
             type="button"
             onClick={armDelete}
             className="shrink-0 rounded-xl p-2 text-[#ccc] opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-400 active:scale-95"
           >
             <HiTrash className="h-4 w-4" />
           </button>
-        )
-      )}
+        ))}
 
       {isMe && <div className="w-8 shrink-0" />}
     </div>
@@ -374,7 +419,10 @@ export default function AdminTeamPage() {
         router.push("/admin/login");
         return;
       }
-      const [teamBody, meBody] = await Promise.all([teamRes.json(), meRes.json()]);
+      const [teamBody, meBody] = await Promise.all([
+        teamRes.json(),
+        meRes.json(),
+      ]);
       setAdmins(teamBody.admins ?? []);
       setMe(meBody);
     } catch {
@@ -384,7 +432,9 @@ export default function AdminTeamPage() {
     }
   }, [router]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function handleRoleChange(id: string, role: string) {
     const res = await fetch("/api/admin/team", {
@@ -393,7 +443,10 @@ export default function AdminTeamPage() {
       body: JSON.stringify({ id, role }),
     });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) { setError(body.error ?? "Failed to update role"); return; }
+    if (!res.ok) {
+      setError(body.error ?? "Failed to update role");
+      return;
+    }
     setAdmins((prev) => prev.map((a) => (a.id === id ? body.admin : a)));
   }
 
@@ -404,7 +457,10 @@ export default function AdminTeamPage() {
       body: JSON.stringify({ id }),
     });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) { setError(body.error ?? "Failed to remove member"); return; }
+    if (!res.ok) {
+      setError(body.error ?? "Failed to remove member");
+      return;
+    }
     setAdmins((prev) => prev.filter((a) => a.id !== id));
   }
 
@@ -431,13 +487,13 @@ export default function AdminTeamPage() {
           <div>
             <h1 className="text-lg font-bold text-[#111]">Team</h1>
             <p className="text-xs text-[#888]">
-              {loading ? "Loading…" : `${admins.length} member${admins.length !== 1 ? "s" : ""}`}
+              {loading
+                ? "Loading…"
+                : `${admins.length} member${admins.length !== 1 ? "s" : ""}`}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {error && (
-              <span className="text-xs text-red-500">{error}</span>
-            )}
+            {error && <span className="text-xs text-red-500">{error}</span>}
             <button
               type="button"
               onClick={() => setShowAdd(true)}
@@ -485,7 +541,9 @@ export default function AdminTeamPage() {
                 >
                   <span
                     className="h-1.5 w-1.5 rounded-full"
-                    style={{ backgroundColor: roleFilter === r ? m.dot : "#d1d5db" }}
+                    style={{
+                      backgroundColor: roleFilter === r ? m.dot : "#d1d5db",
+                    }}
                   />
                   {m.label} ({count})
                 </button>
@@ -496,19 +554,26 @@ export default function AdminTeamPage() {
           {/* Member list */}
           <div className="space-y-2">
             {loading ? (
-              Array(3).fill(null).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 rounded-2xl border border-black/[0.06] bg-white px-5 py-4">
-                  <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-[#f0f0f0]" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3.5 w-36 animate-pulse rounded bg-[#f0f0f0]" />
-                    <div className="h-3 w-48 animate-pulse rounded bg-[#f0f0f0]" />
+              Array(3)
+                .fill(null)
+                .map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 rounded-2xl border border-black/6 bg-white px-5 py-4"
+                  >
+                    <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-[#f0f0f0]" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3.5 w-36 animate-pulse rounded bg-[#f0f0f0]" />
+                      <div className="h-3 w-48 animate-pulse rounded bg-[#f0f0f0]" />
+                    </div>
+                    <div className="h-6 w-20 animate-pulse rounded-full bg-[#f0f0f0]" />
                   </div>
-                  <div className="h-6 w-20 animate-pulse rounded-full bg-[#f0f0f0]" />
-                </div>
-              ))
+                ))
             ) : filtered.length === 0 ? (
-              <div className="rounded-2xl border border-black/[0.06] bg-white px-6 py-12 text-center">
-                <p className="text-sm text-[#aaa]">No members with this role yet.</p>
+              <div className="rounded-2xl border border-black/6 bg-white px-6 py-12 text-center">
+                <p className="text-sm text-[#aaa]">
+                  No members with this role yet.
+                </p>
               </div>
             ) : (
               filtered.map((user) => (
@@ -526,7 +591,10 @@ export default function AdminTeamPage() {
       </div>
 
       {showAdd && (
-        <AddMemberModal onClose={() => setShowAdd(false)} onCreated={handleCreated} />
+        <AddMemberModal
+          onClose={() => setShowAdd(false)}
+          onCreated={handleCreated}
+        />
       )}
     </div>
   );
