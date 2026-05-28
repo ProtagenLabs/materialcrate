@@ -11,6 +11,7 @@
     "start": "node dist/index.js",
     "railway:build": "prisma generate && tsc && cp -r src/email/assets dist/email/assets",
     "railway:start": "prisma migrate deploy && node dist/index.js",
+    "render:migrate": "prisma migrate deploy",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "seed:ocw": "tsx prisma/seed-ocw.ts",
