@@ -197,16 +197,18 @@ export default function PdfViewerModal({
           import.meta.url,
         ).toString();
 
-        // Pass URL directly so pdfjs streams and parses concurrently —
-        // no arrayBuffer() wait. Range requests are disabled since the
-        // proxy returns Accept-Ranges: none.
+        // The proxy now supports HTTP 206 range requests, so pdfjs can
+        // fetch only the cross-reference table + individual pages on demand
+        // instead of buffering the whole file. This is critical for Safari,
+        // which has strict per-tab memory limits and would crash on large PDFs
+        // when the entire file was held in memory simultaneously.
         const task = pdfjs.getDocument({
           url: proxiedFileUrl,
           httpHeaders: {
             "x-materialcrate-pdf-request": "viewer",
           },
           withCredentials: true,
-          disableRange: true,
+          rangeChunkSize: 65536, // 64 KB chunks — balance between request count and latency
         });
         loadingTask = task;
 
@@ -257,7 +259,26 @@ export default function PdfViewerModal({
           canvas.height = viewport.height;
           canvas.className = "h-auto w-full pointer-events-none";
 
-          await page.render({ canvas, canvasContext: context, viewport }).promise;
+          // Guard against Safari's per-canvas size limit (~4096 px on some
+          // versions). Scale down proportionally if a dimension exceeds it.
+          const MAX_CANVAS_DIM = 4096;
+          if (canvas.width > MAX_CANVAS_DIM || canvas.height > MAX_CANVAS_DIM) {
+            const ratio = Math.min(
+              MAX_CANVAS_DIM / canvas.width,
+              MAX_CANVAS_DIM / canvas.height,
+            );
+            const scaledViewport = page.getViewport({ scale: 1.25 * ratio });
+            canvas.width = scaledViewport.width;
+            canvas.height = scaledViewport.height;
+            await page.render({ canvas, canvasContext: context, viewport: scaledViewport }).promise;
+          } else {
+            await page.render({ canvas, canvasContext: context, viewport }).promise;
+          }
+
+          // Release pdfjs's internal decoded image data for this page.
+          // Without this, every page's pixel data stays live in memory for
+          // the entire session — Safari kills the tab on large PDFs.
+          page.cleanup();
 
           if (isCancelled) break;
 

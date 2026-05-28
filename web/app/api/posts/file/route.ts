@@ -170,25 +170,58 @@ export async function GET(req: Request) {
     }),
   }).catch(() => null);
 
+  const totalSize = fileBuffer.byteLength;
+
+  const baseHeaders: Record<string, string> = {
+    "Content-Type": acceptMime,
+    "Content-Disposition": isDownloadRequest
+      ? `attachment; filename="materialcrate-document.${fileExt}"`
+      : `inline; filename="protected-document.${fileExt}"`,
+    "Cache-Control": "private, no-store, no-cache, must-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
+    // "none" was breaking Safari: WebKit applies sandbox CSP to the worker
+    // thread that processes the fetch response, silently killing pdfjs.
+    // "bytes" enables range requests so pdfjs can stream pages on demand.
+    "Accept-Ranges": "bytes",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    // Removed "sandbox" directive — it caused Safari to sandbox the worker
+    // context used by pdfjs when processing this response, making it fail.
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'self'",
+  };
+
+  // Support HTTP Range requests so pdfjs can fetch only the pages it needs.
+  // This dramatically reduces memory pressure in Safari, which has stricter
+  // per-tab memory limits and was crashing on large PDFs rendered all-at-once.
+  const rangeHeader = req.headers.get("range");
+  if (rangeHeader) {
+    const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+    if (match) {
+      const start = match[1] ? parseInt(match[1], 10) : 0;
+      const end = match[2] ? parseInt(match[2], 10) : totalSize - 1;
+      const safeStart = Math.max(0, Math.min(start, totalSize - 1));
+      const safeEnd = Math.max(safeStart, Math.min(end, totalSize - 1));
+      const chunk = fileBuffer.subarray(safeStart, safeEnd + 1);
+      return new NextResponse(new Uint8Array(chunk), {
+        status: 206,
+        headers: {
+          ...baseHeaders,
+          "Content-Length": chunk.byteLength.toString(),
+          "Content-Range": `bytes ${safeStart}-${safeEnd}/${totalSize}`,
+        },
+      });
+    }
+  }
+
   return new NextResponse(new Uint8Array(fileBuffer), {
     status: 200,
     headers: {
-      "Content-Type": acceptMime,
-      "Content-Length": fileBuffer.byteLength.toString(),
-      "Content-Disposition": isDownloadRequest
-        ? `attachment; filename="materialcrate-document.${fileExt}"`
-        : `inline; filename="protected-document.${fileExt}"`,
-      "Cache-Control": "private, no-store, no-cache, must-revalidate",
-      Pragma: "no-cache",
-      Expires: "0",
-      "Accept-Ranges": "none",
-      "Referrer-Policy": "no-referrer",
-      "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "SAMEORIGIN",
-      "Cross-Origin-Resource-Policy": "same-origin",
-      "Cross-Origin-Opener-Policy": "same-origin",
-      "Content-Security-Policy":
-        "default-src 'none'; frame-ancestors 'self'; sandbox",
+      ...baseHeaders,
+      "Content-Length": totalSize.toString(),
     },
   });
 }
