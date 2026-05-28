@@ -186,6 +186,7 @@ export default function PdfViewerModal({
 
     let isCancelled = false;
     let loadingTask: { destroy: () => void } | null = null;
+    let observer: IntersectionObserver | null = null;
 
     const renderPdf = async () => {
       setPdfState({ isLoading: true, isRendering: false, error: "", pageCount: 0 });
@@ -197,171 +198,168 @@ export default function PdfViewerModal({
           import.meta.url,
         ).toString();
 
-        // Range requests are disabled: the proxy re-authenticates and
-        // re-downloads from S3 on every request, so chunked fetching would
-        // be far slower than a single download. Memory safety comes from
-        // page.cleanup() below, not from limiting fetch size.
         const task = pdfjs.getDocument({
           url: proxiedFileUrl,
-          httpHeaders: {
-            "x-materialcrate-pdf-request": "viewer",
-          },
+          httpHeaders: { "x-materialcrate-pdf-request": "viewer" },
           withCredentials: true,
           disableRange: true,
         });
         loadingTask = task;
 
         const pdf = await task.promise;
-
-        if (isCancelled) {
-          task.destroy();
-          return;
-        }
+        if (isCancelled) { task.destroy(); return; }
 
         canvasContainer.innerHTML = "";
 
-        // Reveal the container and start showing pages as they render.
-        // isRendering stays true until the last page is done.
-        setPdfState({
-          isLoading: false,
-          isRendering: pdf.numPages > 1,
-          error: "",
-          pageCount: pdf.numPages,
-        });
+        const dpr = window.devicePixelRatio ?? 1;
+        // Cap at 2× physical pixels per CSS pixel.
+        // A4 at 2× = ~8 MB/canvas; beyond that Safari's GPU texture budget
+        // crashes the tab on large documents even with per-page cleanup.
+        const RENDER_SCALE = Math.min(1.5 * dpr, 2);
+        const MAX_DIM = 4096;
 
-        // Randomise the ad interval (3–5 pages), stable for this render.
+        // Sample first page so all placeholders share its aspect ratio.
+        // Most PDFs are single-size; mixed-size pages will re-flow on render.
+        const firstPage = await pdf.getPage(1);
+        const sampleVP = firstPage.getViewport({ scale: RENDER_SCALE });
+        firstPage.cleanup();
+        const placeholderRatio = `${sampleVP.width / dpr} / ${sampleVP.height / dpr}`;
+
         const adInterval = 3 + Math.floor(Math.random() * 3);
         let adSlotIndex = 0;
 
-        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-          if (isCancelled) break;
-
-          const page = await pdf.getPage(pageNumber);
-
-          // Two sources of blurriness to fix:
-          //
-          // 1. Scale too low: A4 at 1.25× = ~743 px wide. If the container
-          //    is 768 px the browser upscales the canvas, which always blurs.
-          //    Downscaling a larger canvas is always sharper — so we use 1.5×
-          //    as the base (A4 → 892 px, US Letter → 918 px, both > container).
-          //
-          // 2. HiDPI/Retina: multiply by devicePixelRatio so the buffer has
-          //    one physical pixel per screen pixel. Cap the combined scale at 3×
-          //    so 100-page PDFs on Retina don't blow the canvas memory budget.
-          const dpr = window.devicePixelRatio ?? 1;
-          const RENDER_SCALE = Math.min(1.5 * dpr, 3);
-          const viewport = page.getViewport({ scale: RENDER_SCALE });
-
-          // Placeholder aspect ratio uses logical (CSS) dimensions — dpr cancels.
+        // ── Build all placeholder wrappers up-front ───────────────────────
+        // The scroll container gets the correct total height immediately, so
+        // users can jump to any page without waiting for sequential rendering.
+        const pageWrappers: HTMLDivElement[] = [];
+        for (let n = 1; n <= pdf.numPages; n++) {
           const wrapper = document.createElement("div");
           wrapper.className =
             "relative overflow-hidden rounded bg-surface-high shadow-sm select-none";
-          wrapper.style.aspectRatio = `${viewport.width / dpr} / ${viewport.height / dpr}`;
+          wrapper.dataset.page = String(n);
+          wrapper.style.aspectRatio = placeholderRatio;
           canvasContainer.appendChild(wrapper);
+          pageWrappers.push(wrapper);
 
-          const canvas = document.createElement("canvas");
-          const context = canvas.getContext("2d");
-
-          if (!context) {
-            continue;
-          }
-
-          // Canvas buffer = physical pixels; CSS display = w-full h-auto so the
-          // browser downscales it to fit the container — giving crisp text.
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          canvas.className = "h-auto w-full pointer-events-none";
-
-          // Guard against Safari's per-canvas size limit (~4096 px on some
-          // versions). Scale down proportionally if a dimension exceeds it.
-          const MAX_CANVAS_DIM = 4096;
-          if (canvas.width > MAX_CANVAS_DIM || canvas.height > MAX_CANVAS_DIM) {
-            const ratio = Math.min(
-              MAX_CANVAS_DIM / canvas.width,
-              MAX_CANVAS_DIM / canvas.height,
-            );
-            const cappedViewport = page.getViewport({ scale: RENDER_SCALE * ratio });
-            canvas.width = cappedViewport.width;
-            canvas.height = cappedViewport.height;
-            await page.render({ canvas, canvasContext: context, viewport: cappedViewport }).promise;
-          } else {
-            await page.render({ canvas, canvasContext: context, viewport }).promise;
-          }
-
-          // Release pdfjs's internal decoded image data for this page.
-          // Without this, every page's pixel data stays live in memory for
-          // the entire session — Safari kills the tab on large PDFs.
-          page.cleanup();
-
-          if (isCancelled) break;
-
-          wrapper.style.aspectRatio = "";
-          wrapper.className =
-            "relative overflow-hidden rounded bg-surface shadow-sm select-none";
-          wrapper.appendChild(canvas);
-
-          // Insert a native ad after every adInterval pages (not after the last page).
-          // Each ad uses an isolated iframe so Adsterra runs fresh with no ID conflicts.
-          if (
-            pageNumber % adInterval === 0 &&
-            pageNumber < pdf.numPages
-          ) {
+          if (n % adInterval === 0 && n < pdf.numPages) {
             const zone = AD_ZONES[adSlotIndex % AD_ZONES.length];
-            adSlotIndex += 1;
-
+            adSlotIndex++;
             const adWrapper = document.createElement("div");
-            adWrapper.className =
-              "relative rounded-xl bg-surface shadow-sm";
-
+            adWrapper.className = "relative rounded-xl bg-surface shadow-sm";
             const sponsored = document.createElement("span");
             sponsored.textContent = "Sponsored";
             sponsored.style.cssText =
               "position:absolute;top:8px;right:10px;font-size:10px;color:var(--ink-3);z-index:1;pointer-events:none;";
             adWrapper.appendChild(sponsored);
-
             const iframe = document.createElement("iframe");
-            // Start with a sensible min-height per format so the slot isn't collapsed.
             const minHeight = zone.type === "banner" ? zone.height : 120;
             iframe.style.cssText =
               `width:100%;height:${minHeight}px;border:none;display:block;overflow:hidden;`;
             iframe.sandbox.add(
-              "allow-scripts",
-              "allow-same-origin",
-              "allow-popups",
-              "allow-popups-to-escape-sandbox",
-              "allow-forms",
+              "allow-scripts", "allow-same-origin", "allow-popups",
+              "allow-popups-to-escape-sandbox", "allow-forms",
             );
             adWrapper.appendChild(iframe);
             canvasContainer.appendChild(adWrapper);
-
-            // srcdoc replaces the deprecated document.write pattern.
             const cacheBust = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
             iframe.srcdoc = buildAdHtml(zone, cacheBust);
-
-            // Resize once the iframe settles — ad scripts inject content
-            // asynchronously so we watch with ResizeObserver instead of 'load'.
             const resizeToContent = () => {
               const body = iframe.contentDocument?.body;
-              if (body && body.scrollHeight > minHeight) {
+              if (body && body.scrollHeight > minHeight)
                 iframe.style.height = `${body.scrollHeight}px`;
-              }
             };
-
             iframe.addEventListener("load", () => {
               resizeToContent();
-              // Poll briefly for async ad injection finishing.
               let attempts = 0;
               const poll = setInterval(() => {
                 resizeToContent();
-                attempts += 1;
-                if (attempts >= 10) clearInterval(poll);
+                if (++attempts >= 10) clearInterval(poll);
               }, 300);
             });
           }
+        }
 
-          if (pageNumber === pdf.numPages) {
-            setPdfState((prev) => ({ ...prev, isRendering: false }));
+        setPdfState({ isLoading: false, isRendering: false, error: "", pageCount: pdf.numPages });
+
+        // ── Per-page paint / wipe ─────────────────────────────────────────
+        const rendering = new Set<number>();
+        const rendered = new Set<number>();
+
+        const paintPage = async (num: number, el: HTMLDivElement) => {
+          if (rendering.has(num) || rendered.has(num) || isCancelled) return;
+          rendering.add(num);
+          try {
+            const page = await pdf.getPage(num);
+            const vp = page.getViewport({ scale: RENDER_SCALE });
+            const finalVP =
+              vp.width > MAX_DIM || vp.height > MAX_DIM
+                ? page.getViewport({
+                    scale: RENDER_SCALE * Math.min(MAX_DIM / vp.width, MAX_DIM / vp.height),
+                  })
+                : vp;
+
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            if (!ctx) { page.cleanup(); return; }
+
+            canvas.width = finalVP.width;
+            canvas.height = finalVP.height;
+            canvas.className = "h-auto w-full pointer-events-none";
+
+            await page.render({ canvas, canvasContext: ctx, viewport: finalVP }).promise;
+            // Free pdfjs's internal decode buffer — canvas pixels stay on GPU.
+            page.cleanup();
+
+            if (isCancelled) return;
+
+            el.style.aspectRatio = "";
+            el.className = "relative overflow-hidden rounded bg-surface shadow-sm select-none";
+            el.appendChild(canvas);
+            rendered.add(num);
+          } catch {
+            // Leave as placeholder on transient errors; observer will retry on re-entry.
+          } finally {
+            rendering.delete(num);
           }
+        };
+
+        const wipePage = (num: number, el: HTMLDivElement) => {
+          if (!rendered.has(num)) return;
+          const canvas = el.querySelector("canvas");
+          if (canvas) {
+            // Setting dimensions to 0 immediately releases the GPU texture.
+            canvas.width = 0;
+            canvas.height = 0;
+            canvas.remove();
+          }
+          el.style.aspectRatio = placeholderRatio;
+          el.className =
+            "relative overflow-hidden rounded bg-surface-high shadow-sm select-none";
+          rendered.delete(num);
+        };
+
+        // ── IntersectionObserver virtual window ───────────────────────────
+        // rootMargin pre-renders pages 400 px before they enter the viewport,
+        // giving smooth scrolling without keeping every canvas in GPU memory.
+        observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              const el = entry.target as HTMLDivElement;
+              const num = parseInt(el.dataset.page ?? "0", 10);
+              if (!num) continue;
+              if (entry.isIntersecting) {
+                void paintPage(num, el);
+              } else {
+                wipePage(num, el);
+              }
+            }
+          },
+          { root: canvasContainer.parentElement, rootMargin: "400px 0px", threshold: 0 },
+        );
+
+        for (const wrapper of pageWrappers) {
+          if (isCancelled) break;
+          observer.observe(wrapper);
         }
       } catch {
         if (!isCancelled) {
@@ -380,6 +378,7 @@ export default function PdfViewerModal({
     return () => {
       isCancelled = true;
       loadingTask?.destroy();
+      observer?.disconnect();
       canvasContainer.innerHTML = "";
     };
   }, [isOpen, proxiedFileUrl]);
