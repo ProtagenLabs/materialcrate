@@ -9,7 +9,7 @@ function b64urlToBytes(b64url: string): Uint8Array {
   const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
   const padded = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), "=");
   const binary = atob(padded);
-  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new Uint8Array([...binary].map((c) => c.charCodeAt(0)));
 }
 
 async function verifyAdminToken(token: string): Promise<boolean> {
