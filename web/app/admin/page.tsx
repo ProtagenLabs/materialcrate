@@ -224,7 +224,7 @@ export default function AdminDashboardPage() {
     },
     {
       label: "Storage Used",
-      value: stats?.storageBytes != null ? `${(stats.storageBytes / 1e9).toFixed(1)} GB` : null,
+      value: stats ? (stats.storageBytes != null ? `${(stats.storageBytes / 1e9).toFixed(1)} GB` : "—") : null,
       sub: null,
       change: "updated daily",
       up: false,
