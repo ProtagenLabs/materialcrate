@@ -197,18 +197,17 @@ export default function PdfViewerModal({
           import.meta.url,
         ).toString();
 
-        // The proxy now supports HTTP 206 range requests, so pdfjs can
-        // fetch only the cross-reference table + individual pages on demand
-        // instead of buffering the whole file. This is critical for Safari,
-        // which has strict per-tab memory limits and would crash on large PDFs
-        // when the entire file was held in memory simultaneously.
+        // Range requests are disabled: the proxy re-authenticates and
+        // re-downloads from S3 on every request, so chunked fetching would
+        // be far slower than a single download. Memory safety comes from
+        // page.cleanup() below, not from limiting fetch size.
         const task = pdfjs.getDocument({
           url: proxiedFileUrl,
           httpHeaders: {
             "x-materialcrate-pdf-request": "viewer",
           },
           withCredentials: true,
-          rangeChunkSize: 65536, // 64 KB chunks — balance between request count and latency
+          disableRange: true,
         });
         loadingTask = task;
 
@@ -238,14 +237,26 @@ export default function PdfViewerModal({
           if (isCancelled) break;
 
           const page = await pdf.getPage(pageNumber);
-          const viewport = page.getViewport({ scale: 1.25 });
 
-          // Add placeholder with correct aspect ratio before rendering
-          // so layout doesn't reflow when the canvas appears.
+          // Two sources of blurriness to fix:
+          //
+          // 1. Scale too low: A4 at 1.25× = ~743 px wide. If the container
+          //    is 768 px the browser upscales the canvas, which always blurs.
+          //    Downscaling a larger canvas is always sharper — so we use 1.5×
+          //    as the base (A4 → 892 px, US Letter → 918 px, both > container).
+          //
+          // 2. HiDPI/Retina: multiply by devicePixelRatio so the buffer has
+          //    one physical pixel per screen pixel. Cap the combined scale at 3×
+          //    so 100-page PDFs on Retina don't blow the canvas memory budget.
+          const dpr = window.devicePixelRatio ?? 1;
+          const RENDER_SCALE = Math.min(1.5 * dpr, 3);
+          const viewport = page.getViewport({ scale: RENDER_SCALE });
+
+          // Placeholder aspect ratio uses logical (CSS) dimensions — dpr cancels.
           const wrapper = document.createElement("div");
           wrapper.className =
             "relative overflow-hidden rounded bg-surface-high shadow-sm select-none";
-          wrapper.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
+          wrapper.style.aspectRatio = `${viewport.width / dpr} / ${viewport.height / dpr}`;
           canvasContainer.appendChild(wrapper);
 
           const canvas = document.createElement("canvas");
@@ -255,6 +266,8 @@ export default function PdfViewerModal({
             continue;
           }
 
+          // Canvas buffer = physical pixels; CSS display = w-full h-auto so the
+          // browser downscales it to fit the container — giving crisp text.
           canvas.width = viewport.width;
           canvas.height = viewport.height;
           canvas.className = "h-auto w-full pointer-events-none";
@@ -267,10 +280,10 @@ export default function PdfViewerModal({
               MAX_CANVAS_DIM / canvas.width,
               MAX_CANVAS_DIM / canvas.height,
             );
-            const scaledViewport = page.getViewport({ scale: 1.25 * ratio });
-            canvas.width = scaledViewport.width;
-            canvas.height = scaledViewport.height;
-            await page.render({ canvas, canvasContext: context, viewport: scaledViewport }).promise;
+            const cappedViewport = page.getViewport({ scale: RENDER_SCALE * ratio });
+            canvas.width = cappedViewport.width;
+            canvas.height = cappedViewport.height;
+            await page.render({ canvas, canvasContext: context, viewport: cappedViewport }).promise;
           } else {
             await page.render({ canvas, canvasContext: context, viewport }).promise;
           }
@@ -310,8 +323,7 @@ export default function PdfViewerModal({
             // Start with a sensible min-height per format so the slot isn't collapsed.
             const minHeight = zone.type === "banner" ? zone.height : 120;
             iframe.style.cssText =
-              `width:100%;height:${minHeight}px;border:none;display:block;`;
-            iframe.scrolling = "no";
+              `width:100%;height:${minHeight}px;border:none;display:block;overflow:hidden;`;
             iframe.sandbox.add(
               "allow-scripts",
               "allow-same-origin",
@@ -322,34 +334,29 @@ export default function PdfViewerModal({
             adWrapper.appendChild(iframe);
             canvasContainer.appendChild(adWrapper);
 
-            const iframeDoc =
-              iframe.contentDocument ?? iframe.contentWindow?.document;
-            if (iframeDoc) {
-              iframeDoc.open();
-              const cacheBust = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-              iframeDoc.write(buildAdHtml(zone, cacheBust));
-              iframeDoc.close();
+            // srcdoc replaces the deprecated document.write pattern.
+            const cacheBust = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            iframe.srcdoc = buildAdHtml(zone, cacheBust);
 
-              // Resize once the iframe settles — ad scripts inject content
-              // asynchronously so we watch with ResizeObserver instead of 'load'.
-              const resizeToContent = () => {
-                const body = iframe.contentDocument?.body;
-                if (body && body.scrollHeight > minHeight) {
-                  iframe.style.height = `${body.scrollHeight}px`;
-                }
-              };
+            // Resize once the iframe settles — ad scripts inject content
+            // asynchronously so we watch with ResizeObserver instead of 'load'.
+            const resizeToContent = () => {
+              const body = iframe.contentDocument?.body;
+              if (body && body.scrollHeight > minHeight) {
+                iframe.style.height = `${body.scrollHeight}px`;
+              }
+            };
 
-              iframe.addEventListener("load", () => {
+            iframe.addEventListener("load", () => {
+              resizeToContent();
+              // Poll briefly for async ad injection finishing.
+              let attempts = 0;
+              const poll = setInterval(() => {
                 resizeToContent();
-                // Poll briefly for async ad injection finishing.
-                let attempts = 0;
-                const poll = setInterval(() => {
-                  resizeToContent();
-                  attempts += 1;
-                  if (attempts >= 10) clearInterval(poll);
-                }, 300);
-              });
-            }
+                attempts += 1;
+                if (attempts >= 10) clearInterval(poll);
+              }, 300);
+            });
           }
 
           if (pageNumber === pdf.numPages) {
