@@ -109,6 +109,8 @@ type Query {
   myTokenTransactions(limit: Int = 20, offset: Int = 0): [TokenTransaction!]!
   myTokenCashoutRequests: [TokenCashoutRequest!]!
   mySessions: [Session!]!
+  suggestedCategories(limit: Int): [String!]!
+  suggestedUsers(limit: Int): [User!]!
 }
 
 type Mutation {

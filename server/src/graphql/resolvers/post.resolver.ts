@@ -1073,6 +1073,31 @@ export const PostResolver = {
 
       return posts.map((post) => mapPostForGraphQL(post, viewerId));
     },
+    trendingPosts: async (
+      _: unknown,
+      { limit = 5 }: { limit?: number },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      const safeLimit = Math.min(Math.max(Number(limit) || 5, 1), 20);
+      const [inaccessibleIds, blockedIds] = await Promise.all([
+        getInaccessibleAuthorIds(viewerId),
+        getBlockedUserIdsForViewer(viewerId),
+      ]);
+      const excludedAuthorIds = [...new Set([...inaccessibleIds, ...blockedIds])];
+      return prisma.post.findMany({
+        where: {
+          deleted: false,
+          ...(excludedAuthorIds.length > 0
+            ? { authorId: { notIn: excludedAuthorIds } }
+            : {}),
+          author: { deleted: false, disabled: false },
+        },
+        orderBy: { viewCount: "desc" },
+        take: safeLimit,
+      });
+    },
+
     searchPosts: async (
       _: unknown,
       { query, limit = 12, offset = 0 }: { query: string; limit?: number; offset?: number },

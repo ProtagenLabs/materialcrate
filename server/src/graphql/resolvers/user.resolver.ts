@@ -726,6 +726,148 @@ export const UserResolver = {
         current: s.jti === currentJti,
       }));
     },
+
+    suggestedCategories: async (_: unknown, { limit = 12 }: { limit?: number }, ctx: any) => {
+      const viewerId: string | undefined = ctx.user?.sub;
+      const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 30);
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      if (viewerId) {
+        const rows = await (prisma as any).feedInteraction.groupBy({
+          by: ["category"],
+          where: {
+            userId: viewerId,
+            category: { not: null },
+            signalKind: "positive",
+            createdAt: { gte: thirtyDaysAgo },
+          },
+          _count: { category: true },
+          orderBy: { _count: { category: "desc" } },
+          take: safeLimit,
+        });
+        const userCats: string[] = rows.map((r: any) => r.category).filter(Boolean);
+        if (userCats.length >= 4) return userCats;
+      }
+
+      // Fallback: derive from top posts by view count
+      const topPosts = await prisma.post.findMany({
+        where: { deleted: false },
+        orderBy: { viewCount: "desc" },
+        take: 200,
+        select: { categories: true },
+      });
+      const counts: Record<string, number> = {};
+      for (const post of topPosts) {
+        for (const cat of post.categories) {
+          counts[cat] = (counts[cat] ?? 0) + 1;
+        }
+      }
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, safeLimit)
+        .map(([cat]) => cat);
+    },
+
+    suggestedUsers: async (_: unknown, { limit = 5 }: { limit?: number }, ctx: any) => {
+      const viewerId: string | undefined = ctx.user?.sub;
+      const safeLimit = Math.min(Math.max(Number(limit) || 5, 1), 10);
+
+      // Collect author IDs already excluded: followed + blocked
+      let followedIds: string[] = [];
+      let blockedIds: string[] = [];
+
+      if (viewerId) {
+        const [followRows, viewer] = await Promise.all([
+          (prisma as any).follow.findMany({
+            where: { followerId: viewerId },
+            select: { followingId: true },
+          }),
+          prisma.user.findUnique({
+            where: { id: viewerId },
+            select: { blockedUserIds: true },
+          }),
+        ]);
+        followedIds = followRows.map((f: any) => f.followingId);
+        blockedIds = Array.isArray(viewer?.blockedUserIds) ? viewer!.blockedUserIds : [];
+      }
+
+      const excluded = new Set([...followedIds, ...blockedIds, ...(viewerId ? [viewerId] : [])]);
+      const excludedArr = Array.from(excluded);
+
+      if (viewerId) {
+        // Find authors whose posts the viewer positively interacted with in last 30 days
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const interacted = await (prisma as any).feedInteraction.findMany({
+          where: {
+            userId: viewerId,
+            postId: { not: null },
+            signalKind: "positive",
+            createdAt: { gte: thirtyDaysAgo },
+          },
+          select: { postId: true },
+          distinct: ["postId"],
+          take: 100,
+        });
+
+        if (interacted.length > 0) {
+          const postIds: string[] = interacted.map((i: any) => i.postId).filter(Boolean);
+          const authorRows = await prisma.post.findMany({
+            where: {
+              id: { in: postIds },
+              authorId: excludedArr.length > 0 ? { notIn: excludedArr } : undefined,
+              author: { deleted: false, disabled: false },
+            },
+            select: { authorId: true },
+            distinct: ["authorId"],
+            take: safeLimit * 3,
+          });
+
+          const candidateIds = authorRows
+            .map((r) => r.authorId)
+            .filter((id): id is string => !!id && !excluded.has(id))
+            .slice(0, safeLimit);
+
+          if (candidateIds.length >= safeLimit) {
+            return prisma.user.findMany({
+              where: { id: { in: candidateIds } },
+              take: safeLimit,
+            });
+          }
+
+          // Partial — top up with follower-count fallback below
+          const partialUsers = candidateIds.length > 0
+            ? await prisma.user.findMany({ where: { id: { in: candidateIds } } })
+            : [];
+          const stillNeeded = safeLimit - partialUsers.length;
+          const partialIds = partialUsers.map((u) => u.id);
+          const fillExcluded = new Set([...excluded, ...partialIds]);
+
+          const topUploaders = await prisma.user.findMany({
+            where: {
+              id: fillExcluded.size > 0 ? { notIn: Array.from(fillExcluded) } : undefined,
+              deleted: false,
+              disabled: false,
+              posts: { some: { deleted: false } },
+            },
+            orderBy: { followerRelations: { _count: "desc" } },
+            take: stillNeeded,
+          });
+          return [...partialUsers, ...topUploaders];
+        }
+      }
+
+      // Logged-out or no interactions: return top uploaders by follower count
+      return prisma.user.findMany({
+        where: {
+          id: excludedArr.length > 0 ? { notIn: excludedArr } : undefined,
+          deleted: false,
+          disabled: false,
+          posts: { some: { deleted: false } },
+        },
+        orderBy: { followerRelations: { _count: "desc" } },
+        take: safeLimit,
+      });
+    },
   },
 
   Mutation: {

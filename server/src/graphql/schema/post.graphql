@@ -68,6 +68,7 @@ extend type Query {
   post(id: ID!): Post
   postVersions(postId: ID!): [PostVersion!]!
   posts(authorUsername: String, limit: Int = 50, offset: Int = 0): [Post!]!
+  trendingPosts(limit: Int): [Post!]!
   searchPosts(query: String!, limit: Int = 12, offset: Int = 0): [Post!]!
   recentlyDeletedPosts(limit: Int = 50, offset: Int = 0): [Post!]!
   postRenderedHtml(id: ID!): String

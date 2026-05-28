@@ -10,11 +10,11 @@ import {
   Clipboard,
   Archive,
   Profile,
-  SearchNormal1,
   Coin1,
   Messages2,
   Notification,
   DocumentUpload,
+  MessageQuestion,
 } from "iconsax-reactjs";
 import type { Icon as IconsaxIcon } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
@@ -43,6 +43,7 @@ export default function Navbar() {
     : "/login";
 
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+  const [homeTab, setHomeTab] = useState("feed");
   const [rawUnreadCount, setRawUnreadCount] = useState(0);
   const [rawNotificationCount, setRawNotificationCount] = useState(0);
   const unreadMessageCount = user?.id ? rawUnreadCount : 0;
@@ -75,8 +76,10 @@ export default function Navbar() {
   // After that, the Socket.IO subscription below keeps it current.
   useEffect(() => {
     if (!user?.id) return;
-    void fetch("/api/notifications?limit=100&unreadOnly=true", { cache: "no-store" })
-      .then((r) => r.ok ? r.json() : null)
+    void fetch("/api/notifications?limit=100&unreadOnly=true", {
+      cache: "no-store",
+    })
+      .then((r) => (r.ok ? r.json() : null))
       .then((data: { notifications?: unknown[] } | null) => {
         if (Array.isArray(data?.notifications)) {
           setRawNotificationCount(data.notifications.length);
@@ -98,7 +101,10 @@ export default function Navbar() {
         setRawNotificationCount(event.unreadCount);
       }
     }).then((cleanup) => {
-      if (disposed) { cleanup(); return; }
+      if (disposed) {
+        cleanup();
+        return;
+      }
       unsubscribe = cleanup;
     });
 
@@ -113,6 +119,15 @@ export default function Navbar() {
     window.addEventListener("mc:chat:new-message", onNewChatMessage);
     return () =>
       window.removeEventListener("mc:chat:new-message", onNewChatMessage);
+  }, []);
+
+  useEffect(() => {
+    const onTabChange = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab: string }>).detail?.tab;
+      if (tab) setHomeTab(tab);
+    };
+    window.addEventListener("mc:home-tab-change", onTabChange);
+    return () => window.removeEventListener("mc:home-tab-change", onTabChange);
   }, []);
 
   return (
@@ -183,24 +198,6 @@ export default function Navbar() {
             />
           </button>
         </div>
-        <div className="px-2 pb-3">
-          <button
-            type="button"
-            onClick={() => router.push("/search")}
-            className={`cursor-pointer flex w-full items-center gap-4 rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:bg-black/5 active:scale-[0.97] ${
-              pathname === "/search"
-                ? "bg-[#FFF3E7] text-[#E1761F]"
-                : "text-ink-2 hover:text-ink"
-            }`}
-            aria-label="Search"
-          >
-            <SearchNormal1
-              size={24}
-              color={pathname === "/search" ? "#E1761F" : "#959595"}
-            />
-            <span className="hidden xl:inline">Search</span>
-          </button>
-        </div>
         <ul className="flex flex-col gap-1 px-2 flex-1">
           <li>
             <Link
@@ -225,7 +222,9 @@ export default function Navbar() {
                 />
                 {unreadNotificationCount > 0 && (
                   <span className="absolute -top-1 -right-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white leading-none">
-                    {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                    {unreadNotificationCount > 99
+                      ? "99+"
+                      : unreadNotificationCount}
                   </span>
                 )}
               </div>
@@ -285,7 +284,10 @@ export default function Navbar() {
                   onClick={(event) => {
                     if (isChatItem && window.innerWidth >= 1024) {
                       event.preventDefault();
-                      if (!isLoading && !user) { router.push("/login"); return; }
+                      if (!isLoading && !user) {
+                        router.push("/login");
+                        return;
+                      }
                       setIsChatPanelOpen((prev) => !prev);
                       return;
                     }
@@ -315,14 +317,25 @@ export default function Navbar() {
         </ul>
         {user && (
           <div className="px-3 pb-3">
-            <button
-              type="button"
-              onClick={() => router.push("/create")}
-              className="cursor-pointer w-full flex items-center justify-center gap-3 rounded-xl bg-[#E1761F] px-3 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#C96018] active:scale-[0.97]"
-            >
-              <DocumentUpload size={20} color="white" />
-              <span className="hidden xl:inline">Upload</span>
-            </button>
+            {pathname === "/" && homeTab === "requests" ? (
+              <button
+                type="button"
+                onClick={() => router.push("/request/create")}
+                className="cursor-pointer w-full flex items-center justify-center gap-3 rounded-xl bg-[#E1761F] px-3 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#C96018] active:scale-[0.97]"
+              >
+                <MessageQuestion size={20} color="white" variant="Bold" />
+                <span className="hidden xl:inline">New Request</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => router.push("/create")}
+                className="cursor-pointer w-full flex items-center justify-center gap-3 rounded-xl bg-[#E1761F] px-3 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#C96018] active:scale-[0.97]"
+              >
+                <DocumentUpload size={20} color="white" />
+                <span className="hidden xl:inline">Upload</span>
+              </button>
+            )}
           </div>
         )}
         {!isLoading && !user && (
