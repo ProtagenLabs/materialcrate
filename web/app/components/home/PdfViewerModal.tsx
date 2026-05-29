@@ -414,24 +414,24 @@ export default function PdfViewerModal({
       onContextMenu={(event) => event.preventDefault()}
     >
       <div className="flex h-full w-full max-w-5xl flex-col overflow-hidden bg-[#F4F1EC] shadow-2xl sm:rounded-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-edge-mid px-5 py-4">
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold text-ink">
+        <div className="flex items-start justify-between gap-3 border-b border-edge-mid px-4 py-3 sm:px-5 sm:py-4">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-ink sm:text-base">
               {post.title}
             </p>
-            <p className="mt-1 text-sm text-ink-2">
+            <p className="mt-1 truncate text-xs text-ink-2 sm:text-sm">
               {post.categories.join(", ")}
               {pdfState.pageCount > 0 && ` • ${pdfState.pageCount} pages`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => {
                 onClose();
                 router.push(`/hub?postId=${encodeURIComponent(post.id)}`);
               }}
-              className="rounded-3xl bg-[#E1761F] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-[#C96018] active:scale-95 shrink-0 cursor-pointer"
+              className="rounded-3xl bg-[#E1761F] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-[#C96018] active:scale-95 cursor-pointer whitespace-nowrap"
             >
               Open in Hub
             </button>

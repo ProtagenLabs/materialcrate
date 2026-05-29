@@ -36,7 +36,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-const prisma = new PrismaClient();
+// Prefer DIRECT_URL for seeding — bypasses the connection pooler which can be
+// unreachable from Railway's build/run context when Supabase pooler is used.
+const prisma = new PrismaClient({
+  datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } },
+});
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION ?? "us-east-1",
@@ -66,22 +70,75 @@ interface ArchiveItem {
 // Sorted by downloads desc so the first N results are popular/vetted titles.
 
 const SUBJECT_QUERIES: Array<[string, string, number]> = [
-  ["mathematics textbook", "Mathematics", 14],
+  // Mathematics
+  ["mathematics textbook", "Mathematics", 12],
   ["calculus textbook", "Mathematics", 8],
   ["linear algebra textbook", "Mathematics", 6],
-  ["physics textbook", "Physics", 14],
+  ["differential equations textbook", "Mathematics", 6],
+  ["number theory textbook", "Mathematics", 5],
+  ["discrete mathematics textbook", "Mathematics", 5],
+  ["real analysis textbook", "Mathematics", 5],
+  ["abstract algebra textbook", "Mathematics", 5],
+  // Physics
+  ["physics textbook", "Physics", 12],
+  ["quantum mechanics textbook", "Physics", 6],
+  ["classical mechanics textbook", "Physics", 6],
+  ["electromagnetism textbook", "Physics", 5],
+  ["thermodynamics textbook", "Physics", 5],
+  ["astrophysics textbook", "Physics", 5],
+  // Chemistry
   ["chemistry textbook", "Chemistry", 10],
+  ["organic chemistry textbook", "Chemistry", 6],
+  ["physical chemistry textbook", "Chemistry", 5],
+  ["inorganic chemistry textbook", "Chemistry", 5],
+  // Biology
   ["biology textbook", "Biology", 10],
+  ["molecular biology textbook", "Biology", 6],
+  ["genetics textbook", "Biology", 5],
+  ["ecology textbook", "Biology", 5],
+  ["microbiology textbook", "Biology", 5],
+  // Economics
   ["economics textbook", "Economics", 10],
-  ["history", "History", 8],
+  ["microeconomics textbook", "Economics", 6],
+  ["macroeconomics textbook", "Economics", 6],
+  ["econometrics textbook", "Economics", 5],
+  // History
+  ["world history", "History", 8],
+  ["ancient history", "History", 6],
+  ["modern history", "History", 6],
+  ["european history", "History", 5],
+  // Computer Science
   ["computer science algorithms", "Computer Science", 10],
+  ["data structures textbook", "Computer Science", 6],
+  ["operating systems textbook", "Computer Science", 6],
+  ["artificial intelligence textbook", "Computer Science", 6],
+  ["computer networks textbook", "Computer Science", 5],
+  ["database systems textbook", "Computer Science", 5],
+  // Philosophy
   ["philosophy", "Philosophy", 8],
+  ["ethics philosophy", "Philosophy", 6],
+  ["logic textbook", "Philosophy", 5],
+  ["metaphysics", "Philosophy", 5],
+  // Engineering
   ["engineering textbook", "Engineering", 8],
+  ["mechanical engineering textbook", "Engineering", 6],
+  ["electrical engineering textbook", "Engineering", 6],
+  ["civil engineering textbook", "Engineering", 5],
+  // Statistics
   ["statistics textbook", "Statistics", 8],
+  ["probability theory textbook", "Statistics", 6],
+  ["data analysis textbook", "Statistics", 5],
+  // Psychology
   ["psychology textbook", "Psychology", 8],
+  ["cognitive psychology textbook", "Psychology", 6],
+  ["social psychology textbook", "Psychology", 5],
+  // Sociology
   ["sociology textbook", "Sociology", 6],
+  ["social theory textbook", "Sociology", 5],
+  ["anthropology textbook", "Sociology", 5],
 ];
-// Approx total before dedup: 128 items. Dedup by identifier brings it lower.
+// Approx total before dedup: ~360 items. Dedup by identifier + skip of
+// already-seeded posts brings the net new count down on each re-run.
 
 // Max PDF size we are willing to download (bytes). Large scanned books can
 // exceed 200 MB and are impractical for a seed run.
@@ -763,9 +820,6 @@ async function seed() {
     await new Promise((r) => setTimeout(r, 1000));
   }
 
-  // TEST CAP — remove after prod test
-  allItems.splice(10);
-
   console.log(`Total unique items fetched: ${allItems.length}`);
   if (allItems.length === 0) {
     console.error("No items fetched from the Internet Archive. Aborting.");
@@ -883,10 +937,28 @@ async function seed() {
   // ── Create posts (only for items that got a PDF uploaded) ──
   console.log(`Seeding posts...`);
   let count = 0;
+  let skipped = 0;
+
+  // Dedup against already-seeded posts: fileUrl is deterministic per archive
+  // item, so a post with the same fileUrl means we've already seeded it.
+  // This lets re-runs add only genuinely new books without --reset.
+  const existingFileUrls = new Set(
+    (
+      await prisma.post.findMany({
+        where: { fileUrl: { in: [...fileUrlByIdentifier.values()] } },
+        select: { fileUrl: true },
+      })
+    ).map((p) => p.fileUrl),
+  );
 
   for (const { user, item } of assignments) {
     const fileUrl = fileUrlByIdentifier.get(item.identifier);
     if (!fileUrl) continue; // PDF couldn't be fetched — skip silently
+
+    if (existingFileUrls.has(fileUrl)) {
+      skipped++;
+      continue; // already seeded in a previous run — don't duplicate
+    }
 
     const thumbnailUrl = thumbnailByIdentifier.get(item.identifier) ?? null;
     await prisma.post.create({
@@ -923,7 +995,8 @@ async function seed() {
   }
 
   console.log(
-    `\nDone! Created ${createdUsers.length} users and ${count} posts.`,
+    `\nDone! Created ${createdUsers.length} users and ${count} new posts` +
+      (skipped > 0 ? ` (skipped ${skipped} already-seeded).` : "."),
   );
   console.log(
     `  Prolific user: ${prolificUser.username} (up to ${prolificItems.length} posts)`,
