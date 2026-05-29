@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -49,28 +49,30 @@ export default function Navbar() {
   const unreadMessageCount = user?.id ? rawUnreadCount : 0;
   const unreadNotificationCount = user?.id ? rawNotificationCount : 0;
 
-  useEffect(() => {
+  // Re-syncs the badge to the exact server-side unread total across all
+  // conversations. Called on mount, on navigation, and whenever a conversation
+  // is read or a new message arrives.
+  const fetchUnread = useCallback(async () => {
     if (!user?.id) return;
+    try {
+      const res = await fetch("/api/chat", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        conversations?: Array<{ unreadCount?: number }>;
+      };
+      if (Array.isArray(data?.conversations)) {
+        const total = data.conversations.reduce(
+          (sum, c) => sum + (c.unreadCount ?? 0),
+          0,
+        );
+        setRawUnreadCount(total);
+      }
+    } catch {}
+  }, [user?.id]);
 
-    const fetchUnread = async () => {
-      try {
-        const res = await fetch("/api/chat", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          conversations?: Array<{ unreadCount?: number }>;
-        };
-        if (Array.isArray(data?.conversations)) {
-          const total = data.conversations.reduce(
-            (sum, c) => sum + (c.unreadCount ?? 0),
-            0,
-          );
-          setRawUnreadCount(total);
-        }
-      } catch {}
-    };
-
+  useEffect(() => {
     void fetchUnread();
-  }, [user?.id, pathname]);
+  }, [fetchUnread, pathname]);
 
   // Initial fetch — gets the unread count once on mount.
   // After that, the Socket.IO subscription below keeps it current.
@@ -115,11 +117,19 @@ export default function Navbar() {
   }, [user?.id]);
 
   useEffect(() => {
+    // Optimistic +1 for instant feedback on an incoming message.
     const onNewChatMessage = () => setRawUnreadCount((n) => n + 1);
+    // A conversation was read (or otherwise changed) — re-sync to the exact
+    // server total. This is what makes the badge drop when you open a chat in
+    // the desktop panel, where there's no route change to trigger a re-fetch.
+    const onChatRead = () => void fetchUnread();
     window.addEventListener("mc:chat:new-message", onNewChatMessage);
-    return () =>
+    window.addEventListener("mc:chat:read", onChatRead);
+    return () => {
       window.removeEventListener("mc:chat:new-message", onNewChatMessage);
-  }, []);
+      window.removeEventListener("mc:chat:read", onChatRead);
+    };
+  }, [fetchUnread]);
 
   useEffect(() => {
     const onTabChange = (e: Event) => {

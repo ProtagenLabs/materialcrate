@@ -19,7 +19,9 @@
     "seed:openstax": "tsx prisma/seed-openstax.ts",
     "seed:openstax:reset": "tsx prisma/seed-openstax.ts --reset",
     "seed:archive": "tsx prisma/seed-archive.ts",
-    "seed:archive:reset": "tsx prisma/seed-archive.ts --reset"
+    "seed:archive:reset": "tsx prisma/seed-archive.ts --reset",
+    "seed:engagement": "tsx prisma/seed-engagement.ts",
+    "seed:engagement:reset": "tsx prisma/seed-engagement.ts --reset"
   },
   "keywords": [],
   "author": "ProtagenLabs",

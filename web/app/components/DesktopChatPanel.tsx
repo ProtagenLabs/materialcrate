@@ -501,7 +501,9 @@ export default function DesktopChatPanel({ isOpen, onClose }: { isOpen: boolean;
           id: string; text: string | null; sentByMe: boolean; timestamp: string;
           status: string | null; isUnsent: boolean; attachments?: MessageAttachment[];
         }) => ({ ...m, timestamp: new Date(m.timestamp), status: normaliseStatus(m.status), attachments: m.attachments ?? [] })));
-        void fetch(`/api/chat/${activeConvId}`, { method: "PATCH" });
+        void fetch(`/api/chat/${activeConvId}`, { method: "PATCH" }).then(
+          () => window.dispatchEvent(new CustomEvent("mc:chat:read")),
+        );
       })
       .catch(() => {})
       .finally(() => setIsLoadingMessages(false));
@@ -526,7 +528,9 @@ export default function DesktopChatPanel({ isOpen, onClose }: { isOpen: boolean;
           isUnsent: event.message.isUnsent, attachments: event.message.attachments ?? [],
         }];
       });
-      void fetch(`/api/chat/${activeConvId}`, { method: "PATCH" });
+      void fetch(`/api/chat/${activeConvId}`, { method: "PATCH" }).then(
+        () => window.dispatchEvent(new CustomEvent("mc:chat:read")),
+      );
     }).then(unsub => { if (cancelled) unsub(); else cleanups.push(unsub); });
 
     void subscribeToChatTyping(activeConvId, (event: ChatTypingEvent) => {
@@ -791,7 +795,7 @@ export default function DesktopChatPanel({ isOpen, onClose }: { isOpen: boolean;
                             {displayText && (
                               <button type="button"
                                 onContextMenu={e => { e.preventDefault(); setMenuMsg(msg); }}
-                                className={`rounded-[14px] px-3 py-2 text-sm leading-relaxed break-all text-left ${msg.sentByMe ? "bg-[#E1761F] text-white rounded-br-sm" : "bg-surface-high text-ink rounded-bl-sm"}`}>
+                                className={`whitespace-pre-wrap wrap-break-word rounded-[14px] px-3 py-2 text-sm leading-relaxed text-left ${msg.sentByMe ? "bg-[#E1761F] text-white rounded-br-sm" : "border border-edge bg-surface-high text-ink rounded-bl-sm"}`}>
                                 {displayText}
                               </button>
                             )}

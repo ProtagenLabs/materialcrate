@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -345,8 +351,12 @@ function MessageOptionsMenu({
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [position, setPosition] = useState<React.CSSProperties | undefined>();
 
-  useEffect(() => {
+  // Measures the menu against the viewport and positions it — a layout read +
+  // synchronous state set, so useLayoutEffect is the correct hook (runs before
+  // paint, no flicker, and avoids the cascading-render warning of useEffect).
+  useLayoutEffect(() => {
     if (!anchor || !isOpen || typeof window === "undefined") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- layout-measure-then-position is the sanctioned useLayoutEffect pattern
       setPosition(undefined);
       return;
     }
@@ -403,7 +413,7 @@ function MessageOptionsMenu({
     <div
       ref={menuRef}
       style={position}
-      className={`fixed z-[200] rounded-2xl border border-edge bg-surface p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.14)] transition-all duration-200 ease-out min-w-[160px] ${
+      className={`fixed z-200 rounded-2xl border border-edge bg-surface p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.14)] transition-all duration-200 ease-out min-w-40 ${
         !position ? "right-4 bottom-4" : ""
       } ${isOpen ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"}`}
     >
@@ -512,10 +522,12 @@ function MessageBubble({
             className={`rounded-[18px] px-3.5 py-2.5 ${
               sentByMe
                 ? "rounded-br-md bg-[#E1761F] text-white"
-                : "rounded-bl-md bg-surface-high text-ink"
+                : "rounded-bl-md border border-edge bg-surface-high text-ink"
             }`}
           >
-            <p className="break-all text-sm leading-relaxed">{displayText}</p>
+            <p className="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed">
+              {displayText}
+            </p>
           </div>
         )}
 
@@ -907,7 +919,7 @@ function GifTile({ gif, onSelect, onClose }: { gif: GifItem; onSelect: (url: str
         muted
         playsInline
         preload="none"
-        className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-150 [&[data-playing]]:opacity-100"
+        className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-150 data-playing:opacity-100"
         onPlay={(e) => e.currentTarget.setAttribute("data-playing", "")}
         onPause={(e) => e.currentTarget.removeAttribute("data-playing")}
       />
@@ -1117,7 +1129,7 @@ export default function ChatRoomPage() {
     if (!conversationId || isLoading) return;
     void fetch(`/api/chat/${encodeURIComponent(conversationId)}`, {
       method: "PATCH",
-    });
+    }).then(() => window.dispatchEvent(new CustomEvent("mc:chat:read")));
   }, [conversationId, isLoading]);
 
   // ── Realtime subscriptions ─────────────────────────────────────────────────
@@ -1147,7 +1159,7 @@ export default function ChatRoomPage() {
       });
       void fetch(`/api/chat/${encodeURIComponent(conversationId)}`, {
         method: "PATCH",
-      });
+      }).then(() => window.dispatchEvent(new CustomEvent("mc:chat:read")));
     };
 
     const onTyping = (event: ChatTypingEvent) => {
