@@ -95,6 +95,7 @@ const FEED_INTERACTION_SIGNAL_WEIGHTS: Record<
   SEARCH: { authorWeight: 0, categoryWeight: 5, keywordWeight: 10 },
   OPEN_PREVIEW: { authorWeight: 2, categoryWeight: 3, keywordWeight: 0 },
   LONG_VIEW: { authorWeight: 6, categoryWeight: 9, keywordWeight: 0 },
+  SCROLL_PAST: { authorWeight: 0, categoryWeight: 0, keywordWeight: 0 },
   DOWNLOAD: { authorWeight: 8, categoryWeight: 12, keywordWeight: 0 },
   SHARE: { authorWeight: 6, categoryWeight: 8, keywordWeight: 4 },
   LIKE: { authorWeight: 4, categoryWeight: 6, keywordWeight: 0 },
@@ -104,6 +105,18 @@ const FEED_INTERACTION_SIGNAL_WEIGHTS: Record<
   NOT_INTERESTED: { authorWeight: 10, categoryWeight: 14, keywordWeight: 6 },
   DISMISS: { authorWeight: 7, categoryWeight: 10, keywordWeight: 4 },
 };
+
+// Penalty applied to a specific post's score when the viewer has previously seen it.
+// "Opened" interactions (LONG_VIEW, OPEN_PREVIEW) cap at 150 so they can overcome
+// the followBoost of 90 — ensuring a viewed post from a followed author still drops.
+// SCROLL_PAST is a softer signal capped at 35.
+const SEEN_POST_PENALTIES: Record<string, number> = {
+  LONG_VIEW: 95,
+  OPEN_PREVIEW: 55,
+  SCROLL_PAST: 15,
+};
+const SEEN_OPENED_CAP = 150;
+const SEEN_SCROLL_CAP = 35;
 
 const normalizeFeedSignalKind = (value?: string | null) => {
   const normalized = String(value || "positive")
@@ -352,6 +365,9 @@ type FeedViewerSignals = {
   categoryWeights: Map<string, number>;
   authorWeights: Map<string, number>;
   keywordWeights: Map<string, number>;
+  // postId → { penalty, opened }
+  // opened=true means OPEN_PREVIEW or LONG_VIEW fired (higher cap than scroll-past-only)
+  seenPostIds: Map<string, { penalty: number; opened: boolean }>;
   isNewUser: boolean;
 };
 
@@ -393,6 +409,7 @@ const buildViewerFeedSignals = async (
       categoryWeights: new Map<string, number>(),
       authorWeights: new Map<string, number>(),
       keywordWeights: new Map<string, number>(),
+      seenPostIds: new Map<string, { penalty: number; opened: boolean }>(),
       isNewUser: true,
     };
   }
@@ -469,6 +486,7 @@ const buildViewerFeedSignals = async (
       },
       feedInteractions: {
         select: {
+          postId: true,
           interactionType: true,
           signalKind: true,
           category: true,
@@ -482,7 +500,7 @@ const buildViewerFeedSignals = async (
           },
         },
         orderBy: { createdAt: "desc" },
-        take: 120,
+        take: 200,
       },
     },
   });
@@ -522,6 +540,8 @@ const buildViewerFeedSignals = async (
     addCategoryWeights(categoryWeights, post.categories, 4);
   }
 
+  const seenPostIds = new Map<string, { penalty: number; opened: boolean }>();
+
   for (const interaction of viewer?.feedInteractions ?? []) {
     const interactionType = String(interaction.interactionType || "")
       .trim()
@@ -560,6 +580,19 @@ const buildViewerFeedSignals = async (
       interaction.category,
       weighting.keywordWeight * 0.6 * multiplier,
     );
+
+    // Accumulate seen penalties for specific posts
+    const seenPenalty = SEEN_POST_PENALTIES[interactionType];
+    if (seenPenalty && interaction.postId && signalKind !== "negative") {
+      const isOpened = interactionType === "OPEN_PREVIEW" || interactionType === "LONG_VIEW";
+      const existing = seenPostIds.get(interaction.postId) ?? { penalty: 0, opened: false };
+      const wasOpened = existing.opened || isOpened;
+      const cap = wasOpened ? SEEN_OPENED_CAP : SEEN_SCROLL_CAP;
+      seenPostIds.set(interaction.postId, {
+        penalty: Math.min(existing.penalty + seenPenalty, cap),
+        opened: wasOpened,
+      });
+    }
   }
 
   const interactionCount =
@@ -574,6 +607,7 @@ const buildViewerFeedSignals = async (
     categoryWeights,
     authorWeights,
     keywordWeights,
+    seenPostIds,
     isNewUser: interactionCount < 5,
   };
 };
@@ -613,7 +647,6 @@ const scorePostForFeed = (
   const ageHours = Number.isFinite(createdAtMs)
     ? Math.max(0, (Date.now() - createdAtMs) / (1000 * 60 * 60))
     : 72;
-  const followBoost = authorId && signals.followingIds.has(authorId) ? 90 : 0;
   const authorAffinityBoost = authorId
     ? (signals.authorWeights.get(authorId.toLowerCase()) ?? 0)
     : 0;
@@ -621,13 +654,12 @@ const scorePostForFeed = (
     Math.min(likeCount, 30) * 1.4 + Math.min(commentCount, 20) * 1.8;
   const freshnessBoost = Math.max(0, 72 - ageHours) * 0.75;
   const interestBoost = matchedCategoryWeight + matchedCategoryCount * 6;
-  const explorationBoost =
-    !followBoost && matchedCategoryCount > 0 ? 12 : signals.isNewUser ? 8 : 0;
+  const explorationBoost = matchedCategoryCount > 0 ? 10 : signals.isNewUser ? 8 : 0;
   const pinnedBoost = post?.pinned ? 20 : 0;
   const ownPostPenalty = viewerId && authorId === viewerId ? 18 : 0;
+  const seenPenalty = post?.id ? (signals.seenPostIds.get(post.id)?.penalty ?? 0) : 0;
 
   return (
-    followBoost +
     authorAffinityBoost +
     interestBoost +
     Math.max(-40, Math.min(keywordBoost, 40)) +
@@ -635,7 +667,8 @@ const scorePostForFeed = (
     freshnessBoost +
     explorationBoost +
     pinnedBoost -
-    ownPostPenalty
+    ownPostPenalty -
+    seenPenalty
   );
 };
 
@@ -655,61 +688,25 @@ const pickNextFeedCandidate = (
   return pool.splice(nextIndex, 1)[0] ?? null;
 };
 
-const mixRankedFeedCandidates = (
+// Pure score-ranked feed with author diversity (no follow ratio enforcement).
+const buildScoredFeed = (
   rankedCandidates: RankedFeedCandidate[],
   limit: number,
   offset: number,
 ) => {
-  const followedCandidates = rankedCandidates
-    .filter((candidate) => candidate.isFollowed)
-    .sort((left, right) => right.score - left.score);
-  const recommendedCandidates = rankedCandidates
-    .filter((candidate) => !candidate.isFollowed)
-    .sort((left, right) => right.score - left.score);
-  const mixedPosts: any[] = [];
-  const targetSize = Math.min(
-    rankedCandidates.length,
-    Math.max(limit + offset, limit) + Math.max(limit * 2, 12),
-  );
-  const pattern: Array<"followed" | "recommended"> =
-    followedCandidates.length > 0
-      ? ["followed", "followed", "recommended"]
-      : ["recommended"];
+  const sorted = [...rankedCandidates].sort((a, b) => b.score - a.score);
+  const result: any[] = [];
+  const targetSize = offset + limit;
   let lastAuthorId: string | null = null;
 
-  while (
-    mixedPosts.length < targetSize &&
-    (followedCandidates.length > 0 || recommendedCandidates.length > 0)
-  ) {
-    const previousLength = mixedPosts.length;
-
-    for (const slot of pattern) {
-      const primaryPool =
-        slot === "followed" ? followedCandidates : recommendedCandidates;
-      const fallbackPool =
-        slot === "followed" ? recommendedCandidates : followedCandidates;
-      const nextCandidate: RankedFeedCandidate | null =
-        pickNextFeedCandidate(primaryPool, lastAuthorId) ??
-        pickNextFeedCandidate(fallbackPool, lastAuthorId);
-
-      if (!nextCandidate) {
-        continue;
-      }
-
-      mixedPosts.push(nextCandidate.post);
-      lastAuthorId = nextCandidate.post?.authorId ?? null;
-
-      if (mixedPosts.length >= targetSize) {
-        break;
-      }
-    }
-
-    if (mixedPosts.length === previousLength) {
-      break;
-    }
+  while (result.length < targetSize && sorted.length > 0) {
+    const next = pickNextFeedCandidate(sorted, lastAuthorId);
+    if (!next) break;
+    result.push(next.post);
+    lastAuthorId = next.post?.authorId ?? null;
   }
 
-  return mixedPosts;
+  return result;
 };
 
 const getMixedFeedPosts = async (
@@ -784,18 +781,12 @@ const getMixedFeedPosts = async (
       ),
     ).values(),
   );
-  const rankedCandidates = dedupedPosts
-    .map((post) => ({
-      post,
-      score: scorePostForFeed(post, viewerId, signals),
-      isFollowed: signals.followingIds.has(post.authorId ?? ""),
-    }))
-    .sort((left, right) => right.score - left.score);
-  const mixedPosts = mixRankedFeedCandidates(
-    rankedCandidates,
-    safeLimit,
-    safeOffset,
-  );
+  const rankedCandidates = dedupedPosts.map((post) => ({
+    post,
+    score: scorePostForFeed(post, viewerId, signals),
+    isFollowed: signals.followingIds.has(post.authorId ?? ""),
+  }));
+  const mixedPosts = buildScoredFeed(rankedCandidates, safeLimit, safeOffset);
 
   return mixedPosts
     .slice(safeOffset, safeOffset + safeLimit)

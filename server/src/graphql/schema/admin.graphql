@@ -103,9 +103,77 @@ type AdminStats {
   trendingDocs: [AdminTrendingDoc!]!
 }
 
+type AdminPostItem {
+  id: ID!
+  title: String!
+  authorId: String
+  authorUsername: String
+  categories: [String!]!
+  fileType: String!
+  viewCount: Int!
+  likeCount: Int!
+  downloadCount: Int!
+  revenue: Float!
+  createdAt: String!
+  deleted: Boolean!
+  thumbnailUrl: String
+}
+
+type AdminPostsPage {
+  posts: [AdminPostItem!]!
+  total: Int!
+}
+
+type AdminCategoryStat {
+  name: String!
+  count: Int!
+}
+
+type AdminFileTypeStat {
+  type: String!
+  count: Int!
+  percent: Float!
+}
+
+type AdminUploadStats {
+  totalActive: Int!
+  totalRemoved: Int!
+  categories: [AdminCategoryStat!]!
+  fileTypes: [AdminFileTypeStat!]!
+}
+
+type AdminPostUrls {
+  fileUrl: String!
+  fileType: String!
+  renderedHtml: String
+}
+
+type AdminPlagiarismCase {
+  id: ID!
+  originalPostId: ID!
+  originalTitle: String!
+  originalAuthor: String
+  suspectedPostId: ID!
+  suspectedTitle: String!
+  suspectedAuthor: String
+  similarityScore: Float!
+  verdict: String!
+  status: String!
+  createdAt: String!
+}
+
 extend type Query {
   adminListBots: [User!]!
   adminListCashoutRequests(status: String, limit: Int = 50, offset: Int = 0): [AdminCashoutRequest!]!
   adminStats: AdminStats!
   adminListAdmins: [AdminUserItem!]!
+  adminListPosts(limit: Int, offset: Int, search: String, deleted: Boolean): AdminPostsPage!
+  adminUploadStats: AdminUploadStats!
+  adminGetPostUrls(id: ID!): AdminPostUrls!
+  adminListPlagiarismCases(status: String, limit: Int, offset: Int): [AdminPlagiarismCase!]!
+}
+
+extend type Mutation {
+  adminDeletePost(id: ID!): Boolean!
+  adminRestorePost(id: ID!): Boolean!
 }

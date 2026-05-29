@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
-import { PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { CloudWatchClient, GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
 import { prisma } from "../../config/prisma.js";
 import { s3 } from "../../config/s3.js";
@@ -310,6 +311,179 @@ export const AdminResolver = {
             : String(r.payoutDetails ?? "{}"),
         createdAt: toIso(r.createdAt) ?? "",
         reviewedAt: toIso(r.reviewedAt),
+      }));
+    },
+
+    adminListPosts: async (
+      _: unknown,
+      { limit = 20, offset = 0, search, deleted }: { limit?: number; offset?: number; search?: string; deleted?: boolean },
+      ctx: AdminContext,
+    ) => {
+      requireAdmin(ctx);
+
+      const where: Record<string, unknown> = {};
+      if (deleted !== undefined) where.deleted = deleted;
+      if (search?.trim()) {
+        where.OR = [
+          { title: { contains: search.trim(), mode: "insensitive" } },
+          { author: { username: { contains: search.trim(), mode: "insensitive" } } },
+        ];
+      }
+
+      const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+      const safeOffset = Math.max(Number(offset) || 0, 0);
+
+      const [posts, total] = await Promise.all([
+        prisma.post.findMany({
+          where,
+          take: safeLimit,
+          skip: safeOffset,
+          orderBy: { createdAt: "desc" },
+          include: {
+            author: { select: { username: true } },
+            _count: { select: { purchases: true, likes: true } },
+          },
+        }),
+        prisma.post.count({ where }),
+      ]);
+
+      const postIds = posts.map((p) => p.id);
+      const purchaseSums = postIds.length > 0
+        ? await prisma.purchase.groupBy({
+            by: ["postId"],
+            where: { postId: { in: postIds } },
+            _sum: { amount: true },
+          })
+        : [];
+
+      const revenueMap = new Map(purchaseSums.map((s) => [s.postId, s._sum.amount ?? 0]));
+
+      return {
+        total,
+        posts: posts.map((p) => ({
+          id: p.id,
+          title: p.title,
+          authorId: p.authorId ?? null,
+          authorUsername: p.author?.username ?? null,
+          categories: p.categories,
+          fileType: p.fileType,
+          viewCount: p.viewCount,
+          likeCount: p._count.likes,
+          downloadCount: p._count.purchases,
+          revenue: revenueMap.get(p.id) ?? 0,
+          createdAt: p.createdAt.toISOString(),
+          deleted: p.deleted,
+          thumbnailUrl: p.thumbnailUrl ?? null,
+        })),
+      };
+    },
+
+    adminUploadStats: async (_: unknown, __: unknown, ctx: AdminContext) => {
+      requireAdmin(ctx);
+
+      const [totalActive, totalRemoved, fileTypeGroups, categoryRows] = await Promise.all([
+        prisma.post.count({ where: { deleted: false } }),
+        prisma.post.count({ where: { deleted: true } }),
+        prisma.post.groupBy({ by: ["fileType"], where: { deleted: false }, _count: { _all: true } }),
+        prisma.$queryRaw<{ cat: string; cnt: bigint }[]>`
+          SELECT unnest(categories) AS cat, count(*) AS cnt
+          FROM "Post"
+          WHERE deleted = false
+          GROUP BY cat
+          ORDER BY cnt DESC
+          LIMIT 30
+        `,
+      ]);
+
+      const total = fileTypeGroups.reduce((s, g) => s + g._count._all, 0);
+      const fileTypes = fileTypeGroups
+        .sort((a, b) => b._count._all - a._count._all)
+        .map((g) => ({
+          type: g.fileType.toUpperCase(),
+          count: g._count._all,
+          percent: total > 0 ? Math.round((g._count._all / total) * 100) : 0,
+        }));
+
+      const categories = categoryRows.map((r) => ({
+        name: r.cat,
+        count: Number(r.cnt),
+      }));
+
+      return { totalActive, totalRemoved, categories, fileTypes };
+    },
+
+    adminGetPostUrls: async (_: unknown, { id }: { id: string }, ctx: AdminContext) => {
+      requireAdmin(ctx);
+
+      const post = await prisma.post.findUnique({
+        where: { id },
+        select: { fileUrl: true, fileType: true, renderedHtmlUrl: true },
+      });
+      if (!post) throw new Error("Post not found");
+
+      const privateBucket = process.env.AWS_S3_PRIVATE_BUCKET ?? "";
+
+      // Generate a short-lived presigned URL so the Next.js proxy can fetch it
+      let presignedFileUrl = post.fileUrl;
+      try {
+        const parsed = new URL(post.fileUrl);
+        const key = parsed.pathname.slice(1);
+        presignedFileUrl = await getSignedUrl(
+          s3,
+          new GetObjectCommand({ Bucket: privateBucket, Key: key }),
+          { expiresIn: 300 },
+        );
+      } catch { /* fall back to raw URL */ }
+
+      // For Word docs, fetch rendered HTML from S3 server-side
+      let renderedHtml: string | null = null;
+      if (post.renderedHtmlUrl && post.fileType !== "pdf") {
+        try {
+          const parsed = new URL(post.renderedHtmlUrl);
+          const key = parsed.pathname.slice(1);
+          const result = await s3.send(new GetObjectCommand({ Bucket: privateBucket, Key: key }));
+          renderedHtml = (await result.Body?.transformToString("utf-8")) ?? null;
+        } catch {
+          renderedHtml = null;
+        }
+      }
+
+      return { fileUrl: presignedFileUrl, fileType: post.fileType, renderedHtml };
+    },
+
+    adminListPlagiarismCases: async (
+      _: unknown,
+      { status, limit = 50, offset = 0 }: { status?: string; limit?: number; offset?: number },
+      ctx: AdminContext,
+    ) => {
+      requireAdmin(ctx);
+
+      const where: Record<string, unknown> = {};
+      if (status?.trim()) where.status = status.trim();
+
+      const cases = await prisma.plagiarismCase.findMany({
+        where,
+        take: Math.min(Number(limit) || 50, 100),
+        skip: Math.max(Number(offset) || 0, 0),
+        orderBy: { createdAt: "desc" },
+        include: {
+          originalPost: { select: { title: true, author: { select: { username: true } } } },
+          suspectedPost: { select: { title: true, author: { select: { username: true } } } },
+        },
+      });
+
+      return cases.map((c) => ({
+        id: c.id,
+        originalPostId: c.originalPostId,
+        originalTitle: c.originalPost.title,
+        originalAuthor: c.originalPost.author?.username ?? null,
+        suspectedPostId: c.suspectedPostId,
+        suspectedTitle: c.suspectedPost.title,
+        suspectedAuthor: c.suspectedPost.author?.username ?? null,
+        similarityScore: c.similarityScore,
+        verdict: c.verdict,
+        status: c.status,
+        createdAt: c.createdAt.toISOString(),
       }));
     },
   },
@@ -738,6 +912,18 @@ export const AdminResolver = {
         commentCount: createdPost._count?.comments ?? 0,
         viewerHasLiked: false,
       };
+    },
+
+    adminDeletePost: async (_: unknown, { id }: { id: string }, ctx: AdminContext) => {
+      requireAdmin(ctx);
+      await prisma.post.update({ where: { id }, data: { deleted: true, deletedAt: new Date() } });
+      return true;
+    },
+
+    adminRestorePost: async (_: unknown, { id }: { id: string }, ctx: AdminContext) => {
+      requireAdmin(ctx);
+      await prisma.post.update({ where: { id }, data: { deleted: false, deletedAt: null } });
+      return true;
     },
   },
 };
