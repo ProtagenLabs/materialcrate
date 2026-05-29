@@ -297,6 +297,45 @@ export default function Post({
     };
   }, []);
 
+  // Track SCROLL_PAST: fire when post was visible ≥1s but user didn't open it
+  useEffect(() => {
+    const element = postCardRef.current;
+    if (!element || !post.id || typeof IntersectionObserver === "undefined") return;
+
+    let visibleTimer: ReturnType<typeof setTimeout> | null = null;
+    let wasHeld = false; // true once the post has been visible for ≥1s
+    let didOpen = false;
+
+    const markOpen = () => { didOpen = true; };
+    element.addEventListener("click", markOpen);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && (entry.intersectionRatio ?? 0) >= 0.3) {
+          if (!visibleTimer) {
+            visibleTimer = setTimeout(() => { wasHeld = true; }, 1000);
+          }
+        } else {
+          if (visibleTimer) { clearTimeout(visibleTimer); visibleTimer = null; }
+          if (wasHeld && !didOpen) {
+            void trackFeedInteraction({ postId: post.id, interactionType: "SCROLL_PAST", signalKind: "context" });
+          }
+          wasHeld = false;
+          didOpen = false;
+        }
+      },
+      { threshold: 0.3 },
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+      if (visibleTimer) clearTimeout(visibleTimer);
+      element.removeEventListener("click", markOpen);
+    };
+  }, [post.id]);
+
   useEffect(() => {
     if (!isNearViewport) {
       return;

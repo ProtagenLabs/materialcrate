@@ -3,10 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HiHome, HiUsers } from "react-icons/hi2";
+import { HiHome, HiUsers, HiDocumentText } from "react-icons/hi2";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Home", icon: HiHome },
+  { href: "/admin/uploads", label: "Uploads", icon: HiDocumentText },
   { href: "/admin/team", label: "Team", icon: HiUsers },
 ];
 
