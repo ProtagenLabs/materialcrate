@@ -10,8 +10,10 @@ export default function useScrollVisibility() {
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
+    let ticking = false;
 
-    function handleScroll() {
+    function update() {
+      ticking = false;
       const currentScrollY = window.scrollY;
       const scrollDifference = currentScrollY - lastScrollY;
 
@@ -26,6 +28,14 @@ export default function useScrollVisibility() {
       }
 
       lastScrollY = currentScrollY;
+    }
+
+    function handleScroll() {
+      if (ticking) {
+        return;
+      }
+      ticking = true;
+      window.requestAnimationFrame(update);
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true });

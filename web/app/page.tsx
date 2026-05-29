@@ -857,7 +857,7 @@ export default function Home() {
       />
       <div className="lg:mx-auto lg:max-w-255 lg:grid lg:grid-cols-[minmax(0,1fr)_272px] lg:gap-6 lg:px-4 lg:items-start">
         <main className="mx-auto w-full max-w-140 2xl:max-w-120 lg:max-w-none lg:mx-0 lg:pt-4 lg:pb-8">
-          <div className="hidden lg:flex items-center justify-between border-b border-edge mb-4 px-24">
+          <div className="hidden lg:flex items-center justify-between border-b border-edge mb-4 px-24 sticky top-0 bg-white z-100">
             {(["feed", "requests"] as HomeTab[]).map((tab) => (
               <button
                 key={tab}
@@ -869,7 +869,7 @@ export default function Home() {
                   );
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
-                className={`relative px-6 pb-3.5 pt-1 text-sm font-semibold transition-colors duration-150 ${
+                className={`relative px-6 pb-3.5 pt-1 text-sm font-semibold transition-colors duration-150 cursor-pointer ${
                   activeTab === tab ? "text-ink" : "text-ink-3 hover:text-ink-2"
                 }`}
               >
@@ -995,7 +995,7 @@ export default function Home() {
               />
               <input
                 type="text"
-                placeholder="Search materials…"
+                placeholder="Search…"
                 className="w-full rounded-2xl border border-edge bg-surface py-3 pl-9 pr-4 text-sm text-ink placeholder:text-ink-3 shadow-sm transition-all focus:border-[#E1761F]/40 focus:outline-none focus:ring-2 focus:ring-[#E1761F]/10"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -1009,41 +1009,43 @@ export default function Home() {
           </div>
           <div className="flex flex-col gap-3 pb-12">
             {/* Subscribe CTA */}
-            <div className="relative overflow-hidden rounded-2xl bg-[#0d0d0d] p-5">
-              <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-[#E1761F]/20 blur-2xl" />
-              <div className="pointer-events-none absolute -bottom-8 -left-4 h-20 w-20 rounded-full bg-violet-500/15 blur-2xl" />
-              <div className="relative">
-                <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#E1761F]/15 px-2.5 py-1 text-[11px] font-semibold text-[#E1761F]">
-                  ✦ MaterialCrate Pro
-                </span>
-                <p className="text-sm font-semibold leading-snug text-white">
-                  Upgrade your experience
-                </p>
-                <ul className="mt-3 space-y-2">
-                  {[
-                    "Get rid of ads, completely",
-                    "More AI assistant credits",
-                    "Your own verification badge",
-                    "Early access to new features",
-                  ].map((item) => (
-                    <li
-                      key={item}
-                      className="flex items-center gap-2 text-xs text-white/60"
-                    >
-                      <span className="h-1 w-1 shrink-0 rounded-full bg-[#E1761F]" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  type="button"
-                  onClick={() => router.push("/plans")}
-                  className="mt-4 w-full rounded-xl bg-[#E1761F] py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-[#C96018] active:scale-[.98] cursor-pointer"
-                >
-                  Subscribe
-                </button>
+            {!user?.subscriptionPlan && (
+              <div className="relative overflow-hidden rounded-2xl bg-[#0d0d0d] p-5">
+                <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-[#E1761F]/20 blur-2xl" />
+                <div className="pointer-events-none absolute -bottom-8 -left-4 h-20 w-20 rounded-full bg-violet-500/15 blur-2xl" />
+                <div className="relative">
+                  <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#E1761F]/15 px-2.5 py-1 text-[11px] font-semibold text-[#E1761F]">
+                    ✦ MaterialCrate Pro
+                  </span>
+                  <p className="text-sm font-semibold leading-snug text-white">
+                    Upgrade your experience
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {[
+                      "Get rid of ads, completely",
+                      "More AI assistant credits",
+                      "Your own verification badge",
+                      "Early access to new features",
+                    ].map((item) => (
+                      <li
+                        key={item}
+                        className="flex items-center gap-2 text-xs text-white/60"
+                      >
+                        <span className="h-1 w-1 shrink-0 rounded-full bg-[#E1761F]" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/plans")}
+                    className="mt-4 w-full rounded-xl bg-[#E1761F] py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-[#C96018] active:scale-[.98] cursor-pointer"
+                  >
+                    Subscribe
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Trending materials */}
             <div className="rounded-2xl border border-edge bg-surface p-5 shadow-sm">
@@ -1056,7 +1058,10 @@ export default function Home() {
                     <div key={w} className="flex gap-3">
                       <div className="skeleton h-4 w-4 shrink-0 rounded" />
                       <div className="flex-1 space-y-1.5">
-                        <div className="skeleton h-3 rounded-full" style={{ width: w }} />
+                        <div
+                          className="skeleton h-3 rounded-full"
+                          style={{ width: w }}
+                        />
                         <div className="skeleton h-2.5 w-16 rounded-full" />
                       </div>
                     </div>
@@ -1101,7 +1106,11 @@ export default function Home() {
               {isLoadingSidebar ? (
                 <div className="flex flex-wrap gap-2">
                   {[80, 64, 96, 72, 88, 56, 76].map((w) => (
-                    <div key={w} className="skeleton h-7 rounded-full" style={{ width: w }} />
+                    <div
+                      key={w}
+                      className="skeleton h-7 rounded-full"
+                      style={{ width: w }}
+                    />
                   ))}
                 </div>
               ) : !sidebarData?.suggestedCategories.length ? (
@@ -1112,7 +1121,9 @@ export default function Home() {
                     <button
                       key={cat}
                       type="button"
-                      onClick={() => router.push(`/search?q=${encodeURIComponent(cat)}`)}
+                      onClick={() =>
+                        router.push(`/search?q=${encodeURIComponent(cat)}`)
+                      }
                       className="cursor-pointer rounded-full border border-edge bg-page px-3 py-1 text-xs font-medium text-ink-2 transition-colors duration-150 hover:border-[#E1761F]/50 hover:bg-[#E1761F]/5 hover:text-[#E1761F]"
                     >
                       {cat}
