@@ -372,7 +372,7 @@ function MessageMenu({ msg, onClose, onCopy, onUnsend }: {
 
 type View = "convos" | "compose" | "messages";
 
-export default function DesktopChatPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export default function DesktopChatPanel({ isOpen, onClose, shiftedForComments = false }: { isOpen: boolean; onClose: () => void; shiftedForComments?: boolean }) {
   const router = useRouter();
   const { user } = useAuth();
 
@@ -609,7 +609,7 @@ export default function DesktopChatPanel({ isOpen, onClose }: { isOpen: boolean;
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-6 right-4 z-50 hidden lg:flex flex-col w-80 h-130 rounded-2xl bg-surface border border-edge shadow-2xl overflow-hidden">
+    <div className={`fixed bottom-6 z-50 hidden lg:flex flex-col w-80 h-130 rounded-2xl bg-surface border border-edge shadow-2xl overflow-hidden transition-[right] duration-300 ease-out ${shiftedForComments ? "right-88" : "right-4"}`}>
 
       {view === "convos" && (
         <>

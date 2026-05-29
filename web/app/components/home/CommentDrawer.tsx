@@ -380,6 +380,21 @@ export default function CommentDrawer({
     };
   }, []);
 
+  // On desktop the comment window pops up in the same bottom-right slot as the
+  // chat window. Broadcast its open state so the chat panel can slide aside
+  // instead of overlapping it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("mc:comment-window", { detail: { open: isOpen } }),
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("mc:comment-window", { detail: { open: false } }),
+      );
+    };
+  }, [isOpen]);
+
   const scheduleRealtimeCommentsRefresh = useCallback(
     (delay = COMMENTS_REALTIME_REFRESH_DEBOUNCE_MS) => {
       if (!isOpen || !postId || typeof window === "undefined") {
@@ -954,24 +969,31 @@ export default function CommentDrawer({
       />
 
       <div
-        className={`fixed inset-x-0 top-[15%] bottom-0 bg-surface z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2 ${
+        className={`fixed inset-x-0 top-[15%] bottom-0 bg-surface z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out lg:inset-x-auto lg:top-auto lg:left-auto lg:bottom-6 lg:right-4 lg:h-130 lg:w-80 lg:rounded-2xl lg:border lg:border-edge lg:shadow-2xl lg:p-0 lg:space-y-0 lg:flex lg:flex-col lg:overflow-hidden ${
           isOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "translate-y-[110%] opacity-0 pointer-events-none"
         }`}
       >
-        <div className="flex justify-center items-center relative">
-          <h1 className="text-lg text-ink font-medium">Comments</h1>
+        <div className="flex justify-center items-center relative lg:justify-between lg:shrink-0 lg:border-b lg:border-edge lg:px-3 lg:py-2.5">
+          <h1 className="text-lg text-ink font-medium lg:text-sm lg:font-semibold">
+            Comments
+          </h1>
           <button
             type="button"
             aria-label="Close comments"
             onClick={handleClose}
-            className="absolute right-0"
+            className="absolute right-0 lg:static"
           >
-            <CloseCircle size={24} color="#959595" />
+            <CloseCircle size={24} color="#959595" className="lg:hidden" />
+            <CloseCircle
+              size={18}
+              color="var(--ink-3)"
+              className="hidden lg:block"
+            />
           </button>
         </div>
-        <div className="relative space-y-4 pb-18">
+        <div className="relative space-y-4 pb-18 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:px-3 lg:py-3 lg:pb-3">
           {!postId ? (
             <p className="text-xs text-ink-2">
               Select a post to view comments.
@@ -1199,7 +1221,7 @@ export default function CommentDrawer({
             })
           )}
         </div>
-        <div className="absolute bottom-8 left-6 right-6 space-y-2">
+        <div className="absolute bottom-8 left-6 right-6 space-y-2 lg:static lg:shrink-0 lg:border-t lg:border-edge lg:p-3">
           {replyTarget ? (
             <div className="flex items-center justify-between text-[11px] text-ink-2 px-1">
               <p>
@@ -1222,7 +1244,7 @@ export default function CommentDrawer({
               Comments are disabled for this post.
             </p>
           ) : null}
-          <div className="flex items-center justify-between gap-7">
+          <div className="flex items-center justify-between gap-7 lg:gap-2">
             <MentionInput
               value={draftComment}
               onChange={(val) => setDraftComment(val)}
@@ -1247,7 +1269,12 @@ export default function CommentDrawer({
               }
               className="disabled:opacity-50"
             >
-              <Send size={32} color="#5B5B5B" />
+              <Send size={32} color="#5B5B5B" className="lg:hidden" />
+              <Send
+                size={24}
+                color="#5B5B5B"
+                className="hidden lg:block"
+              />
             </button>
           </div>
         </div>

@@ -43,6 +43,7 @@ export default function Navbar() {
     : "/login";
 
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+  const [isCommentWindowOpen, setIsCommentWindowOpen] = useState(false);
   const [homeTab, setHomeTab] = useState("feed");
   const [rawUnreadCount, setRawUnreadCount] = useState(0);
   const [rawNotificationCount, setRawNotificationCount] = useState(0);
@@ -138,6 +139,18 @@ export default function Navbar() {
     };
     window.addEventListener("mc:home-tab-change", onTabChange);
     return () => window.removeEventListener("mc:home-tab-change", onTabChange);
+  }, []);
+
+  // The desktop comment window shares the chat window's bottom-right slot.
+  // When it opens, slide the chat panel aside so the two don't overlap.
+  useEffect(() => {
+    const onCommentWindow = (e: Event) => {
+      const open = (e as CustomEvent<{ open: boolean }>).detail?.open;
+      setIsCommentWindowOpen(Boolean(open));
+    };
+    window.addEventListener("mc:comment-window", onCommentWindow);
+    return () =>
+      window.removeEventListener("mc:comment-window", onCommentWindow);
   }, []);
 
   return (
@@ -366,6 +379,7 @@ export default function Navbar() {
       <DesktopChatPanel
         isOpen={isChatPanelOpen}
         onClose={() => setIsChatPanelOpen(false)}
+        shiftedForComments={isCommentWindowOpen}
       />
     </>
   );

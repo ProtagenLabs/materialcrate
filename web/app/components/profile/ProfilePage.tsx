@@ -6,7 +6,9 @@ import { useAuth } from "@/app/lib/auth-client";
 import { useSystemPopup } from "@/app/components/SystemPopup";
 import { Flag, Link21, Slash, VolumeMute, UserRemove } from "iconsax-reactjs";
 import { subscribeToFollowActivity } from "@/app/lib/post-activity-realtime";
-import Acheivement, { type AchievementData } from "@/app/components/profile/Acheivement";
+import Acheivement, {
+  type AchievementData,
+} from "@/app/components/profile/Acheivement";
 import Header, { type ProfileTab } from "@/app/components/profile/Header";
 import Post, {
   type HomePost,
@@ -16,6 +18,7 @@ import CommentDrawer from "@/app/components/home/CommentDrawer";
 import OptionsDrawer from "@/app/components/home/PostOptions";
 import DocumentViewer from "@/app/components/home/DocumentViewer";
 import FollowersnFollowingList from "./FollowersnFollowingList";
+import RightSidebar from "../RightSidebar";
 import Alert from "../Alert";
 
 type ProfileFieldVisibility = "everyone" | "followers" | "only_you";
@@ -215,14 +218,21 @@ export default function ProfilePage({ username }: ProfilePageProps) {
     }
     setIsUpdatingBlock(true);
     setIsProfileMenuOpen(false);
-    setProfile((c) => c ? { ...c, isBlockedByCurrentUser: !shouldUnblock } : c);
+    setProfile((c) =>
+      c ? { ...c, isBlockedByCurrentUser: !shouldUnblock } : c,
+    );
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(profile.username)}/block`, {
-        method: shouldUnblock ? "DELETE" : "POST",
-      });
+      const res = await fetch(
+        `/api/users/${encodeURIComponent(profile.username)}/block`,
+        {
+          method: shouldUnblock ? "DELETE" : "POST",
+        },
+      );
       if (!res.ok) throw new Error();
     } catch {
-      setProfile((c) => c ? { ...c, isBlockedByCurrentUser: shouldUnblock } : c);
+      setProfile((c) =>
+        c ? { ...c, isBlockedByCurrentUser: shouldUnblock } : c,
+      );
     } finally {
       setIsUpdatingBlock(false);
     }
@@ -233,14 +243,17 @@ export default function ProfilePage({ username }: ProfilePageProps) {
     const shouldUnmute = Boolean(profile.isMutedByCurrentUser);
     setIsUpdatingMute(true);
     setIsProfileMenuOpen(false);
-    setProfile((c) => c ? { ...c, isMutedByCurrentUser: !shouldUnmute } : c);
+    setProfile((c) => (c ? { ...c, isMutedByCurrentUser: !shouldUnmute } : c));
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(profile.username)}/mute`, {
-        method: shouldUnmute ? "DELETE" : "POST",
-      });
+      const res = await fetch(
+        `/api/users/${encodeURIComponent(profile.username)}/mute`,
+        {
+          method: shouldUnmute ? "DELETE" : "POST",
+        },
+      );
       if (!res.ok) throw new Error();
     } catch {
-      setProfile((c) => c ? { ...c, isMutedByCurrentUser: shouldUnmute } : c);
+      setProfile((c) => (c ? { ...c, isMutedByCurrentUser: shouldUnmute } : c));
     } finally {
       setIsUpdatingMute(false);
     }
@@ -258,12 +271,17 @@ export default function ProfilePage({ username }: ProfilePageProps) {
 
   const handleReportProfile = () => {
     setIsProfileMenuOpen(false);
-    router.push(`/settings/support/guidelines?report=user&username=${encodeURIComponent(profile?.username ?? "")}`);
+    router.push(
+      `/settings/support/guidelines?report=user&username=${encodeURIComponent(profile?.username ?? "")}`,
+    );
   };
 
   const handleMessageClick = async () => {
     if (!profile?.id) return;
-    if (!user) { router.push("/login"); return; }
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -406,7 +424,9 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         );
         const body = await response.json().catch(() => ({}));
         if (!controller.signal.aborted) {
-          setAchievements(Array.isArray(body?.achievements) ? body.achievements : []);
+          setAchievements(
+            Array.isArray(body?.achievements) ? body.achievements : [],
+          );
         }
       } catch {
         if (!controller.signal.aborted) setAchievements([]);
@@ -697,18 +717,14 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   };
 
   if (!isPublicProfile && isLoadingAuth) {
-    return (
-      <p className="px-6 py-8 text-sm text-ink-2">Loading profile...</p>
-    );
+    return <p className="px-6 py-8 text-sm text-ink-2">Loading profile...</p>;
   }
 
   if (!isPublicProfile && !user) {
     return (
       <div className="px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-md space-y-4 rounded-3xl bg-surface p-5 shadow-[0_10px_30px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
-          <p className="text-sm text-ink-2">
-            Sign in to view your profile.
-          </p>
+          <p className="text-sm text-ink-2">Sign in to view your profile.</p>
           <button
             type="button"
             onClick={() => router.push("/login")}
@@ -755,203 +771,216 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         post={activePdfPost}
         onClose={() => setActivePdfPost(null)}
       />
-      <div className="mx-auto flex w-full max-w-140 flex-col gap-2 lg:px-4">
+      <div className="lg:mx-auto lg:max-w-255 lg:grid lg:grid-cols-[minmax(0,1fr)_272px] lg:gap-6 lg:px-4 lg:items-start">
+        <main className="mx-auto flex w-full max-w-140 2xl:max-w-120 flex-col gap-2 lg:max-w-none lg:mx-0 pt-2">
         {isLoadingProfile ? (
           <ProfileSkeleton />
         ) : (
           <>
-        <div className="relative">
-          <Header
-            displayName={displayName}
-            username={profileUsername}
-            profilePictureUrl={profilePictureUrl}
-            profileBackground={profile?.profileBackground}
-            followers={followerCount}
-            following={followingCount}
-            subscriptionPlan={profile?.subscriptionPlan ?? "free"}
-            isBot={profile?.isBot ?? false}
-            institution={profile?.institution}
-            institutionVisible={showInstitution}
-            program={profile?.program}
-            programVisible={showProgram}
-            isOwner={isOwner}
-            postsLabel={postsHeading}
-            followLabel={followLabel}
-            isFollowLoading={isUpdatingFollow}
-            onFollowClick={handleFollowToggle}
-            onMessageClick={() => void handleMessageClick()}
-            onFollowListOpen={(tab) => setSelectedFollowList(tab)}
-            onMoreClick={!isOwner && user ? () => setIsProfileMenuOpen((v) => !v) : undefined}
-            selectedTab={selectedTab}
-            onTabChange={setSelectedTab}
-          />
-          {/* Profile options menu */}
-          {isProfileMenuOpen && (
-            <div
-              ref={profileMenuRef}
-              className="absolute right-4 top-14 z-200 w-52 rounded-[20px] border border-edge bg-surface p-2 shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
-            >
-              <div className="overflow-hidden rounded-2xl bg-page">
-                {isFollower && (
-                  <button
-                    type="button"
-                    disabled={isUpdatingFollow}
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      void handleFollowToggle();
-                    }}
-                    className="flex w-full items-center gap-3 border-b border-edge px-4 py-3.5 text-left text-sm text-ink transition-colors hover:bg-black/3 disabled:opacity-60"
-                  >
-                    <UserRemove size={18} color="#111111" variant="Bold" />
-                    Unfollow @{profile?.username}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  disabled={isUpdatingMute}
-                  onClick={handleMuteToggle}
-                  className="flex w-full items-center gap-3 border-b border-edge px-4 py-3.5 text-left text-sm text-ink transition-colors hover:bg-black/3 disabled:opacity-60"
+            <div className="relative">
+              <Header
+                displayName={displayName}
+                username={profileUsername}
+                profilePictureUrl={profilePictureUrl}
+                profileBackground={profile?.profileBackground}
+                followers={followerCount}
+                following={followingCount}
+                subscriptionPlan={profile?.subscriptionPlan ?? "free"}
+                isBot={profile?.isBot ?? false}
+                institution={profile?.institution}
+                institutionVisible={showInstitution}
+                program={profile?.program}
+                programVisible={showProgram}
+                isOwner={isOwner}
+                postsLabel={postsHeading}
+                followLabel={followLabel}
+                isFollowLoading={isUpdatingFollow}
+                onFollowClick={handleFollowToggle}
+                onMessageClick={() => void handleMessageClick()}
+                onFollowListOpen={(tab) => setSelectedFollowList(tab)}
+                onMoreClick={
+                  !isOwner && user
+                    ? () => setIsProfileMenuOpen((v) => !v)
+                    : undefined
+                }
+                selectedTab={selectedTab}
+                onTabChange={setSelectedTab}
+              />
+              {/* Profile options menu */}
+              {isProfileMenuOpen && (
+                <div
+                  ref={profileMenuRef}
+                  className="absolute right-4 top-14 z-200 w-52 rounded-[20px] border border-edge bg-surface p-2 shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
                 >
-                  <VolumeMute size={18} color="#111111" variant="Bold" />
-                  {profile?.isMutedByCurrentUser ? "Unmute" : "Mute"} @{profile?.username}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleShareProfile}
-                  className="flex w-full items-center gap-3 border-b border-edge px-4 py-3.5 text-left text-sm text-ink transition-colors hover:bg-black/3"
-                >
-                  <Link21 size={18} color="#111111" variant="Bold" />
-                  Copy profile link
-                </button>
-                <button
-                  type="button"
-                  disabled={isUpdatingBlock}
-                  onClick={handleBlockToggle}
-                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm text-[#D12F2F] transition-colors hover:bg-[#fff1f1] disabled:opacity-60"
-                >
-                  <Slash size={18} color="#D12F2F" variant="Bold" />
-                  {profile?.isBlockedByCurrentUser ? "Unblock" : "Block"} @{profile?.username}
-                </button>
-              </div>
-              <div className="mt-2 overflow-hidden rounded-2xl bg-[#FFF1F1]">
-                <button
-                  type="button"
-                  onClick={handleReportProfile}
-                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm text-[#D12F2F] transition-colors hover:bg-[#ffe7e7]"
-                >
-                  <Flag size={18} color="#D12F2F" variant="Bold" />
-                  Report account
-                </button>
-              </div>
+                  <div className="overflow-hidden rounded-2xl bg-page">
+                    {isFollower && (
+                      <button
+                        type="button"
+                        disabled={isUpdatingFollow}
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          void handleFollowToggle();
+                        }}
+                        className="flex w-full items-center gap-3 border-b border-edge px-4 py-3.5 text-left text-sm text-ink transition-colors hover:bg-black/3 disabled:opacity-60"
+                      >
+                        <UserRemove size={18} color="#111111" variant="Bold" />
+                        Unfollow @{profile?.username}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={isUpdatingMute}
+                      onClick={handleMuteToggle}
+                      className="flex w-full items-center gap-3 border-b border-edge px-4 py-3.5 text-left text-sm text-ink transition-colors hover:bg-black/3 disabled:opacity-60"
+                    >
+                      <VolumeMute size={18} color="#111111" variant="Bold" />
+                      {profile?.isMutedByCurrentUser ? "Unmute" : "Mute"} @
+                      {profile?.username}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleShareProfile}
+                      className="flex w-full items-center gap-3 border-b border-edge px-4 py-3.5 text-left text-sm text-ink transition-colors hover:bg-black/3"
+                    >
+                      <Link21 size={18} color="#111111" variant="Bold" />
+                      Copy profile link
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isUpdatingBlock}
+                      onClick={handleBlockToggle}
+                      className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm text-[#D12F2F] transition-colors hover:bg-[#fff1f1] disabled:opacity-60"
+                    >
+                      <Slash size={18} color="#D12F2F" variant="Bold" />
+                      {profile?.isBlockedByCurrentUser ? "Unblock" : "Block"} @
+                      {profile?.username}
+                    </button>
+                  </div>
+                  <div className="mt-2 overflow-hidden rounded-2xl bg-[#FFF1F1]">
+                    <button
+                      type="button"
+                      onClick={handleReportProfile}
+                      className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm text-[#D12F2F] transition-colors hover:bg-[#ffe7e7]"
+                    >
+                      <Flag size={18} color="#D12F2F" variant="Bold" />
+                      Report account
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {!profile ? (
-          <p className="px-6 py-8 text-sm text-ink-2">
-            {error || "Profile not found."}
-          </p>
-        ) : !canViewContent ? (
-          <div className="px-6 py-12 text-center">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-surface-high">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#999"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-6 w-6"
-              >
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-            </div>
-            <p className="text-sm font-medium text-ink">
-              This account is private
-            </p>
-            <p className="mt-1 text-sm text-ink-2">
-              {hasPendingRequest
-                ? "Your follow request is pending."
-                : "Follow this account to see their posts and achievements."}
-            </p>
-          </div>
-        ) : (
-          <>
-            {selectedTab === "achievements" ? (
-              <section className="px-4 sm:px-6 lg:px-0">
-                {isLoadingAchievements ? (
-                  <div className="flex items-center justify-center py-16">
-                    <div className="h-7 w-7 animate-spin rounded-full border-2 border-edge-strong border-t-transparent" />
-                  </div>
-                ) : achievements.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <span className="mb-3 text-4xl">🏆</span>
-                    <p className="text-sm font-medium text-ink">No achievements yet</p>
-                    <p className="mt-1 text-xs text-ink-3">Achievements unlock as you use Material Crate.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {achievements.map((a) => (
-                      <Acheivement key={a.id} achievement={a} />
-                    ))}
-                  </div>
-                )}
-              </section>
+            {!profile ? (
+              <p className="px-6 py-8 text-sm text-ink-2">
+                {error || "Profile not found."}
+              </p>
+            ) : !canViewContent ? (
+              <div className="px-6 py-12 text-center">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-surface-high">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#999"
+                    strokeWidth={1.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-6 w-6"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-ink">
+                  This account is private
+                </p>
+                <p className="mt-1 text-sm text-ink-2">
+                  {hasPendingRequest
+                    ? "Your follow request is pending."
+                    : "Follow this account to see their posts and achievements."}
+                </p>
+              </div>
             ) : (
-              <section className="space-y-4">
-                {error && posts.length === 0 && isLoadingPosts ? (
-                  <p className="px-4 py-8 text-sm text-ink-2 sm:px-6 lg:px-0">
-                    Loading posts...
-                  </p>
-                ) : posts.length === 0 ? (
-                  <p className="px-4 py-8 text-sm text-ink-2 sm:px-6 lg:px-0">
-                    No posts yet.
-                  </p>
+              <>
+                {selectedTab === "achievements" ? (
+                  <section className="px-4 sm:px-6 lg:px-0">
+                    {isLoadingAchievements ? (
+                      <div className="flex items-center justify-center py-16">
+                        <div className="h-7 w-7 animate-spin rounded-full border-2 border-edge-strong border-t-transparent" />
+                      </div>
+                    ) : achievements.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <span className="mb-3 text-4xl">🏆</span>
+                        <p className="text-sm font-medium text-ink">
+                          No achievements yet
+                        </p>
+                        <p className="mt-1 text-xs text-ink-3">
+                          Achievements unlock as you use Material Crate.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {achievements.map((a) => (
+                          <Acheivement key={a.id} achievement={a} />
+                        ))}
+                      </div>
+                    )}
+                  </section>
                 ) : (
-                  posts.map((post) => (
-                    <div key={post.id} className="w-full px-3">
-                      <Post
-                        post={post}
-                        showPinnedIndicator
-                        onCommentClick={(selectedPost) => {
-                          setActiveCommentPostId(selectedPost.id);
-                          setActiveCommentPost(selectedPost);
-                          setIsCommentDrawerOpen(true);
-                          setIsPostOptionsDrawerOpen(false);
-                          setActiveOptionsPost(null);
-                          setActiveOptionsAnchor(null);
-                          setActivePdfPost(null);
-                        }}
-                        onOptionsClick={(selectedPost, anchor) => {
-                          setActiveOptionsPost(selectedPost);
-                          setActiveOptionsAnchor(anchor);
-                          setIsPostOptionsDrawerOpen(true);
-                          setIsCommentDrawerOpen(false);
-                          setActiveCommentPostId(null);
-                          setActiveCommentPost(null);
-                          setActivePdfPost(null);
-                        }}
-                        onFileClick={(selectedPost) => {
-                          setActivePdfPost(selectedPost);
-                          setIsCommentDrawerOpen(false);
-                          setActiveCommentPostId(null);
-                          setActiveCommentPost(null);
-                          setIsPostOptionsDrawerOpen(false);
-                          setActiveOptionsPost(null);
-                          setActiveOptionsAnchor(null);
-                        }}
-                      />
-                    </div>
-                  ))
+                  <section className="space-y-4">
+                    {error && posts.length === 0 && isLoadingPosts ? (
+                      <p className="px-4 py-8 text-sm text-ink-2 sm:px-6 lg:px-0">
+                        Loading posts...
+                      </p>
+                    ) : posts.length === 0 ? (
+                      <p className="px-4 py-8 text-sm text-ink-2 sm:px-6 lg:px-0">
+                        No posts yet.
+                      </p>
+                    ) : (
+                      posts.map((post) => (
+                        <div key={post.id} className="w-full px-3">
+                          <Post
+                            post={post}
+                            showPinnedIndicator
+                            onCommentClick={(selectedPost) => {
+                              setActiveCommentPostId(selectedPost.id);
+                              setActiveCommentPost(selectedPost);
+                              setIsCommentDrawerOpen(true);
+                              setIsPostOptionsDrawerOpen(false);
+                              setActiveOptionsPost(null);
+                              setActiveOptionsAnchor(null);
+                              setActivePdfPost(null);
+                            }}
+                            onOptionsClick={(selectedPost, anchor) => {
+                              setActiveOptionsPost(selectedPost);
+                              setActiveOptionsAnchor(anchor);
+                              setIsPostOptionsDrawerOpen(true);
+                              setIsCommentDrawerOpen(false);
+                              setActiveCommentPostId(null);
+                              setActiveCommentPost(null);
+                              setActivePdfPost(null);
+                            }}
+                            onFileClick={(selectedPost) => {
+                              setActivePdfPost(selectedPost);
+                              setIsCommentDrawerOpen(false);
+                              setActiveCommentPostId(null);
+                              setActiveCommentPost(null);
+                              setIsPostOptionsDrawerOpen(false);
+                              setActiveOptionsPost(null);
+                              setActiveOptionsAnchor(null);
+                            }}
+                          />
+                        </div>
+                      ))
+                    )}
+                  </section>
                 )}
-              </section>
+              </>
             )}
           </>
         )}
-          </>
-        )}
+        </main>
+        <RightSidebar />
       </div>
       <FollowersnFollowingList
         isOpen={selectedFollowList !== null}
