@@ -2,6 +2,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { SearchNormal1 } from "iconsax-reactjs";
 import Post, {
   type HomePost,
   type PostOptionsAnchor,
@@ -9,9 +10,53 @@ import Post, {
 import OptionsDrawer from "@/app/components/home/PostOptions";
 import Header, { type SearchTab } from "@/app/components/search/Header";
 import UserCard, { type SearchUser } from "@/app/components/search/UserCard";
+import RightSidebar from "@/app/components/RightSidebar";
 import Alert from "../components/Alert";
 
 const PAGE_SIZE = 12;
+
+function PostSkeleton() {
+  const sk = "skeleton";
+  return (
+    <div className="w-full px-3">
+      <article className="lg:rounded-xl lg:border lg:border-edge lg:bg-surface lg:shadow-sm">
+        <div className="flex items-start justify-between px-2 pt-2">
+          <div className="flex items-center gap-3">
+            <div className={`${sk} h-11 w-11 shrink-0 rounded-full`} />
+            <div className="space-y-2">
+              <div className={`${sk} h-3.5 w-32 rounded-full`} />
+              <div className={`${sk} h-2.5 w-24 rounded-full`} />
+            </div>
+          </div>
+          <div className={`${sk} h-8 w-8 rounded-full`} />
+        </div>
+        <div className={`${sk} mx-2 mt-3 h-36 rounded-xl`} />
+        <div className="px-2 pt-3 space-y-2">
+          <div className={`${sk} h-3.5 w-3/4 rounded-full`} />
+          <div className="flex gap-2">
+            <div className={`${sk} h-5 w-16 rounded-full`} />
+            <div className={`${sk} h-5 w-20 rounded-full`} />
+          </div>
+        </div>
+        <div className="flex items-center gap-4 px-2 py-3">
+          <div className={`${sk} h-5 w-12 rounded-full`} />
+          <div className={`${sk} h-5 w-12 rounded-full`} />
+          <div className={`${sk} h-5 w-12 rounded-full`} />
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function SearchSkeleton() {
+  return (
+    <div className="space-y-0 pt-3">
+      {[0, 1, 2, 3].map((i) => (
+        <PostSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
 
 export default function SearchPage() {
   const router = useRouter();
@@ -254,8 +299,61 @@ export default function SearchPage() {
     );
   };
 
+  const runSearch = () => {
+    const nextParams = new URLSearchParams(searchParamsString);
+    if (query.trim()) nextParams.set("q", query.trim());
+    else nextParams.delete("q");
+    nextParams.set("tab", activeTab);
+    const qs = nextParams.toString();
+    router.push(qs ? `/search?${qs}` : "/search");
+  };
+
+  // Desktop search controls live in the right sidebar (no fixed header on lg+).
+  const desktopSearchSlot = (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-[#f0dfc8] bg-[#fffaf4]/90 px-4 py-3 shadow-sm">
+        <label className="flex items-center justify-between gap-3">
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Find users and documents..."
+            className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-3"
+          />
+          <button type="button" onClick={runSearch} aria-label="Search">
+            <SearchNormal1 size={18} color="#c56f1b" />
+          </button>
+        </label>
+      </div>
+      {query.trim().length > 0 && (
+        <div className="relative grid grid-cols-2 gap-2 border-b border-edge">
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none absolute bottom-0 h-0.75 w-[calc(50%-0.25rem)] rounded-full bg-ink transition-transform duration-300 ease-out ${
+              activeTab === "documents"
+                ? "translate-x-0"
+                : "translate-x-[calc(100%+0.5rem)]"
+            }`}
+          />
+          {(["documents", "users"] as SearchTab[]).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`relative px-2 py-2.5 text-sm font-medium capitalize transition-colors duration-300 ${
+                activeTab === tab ? "text-ink" : "text-ink-2"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="min-h-dvh bg-page pb-16 pt-34">
+    <div className="min-h-dvh bg-page pb-16 pt-34 lg:pt-4">
       {error && <Alert type="error" message={error} />}
       <OptionsDrawer
         isOpen={isPostOptionsDrawerOpen}
@@ -269,26 +367,22 @@ export default function SearchPage() {
         onPostUpdated={handlePostUpdated}
         onPostDeleted={handlePostDeleted}
       />
-      <>
-        <Header
-          query={query}
-          onQueryChange={setQuery}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          isLoading={isLoading || isFetchingMore}
-          search={() => {
-            const nextParams = new URLSearchParams(searchParamsString);
-            if (query.trim()) nextParams.set("q", query.trim());
-            else nextParams.delete("q");
-            nextParams.set("tab", activeTab);
-            const qs = nextParams.toString();
-            router.push(qs ? `/search?${qs}` : "/search");
-          }}
-        />
-      </>
+      <Header
+        query={query}
+        onQueryChange={setQuery}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isLoading={false}
+        search={runSearch}
+      />
 
-      <main className="mx-auto max-w-2xl">
-        {visibleResults.length === 0 && hasQuery && !isLoading ? (
+      <div className="lg:mx-auto lg:max-w-255 lg:grid lg:grid-cols-[minmax(0,1fr)_272px] lg:gap-6 lg:px-4 lg:items-start">
+        <main className="mx-auto w-full max-w-140 2xl:max-w-120 lg:max-w-none lg:mx-0 lg:pt-4 lg:pb-8">
+        {visibleResults.length === 0 && hasQuery && isLoading ? (
+          activeTab === "documents" ? (
+            <SearchSkeleton />
+          ) : null
+        ) : visibleResults.length === 0 && hasQuery && !isLoading ? (
           <section>
             <p className="px-4 text-sm leading-6 text-ink-2">
               Nothing matched &quot;{query.trim()}&quot;. Try a broader keyword
@@ -336,11 +430,13 @@ export default function SearchPage() {
           </section>
         )}
 
-        {/* Infinite scroll sentinel */}
-        {hasQuery && hasMore && !isLoading && (
-          <div ref={sentinelRef} className="h-16" />
-        )}
-      </main>
+          {/* Infinite scroll sentinel */}
+          {hasQuery && hasMore && !isLoading && (
+            <div ref={sentinelRef} className="h-16" />
+          )}
+        </main>
+        <RightSidebar searchSlot={desktopSearchSlot} />
+      </div>
     </div>
   );
 }

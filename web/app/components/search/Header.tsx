@@ -29,7 +29,7 @@ export default function Header({
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-30 bg-surface backdrop-blur-md transition-transform duration-300 ease-out ${
+      className={`fixed top-0 left-0 right-0 z-30 bg-surface backdrop-blur-md transition-transform duration-300 ease-out lg:hidden ${
         isVisible ? "translate-y-0" : "-translate-y-full"
       } ${!query && "pb-6"}`}
     >

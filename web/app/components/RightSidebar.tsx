@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { SearchNormal1 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
@@ -28,8 +28,15 @@ type SidebarData = {
 
 export default function RightSidebar({
   profileUsername,
+  searchSlot,
 }: {
   profileUsername?: string;
+  /**
+   * Custom content rendered in the pinned top slot in place of the default
+   * search input (e.g. the search page's own input + tabs). When provided,
+   * the default search box is not rendered.
+   */
+  searchSlot?: ReactNode;
 } = {}) {
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
@@ -57,27 +64,29 @@ export default function RightSidebar({
     <aside className="hidden lg:flex flex-col sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       {/* Search — stays pinned at top of sidebar while content scrolls */}
       <div className="sticky top-0 z-10 pb-2 pt-4">
-        <div className="relative">
-          <SearchNormal1
-            size={15}
-            color="var(--ink-3)"
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-          />
-          <input
-            type="text"
-            placeholder={profileUsername ? "Search in profile" : "Search…"}
-            className="w-full rounded-2xl border border-edge bg-surface py-3 pl-9 pr-4 text-sm text-ink placeholder:text-ink-3 shadow-sm transition-all focus:border-[#E1761F]/40 focus:outline-none focus:ring-2 focus:ring-[#E1761F]/10"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const val = (e.target as HTMLInputElement).value.trim();
-                if (!val) return;
-                const params = new URLSearchParams({ q: val });
-                if (profileUsername) params.set("author", profileUsername);
-                router.push(`/search?${params.toString()}`);
-              }
-            }}
-          />
-        </div>
+        {searchSlot ?? (
+          <div className="relative">
+            <SearchNormal1
+              size={15}
+              color="var(--ink-3)"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            />
+            <input
+              type="text"
+              placeholder={profileUsername ? "Search in profile" : "Search…"}
+              className="w-full rounded-2xl border border-edge bg-surface py-3 pl-9 pr-4 text-sm text-ink placeholder:text-ink-3 shadow-sm transition-all focus:border-[#E1761F]/40 focus:outline-none focus:ring-2 focus:ring-[#E1761F]/10"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const val = (e.target as HTMLInputElement).value.trim();
+                  if (!val) return;
+                  const params = new URLSearchParams({ q: val });
+                  if (profileUsername) params.set("author", profileUsername);
+                  router.push(`/search?${params.toString()}`);
+                }
+              }}
+            />
+          </div>
+        )}
       </div>
       <div className="flex flex-col gap-3 pb-12">
         {/* Subscribe CTA */}

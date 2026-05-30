@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Navbar from "./Navbar";
 import useScrollVisibility from "./useScrollVisibility";
 
-const NAV_PATHS = new Set(["/", "/hub", "/saved"]);
+const NAV_PATHS = new Set(["/", "/hub", "/saved", "/search"]);
 
 export default function ConditionalNavbar() {
   const pathname = usePathname();
