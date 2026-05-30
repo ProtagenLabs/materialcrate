@@ -265,8 +265,8 @@ export default function CreatePage() {
         title={isEditMode ? "Edit Material" : "Share a New Material"}
         isLoading={isPublishing || isLoadingPost}
       />
-      <div className="mx-auto w-full max-w-140 2xl:max-w-120 pt-20 lg:pb-10 px-0 lg:px-6">
-        <div className="px-6 pb-10 pt-6 space-y-3 lg:bg-surface lg:rounded-3xl lg:border lg:border-edge lg:shadow-sm lg:px-8 lg:py-8">
+      <div className="mx-auto w-full max-w-140 lg:max-w-4xl pt-20 lg:pb-10 px-0 lg:px-6">
+        <div className="px-6 pb-10 pt-6 space-y-3 lg:bg-surface lg:rounded-3xl lg:border lg:border-edge lg:shadow-sm lg:px-10 lg:py-10">
           {alertMessage && (
             <Alert
               key={`${alertType}-${alertMessage}`}
@@ -274,8 +274,19 @@ export default function CreatePage() {
               type={alertType}
             />
           )}
-          <div className="space-y-1">
-            <p className="text-ink-2 text-sm">
+          <div className="hidden lg:block lg:pb-2">
+            <h1 className="text-2xl font-semibold text-ink">
+              {isEditMode ? "Edit Material" : "Share a New Material"}
+            </h1>
+            <p className="mt-1 text-sm text-ink-3">
+              {isEditMode
+                ? "Update the details for your material."
+                : "Upload a document and add details so others can find it."}
+            </p>
+          </div>
+          <div className="space-y-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] lg:gap-10 lg:space-y-0 lg:items-start">
+          <div className="space-y-1 lg:flex lg:h-full lg:flex-col">
+            <p className="text-ink-2 text-sm lg:text-base">
               {isEditMode ? "Document" : "Select document to share"}
               {!isEditMode && <span className="text-red-500">*</span>}
             </p>
@@ -301,7 +312,9 @@ export default function CreatePage() {
                 />
                 <label
                   htmlFor="material-upload"
-                  className="w-full py-6 px-3 border border-[#B0B0B0] border-dashed rounded-xl flex flex-col items-center justify-center gap-5 cursor-pointer"
+                  className={`w-full py-6 px-3 border border-[#B0B0B0] border-dashed rounded-xl flex flex-col items-center justify-center gap-5 cursor-pointer transition-colors hover:border-[#E1761F] hover:bg-[#FFF3E7]/30 ${
+                    !selectedFile ? "lg:flex-1 lg:min-h-72" : ""
+                  }`}
                 >
                   {!selectedFile ? (
                     <>
@@ -357,8 +370,9 @@ export default function CreatePage() {
               </>
             )}
           </div>
+          <div className="space-y-3">
           <div className="space-y-1">
-            <p className="text-ink-2 text-sm">
+            <p className="text-ink-2 text-sm lg:text-base">
               Document title<span className="text-red-500">*</span>
             </p>
             <input
@@ -367,12 +381,11 @@ export default function CreatePage() {
               onChange={(e) => setTitle(e.target.value)}
               required
               maxLength={50}
-              style={{ fontSize: "0.75rem" }}
-              className="w-full rounded-lg px-3 py-3 bg-surface-high/50 shadow text-xs placeholder:text-ink-3 placeholder:text-xs focus:outline-none"
+              className="w-full rounded-lg px-3 py-3 bg-surface-high/50 shadow text-xs lg:text-sm placeholder:text-ink-3 placeholder:text-xs lg:placeholder:text-sm focus:outline-none"
             />
           </div>
           <div className="space-y-1">
-            <p className="text-ink-2 text-sm">
+            <p className="text-ink-2 text-sm lg:text-base">
               Categories<span className="text-red-500">*</span>
               <span className="text-ink-3 text-xs ml-1">
                 ({selectedCategories.length}/3)
@@ -460,14 +473,13 @@ export default function CreatePage() {
             )}
           </div>
           <div className="space-y-1">
-            <p className="text-ink-2 text-sm">Year</p>
+            <p className="text-ink-2 text-sm lg:text-base">Year</p>
             <div className="relative">
               <select
                 title="Year picker"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
-                style={{ fontSize: "0.75rem" }}
-                className={`w-full appearance-none rounded-lg px-3 py-3 pr-10 bg-surface-high/50 shadow focus:outline-none ${
+                className={`w-full appearance-none rounded-lg px-3 py-3 pr-10 bg-surface-high/50 shadow text-xs lg:text-sm focus:outline-none ${
                   year ? "text-black" : "text-ink-3"
                 }`}
               >
@@ -490,7 +502,7 @@ export default function CreatePage() {
             </div>
           </div>
           <div className="space-y-1">
-            <p className="text-ink-2 text-sm">Document description</p>
+            <p className="text-ink-2 text-sm lg:text-base">Document description</p>
             <MentionInput
               multiline
               rows={4}
@@ -498,12 +510,14 @@ export default function CreatePage() {
               value={description}
               onChange={(val) => setDescription(val)}
               maxLength={500}
-              className="w-full rounded-lg px-3 pt-3 h-28 bg-surface-high/50 shadow text-xs placeholder:text-ink-3 placeholder:text-xs resize-none focus:outline-none"
+              className="w-full rounded-lg px-3 pt-3 h-28 bg-surface-high/50 shadow text-xs lg:text-sm placeholder:text-ink-3 placeholder:text-xs lg:placeholder:text-sm resize-none focus:outline-none"
             />
+          </div>
+          </div>
           </div>
           <ActionButton
             type="button"
-            className="w-full"
+            className="w-full lg:w-auto lg:min-w-48 lg:ml-auto lg:flex"
             onClick={handlePublish}
             disabled={disabled}
           >

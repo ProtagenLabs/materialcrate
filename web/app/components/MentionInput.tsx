@@ -25,6 +25,7 @@ interface MentionInputProps {
   disabled?: boolean;
   maxLength?: number;
   className?: string;
+  style?: React.CSSProperties;
   multiline?: boolean;
   rows?: number;
 }
@@ -40,6 +41,7 @@ export default function MentionInput({
   disabled,
   maxLength,
   className,
+  style,
   multiline,
   rows,
 }: MentionInputProps) {
@@ -233,7 +235,7 @@ export default function MentionInput({
     disabled,
     maxLength,
     className,
-    style: { fontSize: "0.75rem" } as React.CSSProperties,
+    style,
     autoComplete: "off" as const,
   };
 
