@@ -8,6 +8,7 @@ import Post, {
   type PostOptionsAnchor,
 } from "@/app/components/home/Post";
 import OptionsDrawer from "@/app/components/home/PostOptions";
+import DocumentViewer from "@/app/components/home/DocumentViewer";
 import Header, { type SearchTab } from "@/app/components/search/Header";
 import UserCard, { type SearchUser } from "@/app/components/search/UserCard";
 import RightSidebar from "@/app/components/RightSidebar";
@@ -79,6 +80,7 @@ export default function SearchPage() {
   const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(null);
   const [activeOptionsAnchor, setActiveOptionsAnchor] =
     useState<PostOptionsAnchor | null>(null);
+  const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
 
   const offsetRef = useRef({ users: 0, documents: 0 });
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -367,6 +369,11 @@ export default function SearchPage() {
         onPostUpdated={handlePostUpdated}
         onPostDeleted={handlePostDeleted}
       />
+      <DocumentViewer
+        isOpen={Boolean(activePdfPost)}
+        post={activePdfPost}
+        onClose={() => setActivePdfPost(null)}
+      />
       <Header
         query={query}
         onQueryChange={setQuery}
@@ -415,9 +422,7 @@ export default function SearchPage() {
                     setIsPostOptionsDrawerOpen(true);
                   }}
                   onFileClick={(selectedDocument) =>
-                    router.push(
-                      `/post/${encodeURIComponent(selectedDocument.id)}`,
-                    )
+                    setActivePdfPost(selectedDocument)
                   }
                   onCommentClick={(selectedDocument) =>
                     router.push(
