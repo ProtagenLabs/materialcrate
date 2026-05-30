@@ -129,7 +129,7 @@ export default function Home() {
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
   const notificationRefreshTimeoutRef = useRef<number | null>(null);
   const lastNotificationRefreshAtRef = useRef(0);
-  const adIntervalRef = useRef(3 + Math.floor(Math.random() * 3));
+  const adIntervalRef = useRef(5 + Math.floor(Math.random() * 4));
 
   const requireAuthenticatedAccess = useCallback(() => {
     if (isLoadingAuth) {

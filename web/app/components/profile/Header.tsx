@@ -49,7 +49,6 @@ export default function Header({
   followers = 0,
   following = 0,
   subscriptionPlan = "free",
-  isBot = false,
   institution,
   institutionVisible = true,
   program,
@@ -111,6 +110,12 @@ export default function Header({
     profileDetails.push({ label: "Program", value: program.trim() });
   }
 
+  const Layout2 =
+    institutionVisible ||
+    programVisible ||
+    institution !== "" ||
+    program !== "";
+
   return (
     <header
       className={`relative z-50 w-full overflow-hidden px-4 pt-8 sm:px-6 sm:pt-10 lg:rounded-[28px] lg:shadow-[0_14px_34px_rgba(0,0,0,0.06)] ${profileBackgroundPresentation.className}`}
@@ -143,20 +148,16 @@ export default function Header({
             )}
           </div>
           <div className="min-w-0 space-y-1">
-            <div
-              className={`${(institutionVisible || programVisible) && "flex items-center gap-2"}`}
-            >
+            <div className={`${!Layout2 && "flex items-center gap-2"}`}>
               <div className="flex items-center gap-0.5">
                 <p
                   className={`truncate text-lg font-medium ${primaryTextClass}`}
                 >
                   {displayName}
                 </p>
-                {isBot ? (
-                  <Cpu size={18} color="#2196F3" variant="Bold" />
-                ) : hasPaidPlan ? (
+                {hasPaidPlan && (
                   <Verify size={18} color="#E1761F" variant="Bold" />
-                ) : null}
+                )}
               </div>
               <p className={`truncate text-sm ${secondaryTextClass}`}>
                 {username}
@@ -276,7 +277,9 @@ export default function Header({
                 onClick={onFollowClick}
                 disabled={isFollowLoading}
                 className={`cursor-pointer rounded-full border px-5 py-2 text-sm font-medium ${
-                  followLabel === "Requested" ? followMutedClass : followPrimaryClass
+                  followLabel === "Requested"
+                    ? followMutedClass
+                    : followPrimaryClass
                 } disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 <p>{isFollowLoading ? "..." : followLabel}</p>

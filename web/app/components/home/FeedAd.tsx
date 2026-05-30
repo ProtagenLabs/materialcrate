@@ -1,23 +1,112 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-const ADSENSE_CLIENT = "ca-pub-4938895869648539";
-const ADSENSE_SLOT = "5899842940";
+// ─── Adsterra Ad Zones (rotated per feed slot) ───────────────────────────────
+// Mirrors the implementation in PdfViewerModal.tsx.
+type AdZone =
+  | { type: "native"; src: string; containerId: string }
+  | { type: "banner"; key: string; src: string; width: number; height: number }
+  | { type: "socialbar"; src: string };
+
+const AD_ZONES: AdZone[] = [
+  {
+    type: "native",
+    src: "https://pl29107546.profitablecpmratenetwork.com/dca3faf47483a0c15be4506365e921d8/invoke.js",
+    containerId: "container-dca3faf47483a0c15be4506365e921d8",
+  },
+  {
+    type: "banner",
+    key: "44be9916dcda20992159a6ccdf64c31e",
+    src: "https://www.highperformanceformat.com/44be9916dcda20992159a6ccdf64c31e/invoke.js",
+    width: 468,
+    height: 60,
+  },
+  {
+    type: "socialbar",
+    src: "https://pl29109074.profitablecpmratenetwork.com/c5/54/ee/c554ee202f818aef11daa36cba5961d3.js",
+  },
+];
+
+// Injected before every ad script — blocks redirects and makes popups safe.
+const AD_SANDBOX_SCRIPT = `<script>
+(function(){
+  var _open = window.open.bind(window);
+  window.open = function(url, name, features) {
+    var f = (features || '') + ',noopener,noreferrer';
+    return _open(url, '_blank', f);
+  };
+  // Block any attempt to navigate the parent frame
+  try { window.top.location; } catch(e) {}
+  Object.defineProperty(window, 'top', { get: function(){ return window; } });
+})();
+<\/script>`;
+
+function buildAdHtml(zone: AdZone, cacheBust: string): string {
+  const base = `<!DOCTYPE html><html><head><style>body{margin:0;padding:0;}</style></head><body>${AD_SANDBOX_SCRIPT}`;
+  const close = `</body></html>`;
+
+  if (zone.type === "native") {
+    return (
+      base +
+      `<script async="async" data-cfasync="false" src="${zone.src}?r=${cacheBust}"><\/script>` +
+      `<div id="${zone.containerId}"></div>` +
+      close
+    );
+  }
+  if (zone.type === "banner") {
+    return (
+      base +
+      `<script>atOptions={'key':'${zone.key}','format':'iframe','height':${zone.height},'width':${zone.width},'params':{}};<\/script>` +
+      `<script src="${zone.src}?r=${cacheBust}"><\/script>` +
+      close
+    );
+  }
+  // socialbar
+  return base + `<script src="${zone.src}?r=${cacheBust}"><\/script>` + close;
+}
+
+// Rotates the zone across feed ad slots so consecutive ads differ.
+let feedAdSlotIndex = 0;
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function FeedAd() {
-  useEffect(() => {
-    if (!document.querySelector(`script[src*="pagead2.googlesyndication.com"]`)) {
-      const script = document.createElement("script");
-      script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`;
-      script.async = true;
-      script.crossOrigin = "anonymous";
-      document.head.appendChild(script);
-    }
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-    try {
-      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
-    } catch {}
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const zone = AD_ZONES[feedAdSlotIndex % AD_ZONES.length];
+    feedAdSlotIndex++;
+
+    const minHeight = zone.type === "banner" ? zone.height : 120;
+    iframe.style.height = `${minHeight}px`;
+
+    const cacheBust = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    iframe.srcdoc = buildAdHtml(zone, cacheBust);
+
+    const resizeToContent = () => {
+      const body = iframe.contentDocument?.body;
+      if (body && body.scrollHeight > minHeight)
+        iframe.style.height = `${body.scrollHeight}px`;
+    };
+
+    let poll: ReturnType<typeof setInterval> | undefined;
+    const onLoad = () => {
+      resizeToContent();
+      let attempts = 0;
+      poll = setInterval(() => {
+        resizeToContent();
+        if (++attempts >= 10 && poll) clearInterval(poll);
+      }, 300);
+    };
+
+    iframe.addEventListener("load", onLoad);
+    return () => {
+      iframe.removeEventListener("load", onLoad);
+      if (poll) clearInterval(poll);
+    };
   }, []);
 
   return (
@@ -55,13 +144,12 @@ export default function FeedAd() {
 
       <div className="px-2 pt-2 pb-4">
         <div className="overflow-hidden rounded-[22px] bg-doc-card p-3">
-          <ins
-            className="adsbygoogle"
-            style={{ display: "block" }}
-            data-ad-client={ADSENSE_CLIENT}
-            data-ad-slot={ADSENSE_SLOT}
-            data-ad-format="auto"
-            data-full-width-responsive="true"
+          <iframe
+            ref={iframeRef}
+            title="Sponsored"
+            className="block w-full border-0"
+            style={{ display: "block", overflow: "hidden" }}
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
           />
         </div>
       </div>

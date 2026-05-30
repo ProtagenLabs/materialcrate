@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SearchNormal1 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
+import { hasPaidSubscription } from "@/app/lib/subscription";
 
 type SidebarPost = {
   id: string;
@@ -80,7 +81,7 @@ export default function RightSidebar({
       </div>
       <div className="flex flex-col gap-3 pb-12">
         {/* Subscribe CTA */}
-        {!user?.subscriptionPlan && (
+        {user && !hasPaidSubscription(user.subscriptionPlan) && (
           <div className="relative overflow-hidden rounded-2xl bg-[#0d0d0d] p-5">
             <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-[#E1761F]/20 blur-2xl" />
             <div className="pointer-events-none absolute -bottom-8 -left-4 h-20 w-20 rounded-full bg-violet-500/15 blur-2xl" />
