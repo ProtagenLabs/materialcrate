@@ -3,6 +3,7 @@ import { createNotification, NOTIFICATION_TYPE, NOTIFICATION_ICON } from "../ser
 import {
   ACHIEVEMENT_DEFINITIONS,
   ACHIEVEMENT_MAP,
+  RARITY_TOKEN_REWARD,
   type AchievementTrigger,
 } from "./definitions.js";
 
@@ -131,19 +132,48 @@ export async function checkAchievements(
 
     if (toUnlock.length === 0) return;
 
-    // Persist and notify each new achievement
+    // Persist, grant the rarity-based token reward, and notify each new achievement.
     await Promise.all(
       toUnlock.map(async (achievement) => {
+        const reward = RARITY_TOKEN_REWARD[achievement.rarity] ?? 0;
+
         try {
-          await prisma.userAchievement.create({
-            data: { userId, achievementId: achievement.id },
-          });
+          // Creating the UserAchievement row first acts as the idempotency
+          // guard — its unique (userId, achievementId) constraint prevents the
+          // token reward from being granted twice for the same achievement.
+          await prisma.$transaction([
+            prisma.userAchievement.create({
+              data: { userId, achievementId: achievement.id },
+            }),
+            ...(reward > 0
+              ? [
+                  prisma.user.update({
+                    where: { id: userId },
+                    data: {
+                      tokenBalance: { increment: reward },
+                      tokensEarned: { increment: reward },
+                    },
+                  }),
+                  prisma.tokenTransaction.create({
+                    data: {
+                      userId,
+                      type: "ACHIEVEMENT_REWARD",
+                      amount: reward,
+                      description: `Achievement unlocked: "${achievement.title}"`,
+                    },
+                  }),
+                ]
+              : []),
+          ]);
 
           await createNotification({
             userId,
             type: NOTIFICATION_TYPE.ACHIEVEMENT_UNLOCKED,
             title: achievement.title,
-            description: `You've unlocked a new achievement: ${achievement.title}`,
+            description:
+              reward > 0
+                ? `You've unlocked "${achievement.title}" and earned ${reward} tokens!`
+                : `You've unlocked a new achievement: ${achievement.title}`,
             icon: NOTIFICATION_ICON.ACHIEVEMENT,
             achievementId: achievement.id,
           });

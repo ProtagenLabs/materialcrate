@@ -24,6 +24,7 @@ import { sendAccountRecoveredEmail } from "../../email/accountRecoveredEmail.js"
 import { sendWelcomeEmail } from "../../email/welcomeEmail.js";
 import { sendLoginEmail } from "../../email/loginEmail.js";
 import { checkAchievements } from "../../achievements/service.js";
+import { grantSignupBonus } from "../../services/tokens.js";
 import { ensureWorkspaceForUserId } from "./workspace.resolver.js";
 import {
   createNotification,
@@ -1235,6 +1236,10 @@ export const UserResolver = {
         },
       });
 
+      void grantSignupBonus(createdUser.id);
+      checkAchievements(createdUser.id, "signup").catch(() => null);
+      checkAchievements(createdUser.id, "email_verified").catch(() => null);
+
       return buildAuthPayload(createdUser, ctx);
     },
 
@@ -1247,6 +1252,7 @@ export const UserResolver = {
       }
 
       const user = await verifyEmailCode(email, code);
+      void grantSignupBonus(user.id);
       checkAchievements(user.id, "email_verified").catch(() => null);
       sendWelcomeEmail(user.email, user.displayName).catch((error) => {
         console.error("Failed to send welcome email after verification:", error);

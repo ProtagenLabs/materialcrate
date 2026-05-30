@@ -293,3 +293,11 @@ export const RARITY_ORDER: Record<AchievementRarity, number> = {
   rare: 2,
   legendary: 3,
 };
+
+// Token reward granted when an achievement is unlocked, by rarity tier.
+export const RARITY_TOKEN_REWARD: Record<AchievementRarity, number> = {
+  common: 10,
+  uncommon: 25,
+  rare: 50,
+  legendary: 100,
+};
