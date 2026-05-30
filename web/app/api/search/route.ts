@@ -5,7 +5,7 @@ const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 
 const SEARCH_QUERY = `
-  query Search($query: String!, $limit: Int!, $offset: Int!) {
+  query Search($query: String!, $limit: Int!, $offset: Int!, $author: String) {
     searchUsers(query: $query, limit: $limit, offset: $offset) {
       id
       username
@@ -18,7 +18,7 @@ const SEARCH_QUERY = `
       institution
       program
     }
-    searchPosts(query: $query, limit: $limit, offset: $offset) {
+    searchPosts(query: $query, limit: $limit, offset: $offset, author: $author) {
       id
       fileUrl
       thumbnailUrl
@@ -46,7 +46,7 @@ const SEARCH_QUERY = `
 `;
 
 const AUTHENTICATED_SEARCH_QUERY = `
-  query Search($query: String!, $limit: Int!, $offset: Int!) {
+  query Search($query: String!, $limit: Int!, $offset: Int!, $author: String) {
     me {
       blockedUserIds
       following {
@@ -68,7 +68,7 @@ const AUTHENTICATED_SEARCH_QUERY = `
       institution
       program
     }
-    searchPosts(query: $query, limit: $limit, offset: $offset) {
+    searchPosts(query: $query, limit: $limit, offset: $offset, author: $author) {
       id
       fileUrl
       thumbnailUrl
@@ -104,6 +104,7 @@ const TRACK_FEED_INTERACTION_MUTATION = `
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";
+  const author = searchParams.get("author")?.trim() || null;
   const limitInput = Number.parseInt(searchParams.get("limit") || "", 10);
   const offsetInput = Number.parseInt(searchParams.get("offset") || "0", 10);
   const limit = Number.isFinite(limitInput)
@@ -126,7 +127,7 @@ export async function GET(request: Request) {
     },
     body: JSON.stringify({
       query: token ? AUTHENTICATED_SEARCH_QUERY : SEARCH_QUERY,
-      variables: { query, limit, offset },
+      variables: { query, limit, offset, author },
     }),
   });
 

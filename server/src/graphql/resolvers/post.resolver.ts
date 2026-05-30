@@ -1091,11 +1091,12 @@ export const PostResolver = {
 
     searchPosts: async (
       _: unknown,
-      { query, limit = 12, offset = 0 }: { query: string; limit?: number; offset?: number },
+      { query, limit = 12, offset = 0, author }: { query: string; limit?: number; offset?: number; author?: string | null },
       ctx: GraphQLContext,
     ) => {
       const viewerId = ctx.user?.sub;
       const normalizedQuery = String(query || "").trim();
+      const authorUsername = author?.trim();
 
       if (!normalizedQuery) {
         return [];
@@ -1115,6 +1116,22 @@ export const PostResolver = {
       const posts = await prisma.post.findMany({
         where: {
           ...buildVisiblePostWhere(undefined, inaccessibleAuthorIds),
+          ...(authorUsername
+            ? {
+                AND: [
+                  {
+                    author: {
+                      is: {
+                        username: {
+                          equals: authorUsername,
+                          mode: "insensitive" as const,
+                        },
+                      },
+                    },
+                  },
+                ],
+              }
+            : {}),
           OR: [
             {
               title: {

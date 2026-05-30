@@ -18,6 +18,7 @@ export default function SearchPage() {
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
   const initialQuery = searchParams.get("q")?.trim() ?? "";
+  const authorParam = searchParams.get("author")?.trim() ?? "";
   const initialTab =
     searchParams.get("tab") === "users" ? "users" : "documents";
 
@@ -63,7 +64,7 @@ export default function SearchPage() {
       signal: AbortSignal,
     ): Promise<{ users: SearchUser[]; documents: HomePost[]; hasMore: boolean }> => {
       const response = await fetch(
-        `/api/search?q=${encodeURIComponent(q)}&limit=${PAGE_SIZE}&offset=${offset}`,
+        `/api/search?q=${encodeURIComponent(q)}&limit=${PAGE_SIZE}&offset=${offset}${authorParam ? `&author=${encodeURIComponent(authorParam)}` : ""}`,
         { cache: "no-store", signal },
       );
       const body = await response.json().catch(() => ({}));
@@ -74,7 +75,7 @@ export default function SearchPage() {
         hasMore: Boolean(body?.hasMore),
       };
     },
-    [],
+    [authorParam],
   );
 
   useEffect(() => {
@@ -310,8 +311,8 @@ export default function SearchPage() {
           </section>
         ) : (
           <section>
-            {documents.map((document, index) => (
-              <div key={document.id}>
+            {documents.map((document) => (
+              <div key={document.id} className="px-3">
                 <Post
                   post={document}
                   onOptionsClick={(selectedDocument, anchor) => {
@@ -330,11 +331,6 @@ export default function SearchPage() {
                     )
                   }
                 />
-                {index < documents.length - 1 && (
-                  <div className="px-6">
-                    <div className="mt-4 h-px w-full bg-edge-strong" />
-                  </div>
-                )}
               </div>
             ))}
           </section>

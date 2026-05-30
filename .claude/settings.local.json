@@ -5,7 +5,12 @@
       "Bash(pnpm add:*)",
       "Bash(npx prisma:*)",
       "Bash(npx tsc:*)",
-      "Bash(curl -s \"https://archive.org/advancedsearch.php?q=subject:mathematics+AND+mediatype:texts&output=json&rows=3&page=1&fl[]=identifier,title,creator,subject,description,year,language,format\")"
+      "Bash(curl -s \"https://archive.org/advancedsearch.php?q=subject:mathematics+AND+mediatype:texts&output=json&rows=3&page=1&fl[]=identifier,title,creator,subject,description,year,language,format\")",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"process.stdout.write\\('RESULT:'+require\\('fs'\\).readFileSync\\(require\\('os'\\).tmpdir\\(\\)+'/check.txt','utf8'\\)\\)\")",
+      "Bash(node -e \"process.stdout.write\\(require\\('fs'\\).readFileSync\\(require\\('os'\\).tmpdir\\(\\)+'/snip.txt','utf8'\\)\\)\")",
+      "Bash(node -e \"const t=require\\('fs'\\).readFileSync\\(require\\('os'\\).tmpdir\\(\\)+'/snip.txt','utf8'\\); console.log\\(JSON.stringify\\(t\\)\\)\")",
+      "Bash(node -e \"const t=require\\('fs'\\).readFileSync\\(require\\('os'\\).tmpdir\\(\\)+'/snip.txt','utf8'\\); console.log\\(t.length\\)\")"
     ]
   }
 }

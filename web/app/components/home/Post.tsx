@@ -116,6 +116,37 @@ function formatTimeAgo(timestamp: string) {
   return `${days}d ago`;
 }
 
+const DESCRIPTION_CLAMP_LENGTH = 180;
+
+function PostDescription({ description }: { description: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLong = description.length > DESCRIPTION_CLAMP_LENGTH;
+
+  let shownText = description;
+  if (isLong && !isExpanded) {
+    const slice = description.slice(0, DESCRIPTION_CLAMP_LENGTH);
+    const lastSpace = slice.lastIndexOf(" ");
+    shownText = `${(lastSpace > 0 ? slice.slice(0, lastSpace) : slice).trimEnd()}… `;
+  }
+
+  return (
+    <p className="px-2 pt-3 text-sm leading-6 text-ink wrap-break-word">
+      {renderTextWithMentions(shownText)}
+      {isLong && (
+        <button
+          type="button"
+          aria-label="more or less"
+          aria-expanded={isExpanded ? "true" : "false"}
+          onClick={() => setIsExpanded((value) => !value)}
+          className="font-semibold text-ink-3 transition-colors hover:text-ink-2 cursor-pointer"
+        >
+          {isExpanded ? " [show less]" : " [more]"}
+        </button>
+      )}
+    </p>
+  );
+}
+
 export default function Post({
   post,
   onCommentClick,
@@ -300,25 +331,37 @@ export default function Post({
   // Track SCROLL_PAST: fire when post was visible ≥1s but user didn't open it
   useEffect(() => {
     const element = postCardRef.current;
-    if (!element || !post.id || typeof IntersectionObserver === "undefined") return;
+    if (!element || !post.id || typeof IntersectionObserver === "undefined")
+      return;
 
     let visibleTimer: ReturnType<typeof setTimeout> | null = null;
     let wasHeld = false; // true once the post has been visible for ≥1s
     let didOpen = false;
 
-    const markOpen = () => { didOpen = true; };
+    const markOpen = () => {
+      didOpen = true;
+    };
     element.addEventListener("click", markOpen);
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && (entry.intersectionRatio ?? 0) >= 0.3) {
           if (!visibleTimer) {
-            visibleTimer = setTimeout(() => { wasHeld = true; }, 1000);
+            visibleTimer = setTimeout(() => {
+              wasHeld = true;
+            }, 1000);
           }
         } else {
-          if (visibleTimer) { clearTimeout(visibleTimer); visibleTimer = null; }
+          if (visibleTimer) {
+            clearTimeout(visibleTimer);
+            visibleTimer = null;
+          }
           if (wasHeld && !didOpen) {
-            void trackFeedInteraction({ postId: post.id, interactionType: "SCROLL_PAST", signalKind: "context" });
+            void trackFeedInteraction({
+              postId: post.id,
+              interactionType: "SCROLL_PAST",
+              signalKind: "context",
+            });
           }
           wasHeld = false;
           didOpen = false;
@@ -489,7 +532,11 @@ export default function Post({
         const safeTitle = (post.title?.trim() || "materialcrate-document")
           .replace(/[<>:"/\\|?*]+/g, "_")
           .replace(/\s+/g, " ");
-        const extMap: Record<string, string> = { pdf: "pdf", docx: "docx", doc: "doc" };
+        const extMap: Record<string, string> = {
+          pdf: "pdf",
+          docx: "docx",
+          doc: "doc",
+        };
         const ext = extMap[post.fileType ?? "pdf"] ?? "pdf";
         const fileName = `${safeTitle}.${ext}`;
 
@@ -508,7 +555,14 @@ export default function Post({
         setIsDownloading(false);
       }
     },
-    [ensureAuthenticated, isDownloading, post.id, post.fileType, post.title, showAlert],
+    [
+      ensureAuthenticated,
+      isDownloading,
+      post.id,
+      post.fileType,
+      post.title,
+      showAlert,
+    ],
   );
 
   useEffect(() => {
@@ -635,11 +689,7 @@ export default function Post({
           </button>
         </div>
 
-        {post.description && (
-          <p className="px-2 pt-3 text-sm leading-6 text-ink">
-            {renderTextWithMentions(post.description)}
-          </p>
-        )}
+        {post.description && <PostDescription description={post.description} />}
 
         <div className="px-2 pt-4">
           <button

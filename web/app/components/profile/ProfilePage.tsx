@@ -980,7 +980,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
           </>
         )}
         </main>
-        <RightSidebar />
+        <RightSidebar profileUsername={profile?.username} />
       </div>
       <FollowersnFollowingList
         isOpen={selectedFollowList !== null}

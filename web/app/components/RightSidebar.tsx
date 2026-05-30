@@ -25,7 +25,11 @@ type SidebarData = {
   suggestedUsers: SidebarUser[];
 };
 
-export default function RightSidebar() {
+export default function RightSidebar({
+  profileUsername,
+}: {
+  profileUsername?: string;
+} = {}) {
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
   const [sidebarData, setSidebarData] = useState<SidebarData | null>(null);
@@ -33,7 +37,6 @@ export default function RightSidebar() {
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoadingSidebar(true);
     void fetch("/api/sidebar", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data: SidebarData | null) => {
@@ -61,12 +64,15 @@ export default function RightSidebar() {
           />
           <input
             type="text"
-            placeholder="Search…"
+            placeholder={profileUsername ? "Search in profile" : "Search…"}
             className="w-full rounded-2xl border border-edge bg-surface py-3 pl-9 pr-4 text-sm text-ink placeholder:text-ink-3 shadow-sm transition-all focus:border-[#E1761F]/40 focus:outline-none focus:ring-2 focus:ring-[#E1761F]/10"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 const val = (e.target as HTMLInputElement).value.trim();
-                if (val) router.push(`/search?q=${encodeURIComponent(val)}`);
+                if (!val) return;
+                const params = new URLSearchParams({ q: val });
+                if (profileUsername) params.set("author", profileUsername);
+                router.push(`/search?${params.toString()}`);
               }
             }}
           />
@@ -221,7 +227,7 @@ export default function RightSidebar() {
                   <button
                     type="button"
                     onClick={() => router.push(`/user/${su.username}`)}
-                    className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-ink/8"
+                    className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-ink/8 cursor-pointer"
                   >
                     {su.profilePicture ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
@@ -245,7 +251,7 @@ export default function RightSidebar() {
                   <button
                     type="button"
                     onClick={() => router.push(`/user/${su.username}`)}
-                    className="shrink-0 rounded-full border border-edge px-3 py-1 text-xs font-semibold text-ink-2 transition-colors hover:border-ink hover:text-ink"
+                    className="shrink-0 rounded-full border border-edge px-3 py-1 text-xs font-semibold text-ink-2 transition-colors hover:border-ink hover:text-ink cursor-pointer"
                   >
                     View
                   </button>
